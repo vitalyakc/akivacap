@@ -14,8 +14,10 @@ contract Ownable {
 }
 
 contract DaiStableCoinPrototype {
+    function transfer(address to, uint256 value) public returns (bool);
     function transferFrom(address src, address dst, uint wad) public returns (bool);
     function approve(address spender, uint256 value) public returns (bool);
+    function balanceOf(address who) public view returns (uint256);
 }
 
 contract FRAMain is Ownable{
@@ -37,24 +39,23 @@ contract FRAMain is Ownable{
 
 contract BaseAgreement is Ownable{
     address constant daiStableCoin = address(0xc7cC3413f169a027dccfeffe5208Ca4f38eF0c40);
-    address constant SimpleCDPMockAddress = address(0x0DCd2F752394c41875e259e00bb44fd505297caF); 
-    address constant SimpleDSRMockAddress = address(0x5E72914535f202659083Db3a02C984188Fa26e9f);
+    address constant SimpleCDPMockAddress = address(0xef55BfAc4228981E850936AAf042951F7b146e41); 
+    address constant SimpleDSRMockAddress = address(0x8c1eD7e19abAa9f23c476dA86Dc1577F1Ef401f5);
     
     uint256 constant TWENTY_FOUR_HOURS = 86399;
     
-    address borrower;
+    address payable public borrower;
+    address payable public lender;
     uint256 public borrowerCollateralValue;
     uint256 public debtValue;
     uint256 public startDate;
     uint256 public initialDate;
     uint256 public expireDate;
     uint256 public interestRate;
-    address public lender;
     address internal DSProxy; // to be removed and used getter from Wrapper contract
     address internal CDPContract;
-    uint256 currentDaiBorrowerBalance;
-    uint256 currentDaiLenderBalance;
-    uint256 injectedBorrowerAmount;
+    uint256 injectedBorrowerAmount;// to be removed for now
+    uint256 borrowerFRADebt;
     
     event AgreementMatched(address _borrower, address _lender, uint256 _interestRate, uint256 _borrowerCollateralValue, uint256 _debtValue);
     
@@ -63,19 +64,19 @@ contract BaseAgreement is Ownable{
         _;
     }
     
-    constructor(address _borrower, uint256 _borrowerCollateralValue, uint256 _debtValue, uint256 _expireDate, uint256 _interestRate) public payable {
+    constructor(address payable _borrower, uint256 _borrowerCollateralValue, uint256 _debtValue, uint256 _expireDate, uint256 _interestRate) public payable {
         require(_expireDate > now, 'expairy date is in the past');
         
         borrower = _borrower;
         owner = msg.sender;
-        currentDaiBorrowerBalance = borrowerCollateralValue = _borrowerCollateralValue;
         debtValue = _debtValue;
         initialDate = now;
         expireDate = _expireDate;
         interestRate = _interestRate;
+        borrowerCollateralValue = _borrowerCollateralValue;
         
         DSProxy = SimpleCDPMock(SimpleCDPMockAddress).getDSProxy(address(this));
-        currentDaiBorrowerBalance = SimpleCDPMock(SimpleCDPMockAddress).openLockETHAndDraw(borrowerCollateralValue);
+        SimpleCDPMock(SimpleCDPMockAddress).openAndLockETH(_borrowerCollateralValue);
     }
     
     function matchAgreement() public returns(bool _success) {
@@ -84,42 +85,77 @@ contract BaseAgreement is Ownable{
             .transferFrom(msg.sender, address(this), debtValue), 'Impossible to transfer DAI tokens, make valid allowance');
         lender = msg.sender;
         startDate = now;
-        currentDaiLenderBalance = debtValue;
         SimpleDSRMock(SimpleDSRMockAddress).lockTokens(debtValue);
         
         emit AgreementMatched(borrower, msg.sender, interestRate, borrowerCollateralValue, debtValue);
     }
     
     function checkThisAgreement() public onlyContractOwner() isMatched() { // is supposed to be called in loop externaly
-        if(_checkExpiringDate()) {
-            _terminateAgreement();
+        if(SimpleCDPMock(SimpleCDPMockAddress).checkLiquidation()) {
+            _terminateAgreement(true);
         }
-        require(_updateCurrentBalancesAndMakeInjection());
+        
+        if(_checkExpiringDate()) {
+            _terminateAgreement(false);
+        }
+        require(_updateCurrentStateOrMakeInjection());
     }
     
     function _checkExpiringDate() internal returns(bool _isExpired) {
         return (now > expireDate || lender == address(0) && now > (initialDate + TWENTY_FOUR_HOURS));
     }
     
-    function _terminateAgreement() internal returns(bool _success) {
-        // to do
+    function _terminateAgreement(bool _isLiquidated) internal returns(bool _success) {
+        uint256 currentDaiLenderBalance;
+        if(_isLiquidated) {
+            lender.transfer(SimpleCDPMock(SimpleCDPMockAddress).calculateCollateralEquivalent(borrowerFRADebt));
+            borrower.transfer(address(this).balance - 
+                - SimpleCDPMock(SimpleCDPMockAddress).calculateCollateralEquivalent(borrowerFRADebt));  
+        } else {
+            if(borrowerFRADebt > 0) { // can be removed and replaced with code in this if {} to make code shorter but gas higher
+                if(DaiStableCoinPrototype(daiStableCoin).transferFrom(borrower, address(this), borrowerFRADebt)) {
+                    currentDaiLenderBalance = SimpleDSRMock(SimpleDSRMockAddress).unlockTokens();
+                    DaiStableCoinPrototype(daiStableCoin).transfer(lender, currentDaiLenderBalance + borrowerFRADebt);
+                    SimpleCDPMock(SimpleCDPMockAddress).transferOwnership(borrower);
+                } else {
+                    SimpleCDPMock(SimpleCDPMockAddress).quitCDP();
+                    lender.transfer(SimpleCDPMock(SimpleCDPMockAddress).calculateCollateralEquivalent(borrowerFRADebt));
+                    borrower.transfer(address(this).balance - 
+                        - SimpleCDPMock(SimpleCDPMockAddress).calculateCollateralEquivalent(borrowerFRADebt));            
+                }
+            } else {
+                currentDaiLenderBalance = SimpleDSRMock(SimpleDSRMockAddress).unlockTokens();
+                DaiStableCoinPrototype(daiStableCoin).transfer(lender, currentDaiLenderBalance);
+                SimpleCDPMock(SimpleCDPMockAddress).transferOwnership(borrower);
+            }
+        }
+        return true;
     }
     
-    function _updateCurrentBalancesAndMakeInjection() internal returns(bool _success) { 
+    function _updateCurrentStateOrMakeInjection() internal returns(bool _success) { 
         uint256 currentDSR = SimpleDSRMock(SimpleDSRMockAddress).getDSR();
         
-        currentDaiLenderBalance = SimpleDSRMock(SimpleDSRMockAddress).unlockTokens();
+        uint256 currentDaiLenderBalance = SimpleDSRMock(SimpleDSRMockAddress).unlockTokens();
         
         if(currentDSR >= interestRate) {
             uint256 currentDifference = debtValue * (currentDSR - interestRate); // to extend with calculation according to decimals
-            DaiStableCoinPrototype(daiStableCoin).approve(DSProxy, currentDifference);
-            SimpleCDPMock(SimpleCDPMockAddress).inject(currentDifference);
-            injectedBorrowerAmount += currentDifference;
-            currentDaiLenderBalance -= currentDifference;
+            
+            if(currentDifference <= borrowerFRADebt) {
+                borrowerFRADebt -= currentDifference;
+            } else {
+                currentDifference -= borrowerFRADebt;
+                DaiStableCoinPrototype(daiStableCoin).approve(DSProxy, currentDifference);
+                SimpleCDPMock(SimpleCDPMockAddress).inject(currentDifference); 
+                currentDaiLenderBalance -= currentDifference;
+            }
+            
+            //injectedBorrowerAmount += currentDifference;
         } else {
             uint256 currentDifference = debtValue * (interestRate - currentDSR); // to extend with calculation according to decimals
-            currentDaiBorrowerBalance -= currentDifference;
+            //currentDaiBorrowerBalance -= currentDifference;
             currentDaiLenderBalance += currentDifference;
+            
+            borrowerFRADebt += currentDifference;
         }
         SimpleDSRMock(SimpleDSRMockAddress).lockTokens(currentDaiLenderBalance);
     }
@@ -149,7 +185,7 @@ contract SimpleCDPMock is Ownable {
     uint256 public currentTokensAmount;
     uint256 public currentCollateralAmount;
     
-    function openLockETHAndDraw(uint256 _eth) public onlyContractOwner() returns(uint256 _tokensAmount) {
+    function openAndLockETH(uint256 _eth) public onlyContractOwner() returns(uint256 _tokensAmount) {
         uint256 tokensAmount = (_eth*66)/100;
         currentTokensAmount += tokensAmount;
         currentCollateralAmount += _eth;
@@ -167,6 +203,27 @@ contract SimpleCDPMock is Ownable {
     
     function getDSProxy (address _proxyOwner) public returns(address) {
         return address(0); // to be changed
+    }
+    
+    function transferOwnership(address _user) public {
+        //returns ownership to user
+    }
+    
+    function inject (uint256 _tokenAmount) public {
+        // approve()
+        // wipe()
+    }
+    
+    function quitCDP() public {
+        // quits CDP contrct and transfers collateral to agreement contract address
+    }
+    
+    function calculateCollateralEquivalent(uint256 _daiAmount) public returns(uint256 _collateralAmount) {
+        return 0;
+    }
+    
+    function checkLiquidation() public returns(bool _isLiquidated) {
+        return false;
     }
 }
 
@@ -186,10 +243,5 @@ contract SimpleDSRMock is Ownable {
     
     function getDSR() public view returns(uint256) {
         return DSRPercent;
-    }
-    
-    function inject (uint256 _tokenAmount) public {
-        // approve()
-        // wipe()
     }
 }
