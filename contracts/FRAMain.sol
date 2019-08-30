@@ -1,8 +1,7 @@
 pragma solidity 0.5.11;
 
-import './DaiStableCoinPrototype.sol';
-import './Claimable.sol';
-import './Agreement.sol';
+import "./Claimable.sol";
+import "./Agreement.sol";
 
 
 contract FRAMain is Claimable {
@@ -26,6 +25,8 @@ contract FRAMain is Claimable {
                 activeAgreementList[i] = activeAgreementList[activeAgreementList.length - 1];
                 delete activeAgreementList[activeAgreementList.length - 1];
                 activeAgreementList.length -= 1;
+            } else {
+                AgreementInterface(activeAgreementList[i]).checkAgreement();
             }
         }
     }
