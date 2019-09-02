@@ -14,6 +14,23 @@ contract PotLike {
     function join(uint) public;
     function exit(uint) public;
 }
+contract VatLike {
+    function ilks(bytes32) public view returns (uint, uint, uint, uint, uint);
+    function dai(address) public view returns (uint);
+    function urns(bytes32, address) public view returns (uint, uint);
+    function hope(address) public;
+    function move(address, address, uint) public;
+}
+
+
+contract SpotterLike {
+    struct Ilk {
+        PipLike pip;
+        uint256 mat;
+    }
+
+    mapping (bytes32 => Ilk) public ilks;
+}
 
 contract McdWrapper {
     address public constant proxyRegistryAddr = 0xda657E86db3e76BDa6d88e6a09798F0BBF5bDf75;
@@ -27,7 +44,8 @@ contract McdWrapper {
     address public constant wethAddr = 0xb39862D7D1b11CD9B781B1473e142Cbb545A6871;
     address public constant mcdJoinEthaAddr = 0x75f0660705EF0dB9adde85337980F579626643af;
     address public constant mcdPotAddr = 0xBb3571B3F1151a2f0545a297363ACddC87099FF5;
-    
+    address public constant mcdSpotAddr = 0x888C83473C72467C2D5289dCD6Ab26cCb8b00bd0;
+
     bytes32 public constant ETH_A = 0x4554482d41000000000000000000000000000000000000000000000000000000;
     bytes32 public constant ETH_B = 0x4554482d42000000000000000000000000000000000000000000000000000000;
     
@@ -77,7 +95,35 @@ contract McdWrapper {
     function getDsr() public view returns(uint) {
         return PotLike(mcdPotAddr).dsr();
     }
+
+    function forceLiquidate() public returns(bool) {
+        return true;
+    }
+
+    function getCollateralEquivalent(bytes32 ilk, uint daiAmount) public view returns(uint) {
+        (,, uint spot,,) = VatLike(mcdVatAddr).ilks(ilk);
+        return daiAmount * ONE / spot;
+    }
+
+    function getPrice(bytes32 ilk) public view returns(uint) {
+        return getSafePrice(ilk) * getLiquidationRatio(ilk) / ONE;
+    }
+
+    function getSafePrice(bytes32 ilk) public view returns(uint) {
+        (,, uint spot,,) = VatLike(mcdVatAddr).ilks(ilk);
+        return spot;
+    }
+
+    function getLiquidationRatio(bytes32 ilk) public view returns(uint) {
+        (,uint mat) = SpotterLike(mcdSpotAddr).ilks(ilk);
+        return mat;
+    }
+
     
+    function isCDPLiquidated() public view returns(bool) {
+        return false;
+    }
+     
     function wipe(uint cdp, uint wad) public {
         proxy().execute(proxyLib, abi.encodeWithSignature("wipe(address,address,uint256,uint256)", cdpManagerAddr, mcdJoinDaiAddr, cdp, wad));
     }
