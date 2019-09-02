@@ -1,7 +1,8 @@
 pragma solidity 0.5.11;
 
-import "./Claimable.sol";
-import "./Agreement.sol";
+import './DaiStableCoinPrototype.sol';
+import './Claimable.sol';
+import './Agreement.sol';
 
 
 contract FRAMain is Claimable {
@@ -20,23 +21,22 @@ contract FRAMain is Claimable {
     }
     
     function checkAllAgreements() public onlyContractOwner() {
-        for(uint256 i = 0; i < activeAgreementList.length; i++) {
+        uint256 length = activeAgreementList.length;
+        for(uint256 i = 0; i < length; i++) {
             if (AgreementInterface(activeAgreementList[i]).isClosed()) {
-                activeAgreementList[i] = activeAgreementList[activeAgreementList.length - 1];
-                delete activeAgreementList[activeAgreementList.length - 1];
-                activeAgreementList.length -= 1;
+                activeAgreementList[i] = activeAgreementList[length - 1];
+                delete activeAgreementList[length - 1];
+                length--;
+                i--;
+                continue;
             } else {
                 AgreementInterface(activeAgreementList[i]).checkAgreement();
             }
         }
+        activeAgreementList.length = length;
     }
     
     function getNow () public view returns(uint256) { // for testing
         return now;
     }
 }
-
-
-
-
-
