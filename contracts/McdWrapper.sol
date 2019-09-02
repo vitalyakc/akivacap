@@ -126,8 +126,14 @@ contract McdWrapper {
     }
 
     function getCollateralEquivalent(bytes32 ilk, uint daiAmount) public view returns(uint) {
-        (,, uint spot,,) = VatLike(mcdVatAddr).ilks(ilk);
-        return daiAmount * ONE / spot;
+        // (,, uint spot,,) = VatLike(mcdVatAddr).ilks(ilk);
+        uint price = getPrice(ilk);
+        uint ethAmount = daiAmount * ONE / price;
+        if (ethAmount * price / ONE == daiAmount)
+        {
+            return ethAmount;
+        }
+        else return ethAmount + 1;
     }
 
     function getPrice(bytes32 ilk) public view returns(uint) {
@@ -192,7 +198,7 @@ contract McdWrapper {
     }
     
     function openLockETHAndDraw(address mcdJoinCollateralAddr, bytes32 ilk, uint wadD) public payable returns (uint cdp) {
-        address payable target = address(proxy());
+        address payable target = buildProxy();
         bytes memory data = abi.encodeWithSignature("execute(address,bytes)", proxyLib, abi.encodeWithSignature("openLockETHAndDraw(address,address,address,bytes32,uint256)", cdpManagerAddr, mcdJoinCollateralAddr, mcdJoinDaiAddr, ilk, wadD));
         assembly {
             let succeeded := call(sub(gas, 5000), target, callvalue, add(data, 0x20), mload(data), 0, 0)
