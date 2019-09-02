@@ -164,7 +164,7 @@ contract McdWrapper {
         }
     }
     
-    function giveCdpOwnership(uint cdp, address guy) public {
+    function transferCdpOwnership(uint cdp, address guy) public {
         proxy().execute(proxyLib,  abi.encodeWithSignature("give(address,uint256,address)", cdpManagerAddr, cdp, guy));
     }
     
