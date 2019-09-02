@@ -32,6 +32,20 @@ contract SpotterLike {
     mapping (bytes32 => Ilk) public ilks;
 }
 
+contract PipLike {
+    function read() external view returns (bytes32);
+    function peek() external returns (bytes32, bool);
+
+}
+
+contract CatLike {
+    function ilks(bytes32) public view returns (address, uint, uint);
+}
+
+contract ManagerLike {
+    mapping (uint => address) public urns;      // CDPId => UrnHandler
+}
+
 contract McdWrapper {
     address public constant proxyRegistryAddr = 0xda657E86db3e76BDa6d88e6a09798F0BBF5bDf75;
     address public constant proxyLib = 0x3B444f91f86d162C991D5EC048464C93b0890aE2;
@@ -45,10 +59,12 @@ contract McdWrapper {
     address public constant mcdJoinEthaAddr = 0x75f0660705EF0dB9adde85337980F579626643af;
     address public constant mcdPotAddr = 0xBb3571B3F1151a2f0545a297363ACddC87099FF5;
     address public constant mcdSpotAddr = 0x888C83473C72467C2D5289dCD6Ab26cCb8b00bd0;
+    address public constant mcdCatAddr = 0x81F7Aa9c1570de564eB511b3a1e57DAe558C65b5;
 
     bytes32 public constant ETH_A = 0x4554482d41000000000000000000000000000000000000000000000000000000;
     bytes32 public constant ETH_B = 0x4554482d42000000000000000000000000000000000000000000000000000000;
-    
+    uint256 constant ONE = 10 ** 27;
+
     function buildProxy() public returns (address payable) {
         return ProxyRegistry(proxyRegistryAddr).build();
     }
@@ -96,8 +112,17 @@ contract McdWrapper {
         return PotLike(mcdPotAddr).dsr();
     }
 
-    function forceLiquidate() public returns(bool) {
-        return true;
+    /**
+     *  To determine how much collateral you would possess after a Liquidation you can use the following simplified formula:
+     *  (Collateral * Oracle Price * PETH/ETH Ratio) - (Liquidation Penalty * Stability Debt) - Stability Debt = (Remaining Collateral * Oracle Price) DAI
+     */
+    function forceLiquidate(bytes32 ilk, uint cdpId) public returns(uint) {
+        address urn = ManagerLike(cdpManagerAddr).urns(cdpId);
+        (uint ink, uint art) = VatLike(mcdVatAddr).urns(ilk, urn);
+        (,uint rate,,,) = VatLike(mcdVatAddr).ilks(ilk); // in single collateral it is: The ratio of PETH/ETH is 1.012
+        (,uint chop,) = CatLike(mcdCatAddr).ilks(ilk); // penalty
+        uint price = getPrice(ilk);
+        return (ink * price * rate - chop * art - art) / price;
     }
 
     function getCollateralEquivalent(bytes32 ilk, uint daiAmount) public view returns(uint) {
@@ -119,8 +144,7 @@ contract McdWrapper {
         return mat;
     }
 
-    
-    function isCDPLiquidated() public view returns(bool) {
+    function isCDPLiquidated(bytes32 ilk, uint cdpId) public view returns(bool) {
         return false;
     }
      
@@ -140,7 +164,7 @@ contract McdWrapper {
         }
     }
     
-    function give(uint cdp, address guy) public {
+    function giveCdpOwnership(uint cdp, address guy) public {
         proxy().execute(proxyLib,  abi.encodeWithSignature("give(address,uint256,address)", cdpManagerAddr, cdp, guy));
     }
     
