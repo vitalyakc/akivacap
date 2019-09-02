@@ -35,7 +35,7 @@ contract BaseAgreement is Claimable, AgreementInterface{
     uint256 public interestRate;
     uint256 borrowerFRADebt;
     bool public isClosed;
-    uint256 cdpId;
+    uint256 public cdpId;
     
     // test version, should be extended after stable multicollaterall makerDAO release
     bytes32 constant collateralType = 0x4554482d41000000000000000000000000000000000000000000000000000000; // ETH-A
@@ -60,7 +60,7 @@ contract BaseAgreement is Claimable, AgreementInterface{
         expireDate = _expireDate;
         interestRate = _interestRate;
         borrowerCollateralValue = _borrowerCollateralValue;
-        bytes32 response = execute(MCDWrapperMockAddress, abi.encodeWithSignature('openEthaCdp(uint256)', _borrowerCollateralValue));
+        bytes32 response = execute(MCDWrapperMockAddress, abi.encodeWithSignature('openEthaCdp(uint256)', _debtValue));
         assembly {
             _cdpId := mload(add(response, 0x20))
         }
@@ -89,14 +89,14 @@ contract BaseAgreement is Claimable, AgreementInterface{
 
 contract AgreementETH is BaseAgreement {
     
-    constructor (address payable _borrower, uint256 _borrowerCollateralValue, uint256 _debtValue, uint256 _expairyDate, uint256 _interestRate) public
+    constructor (address payable _borrower, uint256 _borrowerCollateralValue, uint256 _debtValue, uint256 _expairyDate, uint256 _interestRate) public payable
     BaseAgreement(_borrower, _borrowerCollateralValue, _debtValue, _expairyDate, _interestRate) {}
     
     function matchAgreement() public isActive() returns(bool _success) {
         require(isPending(), 'Agreement has its lender already');
         
         (bool transferSuccess,) = daiStableCoinAddress.call(
-            abi.encodeWithSignature('transferFrom(address, address, uint256)', msg.sender, address(this), debtValue));
+            abi.encodeWithSignature('transferFrom(address,address,uint256)', msg.sender, address(this), debtValue));
         require(transferSuccess, 'Impossible to transfer DAI tokens, make valid allowance');
         
         lender = msg.sender;
