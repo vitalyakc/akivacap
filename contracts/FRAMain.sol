@@ -1,6 +1,6 @@
 pragma solidity 0.5.11;
 
-import './DaiStableCoinPrototype.sol';
+import './DaiInterface.sol';
 import './Claimable.sol';
 import './Agreement.sol';
 

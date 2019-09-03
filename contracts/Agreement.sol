@@ -17,12 +17,13 @@ interface AgreementInterface {
 
 contract BaseAgreement is Claimable, AgreementInterface{
     address constant daiStableCoinAddress = address(0xc7cC3413f169a027dccfeffe5208Ca4f38eF0c40);
-    address constant MCDWrapperMockAddress = address(0x458dAdcE7579057a26bfC78B951058AB12FB8093); 
+    address constant MCDWrapperMockAddress = address(0xAF474f085cdBca740A39C60F4c2EB48e71a494bF); 
     
     DaiStableCoinPrototype DaiInstance = DaiStableCoinPrototype(daiStableCoinAddress);
     McdWrapper WrapperInstance = McdWrapper(MCDWrapperMockAddress);
 
     uint256 constant TWENTY_FOUR_HOURS = 86399;
+    uint256 constant YEAR = 31536000;
     uint256 constant ONE = 10 ** 27;
     
     address payable public borrower;
@@ -33,13 +34,14 @@ contract BaseAgreement is Claimable, AgreementInterface{
     uint256 public initialDate;
     uint256 public expireDate;
     uint256 public interestRate;
-    uint256 borrowerFRADebt;
+    uint256 public borrowerFRADebt;
     bool public isClosed;
     uint256 public cdpId;
+    uint256 public lastCheckTime;
     
     // test version, should be extended after stable multicollaterall makerDAO release
     bytes32 constant collateralType = 0x4554482d41000000000000000000000000000000000000000000000000000000; // ETH-A
-    uint256 ethAmountAfterLiquidation;
+    uint256 public ethAmountAfterLiquidation;
     //
     
     modifier isActive() {
@@ -58,7 +60,7 @@ contract BaseAgreement is Claimable, AgreementInterface{
         debtValue = _debtValue;
         initialDate = now;
         expireDate = _expireDate;
-        interestRate = _interestRate;
+        interestRate = _interestRate + ONE;
         borrowerCollateralValue = _borrowerCollateralValue;
         bytes32 response = execute(MCDWrapperMockAddress, abi.encodeWithSignature('openEthaCdp(uint256)', _debtValue));
         assembly {
@@ -103,6 +105,7 @@ contract AgreementETH is BaseAgreement {
         startDate = now;
         execute(MCDWrapperMockAddress, abi.encodeWithSignature('lockDai(uint256)', debtValue));
 
+        lastCheckTime = now;
         emit AgreementMatched(borrower, msg.sender, interestRate, borrowerCollateralValue, debtValue);
         return true;
     }
@@ -119,6 +122,8 @@ contract AgreementETH is BaseAgreement {
         if(_checkExpiringDate()) {
             _terminateAgreement();
         }
+        
+        lastCheckTime = now;
         
         return true;
     }
@@ -173,13 +178,14 @@ contract AgreementETH is BaseAgreement {
     function _updateCurrentStateOrMakeInjection() internal returns(bool _success) { 
         uint256 currentDSR = WrapperInstance.getDsr();
         uint256 currentDaiLenderBalance;
+        uint256 timeInterval = now - lastCheckTime;
         
         currentDaiLenderBalance = WrapperInstance.getLockedDai();
-        execute(MCDWrapperMockAddress, abi.encodeWithSignature('unlockDai()'));
+        execute(MCDWrapperMockAddress, abi.encodeWithSignature('unlockAllDai()'));
 
         if(currentDSR >= interestRate) {
             
-            uint256 currentDifference = debtValue * (currentDSR - interestRate); // to extend with calculation according to decimals
+            uint256 currentDifference = ((debtValue * (currentDSR - interestRate)) * timeInterval) / YEAR; // to extend with calculation according to decimals
             
             if(currentDifference <= borrowerFRADebt) {
                 borrowerFRADebt -= currentDifference;
@@ -190,11 +196,11 @@ contract AgreementETH is BaseAgreement {
                 currentDaiLenderBalance -= currentDifference;
             }
         } else {
-            uint256 currentDifference = debtValue * (interestRate - currentDSR); // to extend with calculation according to decimals
+            uint256 currentDifference = ((debtValue * (interestRate - currentDSR)) * timeInterval) / YEAR; // to extend with calculation according to decimals
             borrowerFRADebt += currentDifference;
         }
         
-        WrapperInstance.lockDai(currentDaiLenderBalance);
+        execute(MCDWrapperMockAddress, abi.encodeWithSignature('lockDai(uint256)', currentDaiLenderBalance));
         
         return true;
     }
