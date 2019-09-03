@@ -93,8 +93,14 @@ contract BaseAgreement is Claimable, AgreementInterface{
 
 contract AgreementETH is BaseAgreement {
     
+    uint256 public dsrTest = 105 * 10 ** 25;
+    
     constructor (address payable _borrower, uint256 _borrowerCollateralValue, uint256 _debtValue, uint256 _expairyDate, uint256 _interestRate) public payable
     BaseAgreement(_borrower, _borrowerCollateralValue, _debtValue, _expairyDate, _interestRate) {}
+    
+    function setdsrTest(uint256 _dsrTest) public {
+        dsrTest = _dsrTest;
+    }
     
     function matchAgreement() public isActive() returns(bool _success) {
         require(isPending(), 'Agreement has its lender already');
@@ -178,7 +184,7 @@ contract AgreementETH is BaseAgreement {
     }
     
     function _updateCurrentStateOrMakeInjection() internal returns(bool _success) { 
-        uint256 currentDSR = WrapperInstance.getDsr();
+        uint256 currentDSR = dsrTest; //WrapperInstance.getDsr();
         uint256 currentDaiLenderBalance;
         uint256 timeInterval = now - lastCheckTime;
         
