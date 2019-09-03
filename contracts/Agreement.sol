@@ -25,6 +25,7 @@ contract BaseAgreement is Claimable, AgreementInterface{
     uint256 constant TWENTY_FOUR_HOURS = 86399;
     uint256 constant YEAR = 31536000;
     uint256 constant ONE = 10 ** 27;
+    uint256 constant injectionThreshold = 2 * ONE;
     
     address payable public borrower;
     address payable public lender;
@@ -35,6 +36,7 @@ contract BaseAgreement is Claimable, AgreementInterface{
     uint256 public expireDate;
     uint256 public interestRate;
     uint256 public borrowerFRADebt;
+    uint256 public lenderPendingInjection;
     bool public isClosed;
     uint256 public cdpId;
     uint256 public lastCheckTime;
@@ -185,15 +187,24 @@ contract AgreementETH is BaseAgreement {
 
         if(currentDSR >= interestRate) {
             
+            //rad, 45
             uint256 currentDifference = ((debtValue * (currentDSR - interestRate)) * timeInterval) / YEAR; // to extend with calculation according to decimals
             
             if(currentDifference <= borrowerFRADebt) {
+                //rad, 45
                 borrowerFRADebt -= currentDifference;
             } else {
                 currentDifference -= borrowerFRADebt;
                 borrowerFRADebt = 0;
-                execute(MCDWrapperMockAddress, abi.encodeWithSignature('inject(uint256)', currentDifference));
-                currentDaiLenderBalance -= currentDifference;
+                //rad, 45
+                lenderPendingInjection += currentDifference;
+                if(lenderPendingInjection >= injectionThreshold) {
+                    //wad, 18
+                    uint256 lenderPendingInjectionDai = lenderPendingInjection/ONE;
+                    execute(MCDWrapperMockAddress, abi.encodeWithSignature('inject(uint256)', lenderPendingInjectionDai));
+                    //wad, 18
+                    currentDaiLenderBalance -= lenderPendingInjectionDai;
+                } 
             }
         } else {
             uint256 currentDifference = ((debtValue * (interestRate - currentDSR)) * timeInterval) / YEAR; // to extend with calculation according to decimals
