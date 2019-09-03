@@ -91,6 +91,7 @@ contract McdWrapper {
     }
     
     function lockDai(uint wad) public {
+        approveDai(address(proxy()), wad);
         proxy().execute(proxyLib, abi.encodeWithSignature("dsrJoin(address,address,uint256)", mcdJoinDaiAddr, mcdPotAddr, wad));
     }
     
@@ -116,13 +117,14 @@ contract McdWrapper {
      *  To determine how much collateral you would possess after a Liquidation you can use the following simplified formula:
      *  (Collateral * Oracle Price * PETH/ETH Ratio) - (Liquidation Penalty * Stability Debt) - Stability Debt = (Remaining Collateral * Oracle Price) DAI
      */
-    function forceLiquidate(bytes32 ilk, uint cdpId) public returns(uint) {
+    function forceLiquidate(bytes32 ilk, uint cdpId) public view returns(uint) {
         address urn = ManagerLike(cdpManagerAddr).urns(cdpId);
         (uint ink, uint art) = VatLike(mcdVatAddr).urns(ilk, urn);
         (,uint rate,,,) = VatLike(mcdVatAddr).ilks(ilk); // in single collateral it is: The ratio of PETH/ETH is 1.012
         (,uint chop,) = CatLike(mcdCatAddr).ilks(ilk); // penalty
+        chop = 1100000000000000000000000000;
         uint price = getPrice(ilk);
-        return (ink * price * rate - chop * art - art) / price;
+        return (ink * price - (chop - ONE) * art) / price;
     }
 
     function getCollateralEquivalent(bytes32 ilk, uint daiAmount) public view returns(uint) {
