@@ -1,6 +1,6 @@
-pragma solidity 0.5.11;
+ pragma solidity 0.5.11;
 
-import './DaiInterface.sol';
+import './DaiStableCoinPrototype.sol';
 import './Claimable.sol';
 import './Agreement.sol';
 
@@ -10,10 +10,12 @@ contract FRAMain is Claimable {
     address[] fullAgreementList;
     address[] activeAgreementList;
     
-    function requestAgreementOnETH (uint256 _expairyDate, uint256 _debtValue, uint256 _interestRate) 
+    function requestAgreementOnETH (uint256 _debtValue, uint256 _expairyDate, uint256 _interestRate) 
     public payable returns(address _newAgreement) {
         
-        AgreementETH agreement = new AgreementETH(msg.sender, msg.value, _debtValue, _expairyDate, _interestRate);
+        AgreementETH agreement = 
+            (new AgreementETH).value(msg.value)(msg.sender, msg.value, _debtValue, _expairyDate, _interestRate);
+            
         agreements[msg.sender].push(address(agreement));
         fullAgreementList.push(address(agreement));
         activeAgreementList.push(address(agreement));
