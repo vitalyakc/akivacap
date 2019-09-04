@@ -2,7 +2,7 @@ pragma solidity 0.5.11;
 
 import './Claimable.sol';
 import './McdWrapper.sol';
-import './DaiStableCoinPrototype.sol';
+import './DaiInterface.sol';
 
 
 interface AgreementInterface {
@@ -19,7 +19,7 @@ contract BaseAgreement is Claimable, AgreementInterface{
     address constant daiStableCoinAddress = address(0xc7cC3413f169a027dccfeffe5208Ca4f38eF0c40);
     address constant MCDWrapperMockAddress = address(0xAF474f085cdBca740A39C60F4c2EB48e71a494bF); 
     
-    DaiStableCoinPrototype DaiInstance = DaiStableCoinPrototype(daiStableCoinAddress);
+    DaiInterface DaiInstance = DaiInterface(daiStableCoinAddress);
     McdWrapper WrapperInstance = McdWrapper(MCDWrapperMockAddress);
 
     uint256 constant TWENTY_FOUR_HOURS = 86399;
