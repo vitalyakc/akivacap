@@ -17,9 +17,9 @@ interface AgreementInterface {
 
 contract BaseAgreement is Claimable, AgreementInterface{
     address constant daiStableCoinAddress = address(0xc7cC3413f169a027dccfeffe5208Ca4f38eF0c40);
-    address constant MCDWrapperMockAddress = address(0xAF474f085cdBca740A39C60F4c2EB48e71a494bF); 
+    address constant MCDWrapperMockAddress = address(0xF53A62CCAd8842f8FE11508E5931685B9e6c786C); 
     
-    DaiStableCoinPrototype DaiInstance = DaiStableCoinPrototype(daiStableCoinAddress);
+    DaiInterface DaiInstance = DaiInterface(daiStableCoinAddress);
     McdWrapper WrapperInstance = McdWrapper(MCDWrapperMockAddress);
 
     uint256 constant TWENTY_FOUR_HOURS = 86399;
@@ -120,7 +120,7 @@ contract AgreementETH is BaseAgreement {
         
         lender = msg.sender;
         startDate = now;
-        //execute(MCDWrapperMockAddress, abi.encodeWithSignature('lockDai(uint256)', debtValue));
+        execute(MCDWrapperMockAddress, abi.encodeWithSignature('lockDai(uint256)', debtValue));
 
         lastCheckTime = now;
         emit AgreementMatched(borrower, msg.sender, interestRate, borrowerCollateralValue, debtValue);
@@ -198,7 +198,7 @@ contract AgreementETH is BaseAgreement {
         
         currentDaiLenderBalance = WrapperInstance.getLockedDai();
         
-        //execute(MCDWrapperMockAddress, abi.encodeWithSignature('unlockAllDai()'));
+        execute(MCDWrapperMockAddress, abi.encodeWithSignature('unlockAllDai()'));
 
         if(currentDSR >= interestRate) {
             
@@ -224,10 +224,14 @@ contract AgreementETH is BaseAgreement {
             }
         } else {
             currentDifference = ((debtValue * (interestRate - currentDSR)) * timeInterval) / YEAR; // to extend with calculation according to decimals
-            borrowerFRADebt += currentDifference;
+            if(lenderPendingInjection >= currentDifference) {
+                lenderPendingInjection -= currentDifference;
+            } else {
+                borrowerFRADebt = currentDifference - lenderPendingInjection;
+            }
         }
         
-        //execute(MCDWrapperMockAddress, abi.encodeWithSignature('lockDai(uint256)', currentDaiLenderBalance));
+        execute(MCDWrapperMockAddress, abi.encodeWithSignature('lockDai(uint256)', currentDaiLenderBalance));
         
         //test
         currentDaiLenderBalanceTestStorage = currentDaiLenderBalance;
