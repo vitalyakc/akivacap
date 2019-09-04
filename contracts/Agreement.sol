@@ -2,7 +2,7 @@ pragma solidity 0.5.11;
 
 import './Claimable.sol';
 import './McdWrapper.sol';
-import './DaiInterface.sol';
+import './DaiStableCoinPrototype.sol';
 
 
 interface AgreementInterface {
@@ -19,7 +19,7 @@ contract BaseAgreement is Claimable, AgreementInterface{
     address constant daiStableCoinAddress = address(0xc7cC3413f169a027dccfeffe5208Ca4f38eF0c40);
     address constant MCDWrapperMockAddress = address(0xAF474f085cdBca740A39C60F4c2EB48e71a494bF); 
     
-    DaiInterface DaiInstance = DaiInterface(daiStableCoinAddress);
+    DaiStableCoinPrototype DaiInstance = DaiStableCoinPrototype(daiStableCoinAddress);
     McdWrapper WrapperInstance = McdWrapper(MCDWrapperMockAddress);
 
     uint256 constant TWENTY_FOUR_HOURS = 86399;
@@ -64,7 +64,8 @@ contract BaseAgreement is Claimable, AgreementInterface{
         expireDate = _expireDate;
         interestRate = _interestRate + ONE;
         borrowerCollateralValue = _borrowerCollateralValue;
-        bytes32 response = execute(MCDWrapperMockAddress, abi.encodeWithSignature('openEthaCdp(uint256)', _debtValue));
+        
+        bytes memory response = execute(MCDWrapperMockAddress, abi.encodeWithSignature('openEthaCdp(uint256)', _debtValue));
         assembly {
             _cdpId := mload(add(response, 0x20))
         }
@@ -74,18 +75,24 @@ contract BaseAgreement is Claimable, AgreementInterface{
     function execute(address _target, bytes memory _data)
         public
         payable
-        returns (bytes32 response)
+        returns (bytes memory response)
     {
-        require(_target != address(0));
+        require(_target != address(0), "ds-proxy-target-address-required");
 
         // call contract in current context
         assembly {
-            let succeeded := delegatecall(sub(gas, 5000), _target, add(_data, 0x20), mload(_data), 0, 32)
-            response := mload(0)      // load delegatecall output
+            let succeeded := delegatecall(sub(gas, 5000), _target, add(_data, 0x20), mload(_data), 0, 0)
+            let size := returndatasize
+
+            response := mload(0x40)
+            mstore(0x40, add(response, and(add(add(size, 0x20), 0x1f), not(0x1f))))
+            mstore(response, size)
+            returndatacopy(add(response, 0x20), 0, size)
+
             switch iszero(succeeded)
             case 1 {
                 // throw if delegatecall failed
-                revert(0, 0)
+                revert(add(response, 0x20), size)
             }
         }
     }
@@ -205,7 +212,7 @@ contract AgreementETH is BaseAgreement {
                 if(lenderPendingInjection >= injectionThreshold) {
                     //wad, 18
                     uint256 lenderPendingInjectionDai = lenderPendingInjection/ONE;
-                    execute(MCDWrapperMockAddress, abi.encodeWithSignature('inject(uint256)', lenderPendingInjectionDai));
+                    execute(MCDWrapperMockAddress, abi.encodeWithSignature('injectToCdp(uint256,uint256)', cdpId, lenderPendingInjectionDai));
                     //wad, 18
                     lenderPendingInjection = 0;
                     currentDaiLenderBalance -= lenderPendingInjectionDai;
