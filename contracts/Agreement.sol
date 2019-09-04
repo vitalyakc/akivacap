@@ -2,7 +2,7 @@ pragma solidity 0.5.11;
 
 import './Claimable.sol';
 import './McdWrapper.sol';
-import './DaiStableCoinPrototype.sol';
+import './DaiInterface.sol';
 
 
 interface AgreementInterface {
@@ -44,6 +44,8 @@ contract BaseAgreement is Claimable, AgreementInterface{
     // test version, should be extended after stable multicollaterall makerDAO release
     bytes32 constant collateralType = 0x4554482d41000000000000000000000000000000000000000000000000000000; // ETH-A
     uint256 public ethAmountAfterLiquidation;
+    uint256 public currentDaiLenderBalanceTestStorage;
+    uint256 public currentDifferenceTestStorage; 
     //
     
     modifier isActive() {
@@ -118,7 +120,7 @@ contract AgreementETH is BaseAgreement {
         
         lender = msg.sender;
         startDate = now;
-        execute(MCDWrapperMockAddress, abi.encodeWithSignature('lockDai(uint256)', debtValue));
+        //execute(MCDWrapperMockAddress, abi.encodeWithSignature('lockDai(uint256)', debtValue));
 
         lastCheckTime = now;
         emit AgreementMatched(borrower, msg.sender, interestRate, borrowerCollateralValue, debtValue);
@@ -192,14 +194,16 @@ contract AgreementETH is BaseAgreement {
         uint256 currentDSR = dsrTest; //WrapperInstance.getDsr();
         uint256 currentDaiLenderBalance;
         uint256 timeInterval = now - lastCheckTime;
+        uint256 currentDifference;
         
         currentDaiLenderBalance = WrapperInstance.getLockedDai();
-        execute(MCDWrapperMockAddress, abi.encodeWithSignature('unlockAllDai()'));
+        
+        //execute(MCDWrapperMockAddress, abi.encodeWithSignature('unlockAllDai()'));
 
         if(currentDSR >= interestRate) {
             
             //rad, 45
-            uint256 currentDifference = ((debtValue * (currentDSR - interestRate)) * timeInterval) / YEAR; // to extend with calculation according to decimals
+            currentDifference = ((debtValue * (currentDSR - interestRate)) * timeInterval) / YEAR; // to extend with calculation according to decimals
             
             if(currentDifference <= borrowerFRADebt) {
                 //rad, 45
@@ -219,11 +223,16 @@ contract AgreementETH is BaseAgreement {
                 } 
             }
         } else {
-            uint256 currentDifference = ((debtValue * (interestRate - currentDSR)) * timeInterval) / YEAR; // to extend with calculation according to decimals
+            currentDifference = ((debtValue * (interestRate - currentDSR)) * timeInterval) / YEAR; // to extend with calculation according to decimals
             borrowerFRADebt += currentDifference;
         }
         
-        execute(MCDWrapperMockAddress, abi.encodeWithSignature('lockDai(uint256)', currentDaiLenderBalance));
+        //execute(MCDWrapperMockAddress, abi.encodeWithSignature('lockDai(uint256)', currentDaiLenderBalance));
+        
+        //test
+        currentDaiLenderBalanceTestStorage = currentDaiLenderBalance;
+        currentDifferenceTestStorage = currentDifference;
+        //
         
         return true;
     }
