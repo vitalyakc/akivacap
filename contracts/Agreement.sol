@@ -17,7 +17,7 @@ interface AgreementInterface {
 
 contract BaseAgreement is Claimable, AgreementInterface{
     address constant daiStableCoinAddress = address(0xc7cC3413f169a027dccfeffe5208Ca4f38eF0c40);
-    address constant MCDWrapperMockAddress = address(0xF53A62CCAd8842f8FE11508E5931685B9e6c786C); 
+    address constant MCDWrapperMockAddress = address(0x0E823942b5eeD059635d82Da8E869B129DE4771c); 
     
     DaiInterface DaiInstance = DaiInterface(daiStableCoinAddress);
     McdWrapper WrapperInstance = McdWrapper(MCDWrapperMockAddress);
@@ -218,7 +218,7 @@ contract AgreementETH is BaseAgreement {
                     uint256 lenderPendingInjectionDai = lenderPendingInjection/ONE;
                     execute(MCDWrapperMockAddress, abi.encodeWithSignature('injectToCdp(uint256,uint256)', cdpId, lenderPendingInjectionDai));
                     //wad, 18
-                    lenderPendingInjection = 0;
+                    lenderPendingInjection -= lenderPendingInjectionDai * ONE;
                     currentDaiLenderBalance -= lenderPendingInjectionDai;
                 } 
             }
