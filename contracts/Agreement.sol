@@ -141,24 +141,22 @@ contract AgreementETH is BaseAgreement {
     }
     
     function _terminateAgreement() internal returns(bool _success) {
-        uint256 finalDaiLenderBalance;
+        uint256 borrowerFraDebtDai = borrowerFRADebt/ONE;
         
+        uint256 finalDaiLenderBalance = WrapperInstance.getLockedDai();
+        execute(MCDWrapperMockAddress, abi.encodeWithSignature('unlockDai()'));
+            
         if(borrowerFRADebt > 0) {
         (bool TransferSuccessful,) = daiStableCoinAddress
-            .call(abi.encodeWithSignature('transferFrom(address, address, uint256)', borrower, address(this), borrowerFRADebt));
+            .call(abi.encodeWithSignature(
+                'transferFrom(address, address, uint256)', borrower, address(this), borrowerFraDebtDai));
             
             if(TransferSuccessful) {
-                uint256 unlockedDaiAmount;
-                unlockedDaiAmount = WrapperInstance.getLockedDai();
-                execute(MCDWrapperMockAddress, abi.encodeWithSignature('unlockDai()'));
-                finalDaiLenderBalance = unlockedDaiAmount + borrowerFRADebt;
+                finalDaiLenderBalance += borrowerFRADebt;
             } else {
                 ethAmountAfterLiquidation = WrapperInstance.forceLiquidate(collateralType, cdpId);
                 _refundUsersAfterCDPLiquidation();
             }
-        } else {
-            finalDaiLenderBalance = WrapperInstance.getLockedDai();
-            execute(MCDWrapperMockAddress, abi.encodeWithSignature('unlockDai()'));
         }
         
         DaiInstance.transfer(lender, finalDaiLenderBalance);
@@ -209,6 +207,7 @@ contract AgreementETH is BaseAgreement {
                     uint256 lenderPendingInjectionDai = lenderPendingInjection/ONE;
                     execute(MCDWrapperMockAddress, abi.encodeWithSignature('inject(uint256)', lenderPendingInjectionDai));
                     //wad, 18
+                    lenderPendingInjection = 0;
                     currentDaiLenderBalance -= lenderPendingInjectionDai;
                 } 
             }
