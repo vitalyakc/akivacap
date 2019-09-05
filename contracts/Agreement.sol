@@ -46,6 +46,10 @@ contract BaseAgreement is Claimable, AgreementInterface{
     uint256 public ethAmountAfterLiquidation;
     uint256 public currentDaiLenderBalanceTestStorage;
     uint256 public currentDifferenceTestStorage; 
+    uint256 public gotLockedDaiTestStorage;
+    uint256 public injectedDaiTestStorage;
+    uint256 public beforeSubTestStorage;
+    uint256 public afterSubTestStorage;
     //
     
     modifier isActive() {
@@ -198,6 +202,10 @@ contract AgreementETH is BaseAgreement {
         
         currentDaiLenderBalance = WrapperInstance.getLockedDai();
         
+        // test
+            gotLockedDaiTestStorage = currentDaiLenderBalance;
+        //
+        
         execute(MCDWrapperMockAddress, abi.encodeWithSignature('unlockAllDai()'));
 
         if(currentDSR >= interestRate) {
@@ -217,9 +225,20 @@ contract AgreementETH is BaseAgreement {
                     //wad, 18
                     uint256 lenderPendingInjectionDai = lenderPendingInjection/ONE;
                     execute(MCDWrapperMockAddress, abi.encodeWithSignature('injectToCdp(uint256,uint256)', cdpId, lenderPendingInjectionDai));
+                    
+                    // test
+                    injectedDaiTestStorage = lenderPendingInjectionDai;
+                    //
+                    
                     //wad, 18
                     lenderPendingInjection -= lenderPendingInjectionDai * ONE;
+                    // test
+                    beforeSubTestStorage = currentDaiLenderBalance;
+                    //
                     currentDaiLenderBalance -= lenderPendingInjectionDai;
+                    // test
+                    afterSubTestStorage = currentDaiLenderBalance;
+                    //
                 } 
             }
         } else {
