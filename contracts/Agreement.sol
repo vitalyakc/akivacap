@@ -12,8 +12,10 @@ interface AgreementInterface {
     function checkAgreement() external returns(bool);
     
     event AgreementInitiated(address _borrower, uint256 _interestRate, uint256 _borrowerCollateralValue, uint256 _debtValue);
-    event AgreementMatched(address _lender, uint256 _debtValue);
+    event AgreementMatched(address _lender, uint256 _startDate, uint256 _lastCheckTime);
     event AgreementUpdated(uint256 _borrowerFRADebt, uint256 _lenderPendingInjection, uint256 _injectedDaiAmount);
+    event AgreementTerminated(uint256 _borrowerFraDebtDai, uint256 _finalDaiLenderBalance);
+    event AgreementLiquidated(uint256 _lenderEthReward, uint256 _borrowerEthResedual);
 }
 
 contract BaseAgreement is Claimable, AgreementInterface{
@@ -47,10 +49,6 @@ contract BaseAgreement is Claimable, AgreementInterface{
     uint256 public ethAmountAfterLiquidation;
     uint256 public currentDaiLenderBalanceTestStorage;
     uint256 public currentDifferenceTestStorage; 
-    uint256 public gotLockedDaiTestStorage;
-    uint256 public injectedDaiTestStorage;
-    uint256 public beforeSubTestStorage;
-    uint256 public afterSubTestStorage;
     //
     
     modifier isActive() {
@@ -128,7 +126,8 @@ contract AgreementETH is BaseAgreement {
         execute(MCDWrapperMockAddress, abi.encodeWithSignature('lockDai(uint256)', debtValue));
 
         lastCheckTime = now;
-        emit AgreementMatched(msg.sender, debtValue);
+        
+        emit AgreementMatched(msg.sender, now, now);
         return true;
     }
     
@@ -155,6 +154,7 @@ contract AgreementETH is BaseAgreement {
     }
     
     function _terminateAgreement() internal returns(bool _success) {
+        
         uint256 borrowerFraDebtDai = borrowerFRADebt/ONE;
         uint256 finalDaiLenderBalance;
         
@@ -172,6 +172,8 @@ contract AgreementETH is BaseAgreement {
             
             if(TransferSuccessful) {
                 finalDaiLenderBalance += borrowerFRADebt;
+                
+                emit AgreementTerminated(borrowerFraDebtDai, finalDaiLenderBalance);
             } else {
                 ethAmountAfterLiquidation = WrapperInstance.forceLiquidate(collateralType, cdpId);
                 _refundUsersAfterCDPLiquidation();
@@ -205,15 +207,12 @@ contract AgreementETH is BaseAgreement {
         uint256 currentDaiLenderBalance;
         uint256 timeInterval = now - lastCheckTime;
         uint256 currentDifference;
+        uint256 lenderPendingInjectionDai;
         
         bytes memory response = execute(MCDWrapperMockAddress, abi.encodeWithSignature('getLockedDai()'));
         assembly {
             currentDaiLenderBalance := mload(add(response, 0x20))
         }
-        
-        // test
-            gotLockedDaiTestStorage = currentDaiLenderBalance;
-        //
         
         execute(MCDWrapperMockAddress, abi.encodeWithSignature('unlockAllDai()'));
 
@@ -232,22 +231,10 @@ contract AgreementETH is BaseAgreement {
                 lenderPendingInjection += currentDifference;
                 if(lenderPendingInjection >= injectionThreshold) {
                     //wad, 18
-                    uint256 lenderPendingInjectionDai = lenderPendingInjection/ONE;
+                    lenderPendingInjectionDai = lenderPendingInjection/ONE;
                     execute(MCDWrapperMockAddress, abi.encodeWithSignature('injectToCdp(uint256,uint256)', cdpId, lenderPendingInjectionDai));
-                    
-                    // test
-                    injectedDaiTestStorage = lenderPendingInjectionDai;
-                    //
-                    
                     //wad, 18
                     lenderPendingInjection -= lenderPendingInjectionDai * ONE;
-                    // test
-                    beforeSubTestStorage = currentDaiLenderBalance;
-                    //
-                    currentDaiLenderBalance -= lenderPendingInjectionDai;
-                    // test
-                    afterSubTestStorage = currentDaiLenderBalance;
-                    //
                 } 
             }
         } else {
@@ -266,6 +253,7 @@ contract AgreementETH is BaseAgreement {
         currentDifferenceTestStorage = currentDifference;
         //
         
+        emit AgreementUpdated(borrowerFRADebt, lenderPendingInjection, lenderPendingInjectionDai);
         return true;
     }
     
@@ -277,6 +265,8 @@ contract AgreementETH is BaseAgreement {
         uint256 ethFRADebtEquivalent = WrapperInstance.getCollateralEquivalent(collateralType, borrowerFRADebt);
         lender.transfer(ethFRADebtEquivalent);
         borrower.transfer(address(this).balance - ethFRADebtEquivalent);
+        
+        emit AgreementLiquidated(ethFRADebtEquivalent, address(this).balance - ethFRADebtEquivalent);
         return true;
     }
 }
