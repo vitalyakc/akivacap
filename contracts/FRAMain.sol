@@ -21,7 +21,7 @@ contract FRAMain is Claimable {
     }
     
     function checkAllAgreements() public onlyContractOwner() {
-        for(uint256 i = 0; i < length; i++) {
+        for(uint256 i = 0; i < agreementList.length; i++) {
             if (!AgreementInterface(agreementList[i]).isClosed()) {
                 AgreementInterface(agreementList[i]).checkAgreement();
             } else {
@@ -30,8 +30,8 @@ contract FRAMain is Claimable {
         }
     }
     
-    function getAgreementListLength() public view returns(uint256 _agreementListLength) {
-        return agreementList.length;
+    function getAgreementListLength() public view returns(address[] memory _agreementList) {
+        return agreementList;
     }
     
     function getNow () public view returns(uint256) { // for testing
