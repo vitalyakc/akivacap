@@ -12,7 +12,8 @@ interface AgreementInterface {
     function checkAgreement() external returns(bool);
     
     event AgreementInitiated(address _borrower, uint256 _interestRate, uint256 _borrowerCollateralValue, uint256 _debtValue);
-    event AgreementMatched(address _borrower, address _lender, uint256 _interestRate, uint256 _borrowerCollateralValue, uint256 _debtValue);
+    event AgreementMatched(address _lender, uint256 _debtValue);
+    event AgreementUpdated(uint256 _borrowerFRADebt, uint256 _lenderPendingInjection, uint256 _injectedDaiAmount);
 }
 
 contract BaseAgreement is Claimable, AgreementInterface{
@@ -127,7 +128,7 @@ contract AgreementETH is BaseAgreement {
         execute(MCDWrapperMockAddress, abi.encodeWithSignature('lockDai(uint256)', debtValue));
 
         lastCheckTime = now;
-        emit AgreementMatched(borrower, msg.sender, interestRate, borrowerCollateralValue, debtValue);
+        emit AgreementMatched(msg.sender, debtValue);
         return true;
     }
     
@@ -155,9 +156,14 @@ contract AgreementETH is BaseAgreement {
     
     function _terminateAgreement() internal returns(bool _success) {
         uint256 borrowerFraDebtDai = borrowerFRADebt/ONE;
+        uint256 finalDaiLenderBalance;
         
-        uint256 finalDaiLenderBalance = WrapperInstance.getLockedDai();
-        execute(MCDWrapperMockAddress, abi.encodeWithSignature('unlockDai()'));
+        bytes memory response = execute(MCDWrapperMockAddress, abi.encodeWithSignature('getLockedDai()'));
+        assembly {
+            finalDaiLenderBalance := mload(add(response, 0x20))
+        }
+        
+        execute(MCDWrapperMockAddress, abi.encodeWithSignature('unlockAllDai()'));
             
         if(borrowerFRADebt > 0) {
         (bool TransferSuccessful,) = daiStableCoinAddress
@@ -200,7 +206,10 @@ contract AgreementETH is BaseAgreement {
         uint256 timeInterval = now - lastCheckTime;
         uint256 currentDifference;
         
-        currentDaiLenderBalance = WrapperInstance.getLockedDai();
+        bytes memory response = execute(MCDWrapperMockAddress, abi.encodeWithSignature('getLockedDai()'));
+        assembly {
+            currentDaiLenderBalance := mload(add(response, 0x20))
+        }
         
         // test
             gotLockedDaiTestStorage = currentDaiLenderBalance;
