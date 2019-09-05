@@ -165,13 +165,14 @@ contract AgreementETH is BaseAgreement {
         
         execute(MCDWrapperMockAddress, abi.encodeWithSignature('unlockAllDai()'));
             
-        if(borrowerFRADebt > 0) {
+        if(borrowerFraDebtDai > 0) {
+            
         (bool TransferSuccessful,) = daiStableCoinAddress
             .call(abi.encodeWithSignature(
-                'transferFrom(address, address, uint256)', borrower, address(this), borrowerFraDebtDai));
+                'transferFrom(address,address,uint256)', borrower, address(this), borrowerFraDebtDai));
             
             if(TransferSuccessful) {
-                finalDaiLenderBalance += borrowerFRADebt;
+                finalDaiLenderBalance += borrowerFraDebtDai;
                 
                 emit AgreementTerminated(borrowerFraDebtDai, finalDaiLenderBalance);
             } else {
@@ -181,7 +182,7 @@ contract AgreementETH is BaseAgreement {
         }
         
         DaiInstance.transfer(lender, finalDaiLenderBalance);
-        WrapperInstance.transferCdpOwnership(cdpId, borrower);
+        //WrapperInstance.transferCdpOwnership(cdpId, borrower);
         
         isClosed = true;
         return true;
@@ -268,6 +269,11 @@ contract AgreementETH is BaseAgreement {
         
         emit AgreementLiquidated(ethFRADebtEquivalent, address(this).balance - ethFRADebtEquivalent);
         return true;
+    }
+    
+    //should be removed after testing!!!
+    function setBorrowerFraDebt(uint256 _borrowerFraDebt) public {
+        borrowerFRADebt = _borrowerFraDebt;
     }
 }
 
