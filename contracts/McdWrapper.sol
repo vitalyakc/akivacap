@@ -120,7 +120,7 @@ contract McdWrapper {
     function forceLiquidate(bytes32 ilk, uint cdpId) public view returns(uint) {
         address urn = ManagerLike(cdpManagerAddr).urns(cdpId);
         (uint ink, uint art) = VatLike(mcdVatAddr).urns(ilk, urn);
-        (,uint rate,,,) = VatLike(mcdVatAddr).ilks(ilk); // in single collateral it is: The ratio of PETH/ETH is 1.012
+        (,uint rate,,,) = VatLike(mcdVatAddr).ilks(ilk); // need to be clarified what it os in mcd. In single collateral it is: The ratio of PETH/ETH is 1.012
         (,uint chop,) = CatLike(mcdCatAddr).ilks(ilk); // penalty
         chop = 1100000000000000000000000000;
         uint price = getPrice(ilk);
