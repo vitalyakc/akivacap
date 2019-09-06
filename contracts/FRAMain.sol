@@ -30,7 +30,7 @@ contract FRAMain is Claimable {
         }
     }
     
-    function getAgreementListLength() public view returns(address[] memory _agreementList) {
+    function getAgreementList() public view returns(address[] memory _agreementList) {
         return agreementList;
     }
     
