@@ -67,16 +67,18 @@ contract BaseAgreement is Claimable, AgreementInterface{
     }
     
     constructor(address payable _borrower, uint256 _borrowerCollateralValue, uint256 _debtValue, uint256 _expireDate, uint256 _interestRate) public payable {
-        require(_expireDate > now, 'expairy date is in the past');
         require(_debtValue > 0);
         require(_interestRate <= ONE, 'interestRate');
+        
+        expireDate = now.add(_expireDate.mul(60));
+        
+        require(expireDate > now, 'expairy date is in the past');
         
         uint256 _cdpId;
 
         borrower = _borrower;
         debtValue = _debtValue;
         initialDate = now;
-        expireDate = now.add(_expireDate.mul(60));
         interestRate = _interestRate + ONE;
         borrowerCollateralValue = _borrowerCollateralValue;
         
@@ -94,7 +96,7 @@ contract BaseAgreement is Claimable, AgreementInterface{
     function closePendingAgreement() public isActive() onlyPending() returns(bool _success) {
         require(msg.sender == borrower);
         
-        WrapperInstance.transferCdpOwnership(cdpId, msg.sender);
+        execute(MCDWrapperMockAddress, abi.encodeWithSignature('transferCdpOwnership(uint256,address)', cdpId, msg.sender));
         isClosed = true;
         
         return true;
@@ -203,7 +205,7 @@ contract AgreementETH is BaseAgreement {
         }
         
         DaiInstance.transfer(lender, finalDaiLenderBalance);
-        WrapperInstance.transferCdpOwnership(cdpId, borrower);
+        execute(MCDWrapperMockAddress, abi.encodeWithSignature('transferCdpOwnership(uint256,address)', cdpId, borrower));
         
         isClosed = true;
         return true;
