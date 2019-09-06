@@ -3,6 +3,7 @@ pragma solidity 0.5.11;
 import './Claimable.sol';
 import './McdWrapper.sol';
 import './DaiInterface.sol';
+import './SafeMath.sol';
 
 
 interface AgreementInterface {
@@ -10,8 +11,10 @@ interface AgreementInterface {
     function isClosed() external view returns(bool);
     function matchAgreement() external returns(bool);
     function checkAgreement() external returns(bool);
+    function closePendingAgreement() external returns(bool);
     
-    event AgreementInitiated(address _borrower, uint256 _interestRate, uint256 _borrowerCollateralValue, uint256 _debtValue);
+    event AgreementInitiated(address _borrower, uint256 _borrowerCollateralValue, 
+        uint256 _debtValue, uint256 _expireDate, uint256 _interestRate);
     event AgreementMatched(address _lender, uint256 _startDate, uint256 _lastCheckTime);
     event AgreementUpdated(uint256 _borrowerFRADebt, uint256 _lenderPendingInjection, uint256 _injectedDaiAmount);
     event AgreementTerminated(uint256 _borrowerFraDebtDai, uint256 _finalDaiLenderBalance);
@@ -19,6 +22,8 @@ interface AgreementInterface {
 }
 
 contract BaseAgreement is Claimable, AgreementInterface{
+    using SafeMath for uint256;
+    
     address constant daiStableCoinAddress = address(0xc7cC3413f169a027dccfeffe5208Ca4f38eF0c40);
     address constant MCDWrapperMockAddress = address(0x0E823942b5eeD059635d82Da8E869B129DE4771c); 
     
@@ -52,7 +57,12 @@ contract BaseAgreement is Claimable, AgreementInterface{
     //
     
     modifier isActive() {
-        require(!isClosed);
+        require(!isClosed, 'Agreement is closed');
+        _;
+    }
+    
+    modifier onlyPending() {
+        require(isPending(), 'Agreement has its lender already');
         _;
     }
     
@@ -66,7 +76,7 @@ contract BaseAgreement is Claimable, AgreementInterface{
         borrower = _borrower;
         debtValue = _debtValue;
         initialDate = now;
-        expireDate = _expireDate;
+        expireDate = now.add(_expireDate.mul(60));
         interestRate = _interestRate + ONE;
         borrowerCollateralValue = _borrowerCollateralValue;
         
@@ -77,6 +87,21 @@ contract BaseAgreement is Claimable, AgreementInterface{
         cdpId = _cdpId;
         
         DaiInstance.transfer(_borrower, _debtValue);
+        
+        emit AgreementInitiated(_borrower, _borrowerCollateralValue, _debtValue, _expireDate, _interestRate);
+    }
+    
+    function closePendingAgreement() public isActive() onlyPending() returns(bool _success) {
+        require(msg.sender == borrower);
+        
+        WrapperInstance.transferCdpOwnership(cdpId, msg.sender);
+        isClosed = true;
+        
+        return true;
+    }
+    
+    function isPending() public view returns(bool) {
+        return (lender == address(0));
     }
     
     function execute(address _target, bytes memory _data)
@@ -116,9 +141,7 @@ contract AgreementETH is BaseAgreement {
         dsrTest = _dsrTest;
     }
     
-    function matchAgreement() public isActive() returns(bool _success) {
-        require(isPending(), 'Agreement has its lender already');
-        
+    function matchAgreement() public isActive() onlyPending() returns(bool _success) {
         (bool transferSuccess,) = daiStableCoinAddress.call(
             abi.encodeWithSignature('transferFrom(address,address,uint256)', msg.sender, address(this), debtValue));
         require(transferSuccess, 'Impossible to transfer DAI tokens, make valid allowance');
@@ -170,7 +193,7 @@ contract AgreementETH is BaseAgreement {
                     'transferFrom(address,address,uint256)', borrower, address(this), borrowerFraDebtDai));
             
             if(TransferSuccessful) {
-                finalDaiLenderBalance += borrowerFraDebtDai;
+                finalDaiLenderBalance = finalDaiLenderBalance.add(borrowerFraDebtDai);
                 
                 emit AgreementTerminated(borrowerFraDebtDai, finalDaiLenderBalance);
             } else {
@@ -205,7 +228,7 @@ contract AgreementETH is BaseAgreement {
     function _updateCurrentStateOrMakeInjection() internal returns(bool _success) { 
         uint256 currentDSR = dsrTest; //WrapperInstance.getDsr();
         uint256 currentDaiLenderBalance;
-        uint256 timeInterval = now - lastCheckTime;
+        uint256 timeInterval = now.sub(lastCheckTime);
         uint256 currentDifference;
         uint256 lenderPendingInjectionDai;
         
@@ -217,7 +240,7 @@ contract AgreementETH is BaseAgreement {
         if(currentDSR >= interestRate) {
             
             //rad, 45
-            currentDifference = ((debtValue * (currentDSR - interestRate)) * timeInterval) / YEAR; // to extend with calculation according to decimals
+            currentDifference = ((debtValue.mul((currentDSR.sub(interestRate)))).mul(timeInterval)) / YEAR; 
             
             if(currentDifference <= borrowerFRADebt) {
                 //rad, 45
@@ -236,11 +259,11 @@ contract AgreementETH is BaseAgreement {
                 } 
             }
         } else {
-            currentDifference = ((debtValue * (interestRate - currentDSR)) * timeInterval) / YEAR; // to extend with calculation according to decimals
+            currentDifference = ((debtValue.mul((interestRate.sub(currentDSR)))).mul(timeInterval)) / YEAR; 
             if(lenderPendingInjection >= currentDifference) {
-                lenderPendingInjection -= currentDifference;
+                lenderPendingInjection = lenderPendingInjection.sub(currentDifference);
             } else {
-                borrowerFRADebt = currentDifference - lenderPendingInjection;
+                borrowerFRADebt = currentDifference.sub(lenderPendingInjection);
             }
         }
         
@@ -255,16 +278,12 @@ contract AgreementETH is BaseAgreement {
         return true;
     }
     
-    function isPending() public view returns(bool) {
-        return (lender == address(0));
-    }
-    
     function _refundUsersAfterCDPLiquidation() internal returns(bool _success) {
         uint256 ethFRADebtEquivalent = WrapperInstance.getCollateralEquivalent(collateralType, borrowerFRADebt);
         lender.transfer(ethFRADebtEquivalent);
-        borrower.transfer(address(this).balance - ethFRADebtEquivalent);
+        borrower.transfer(address(this).balance.sub(ethFRADebtEquivalent));
         
-        emit AgreementLiquidated(ethFRADebtEquivalent, address(this).balance - ethFRADebtEquivalent);
+        emit AgreementLiquidated(ethFRADebtEquivalent, address(this).balance.sub(ethFRADebtEquivalent));
         return true;
     }
     
