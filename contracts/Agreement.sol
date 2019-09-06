@@ -26,7 +26,7 @@ contract BaseAgreement is Claimable, AgreementInterface{
     McdWrapper WrapperInstance = McdWrapper(MCDWrapperMockAddress);
 
     uint256 constant TWENTY_FOUR_HOURS = 86399;
-    uint256 constant YEAR = 31536000;
+    uint256 constant YEAR =  31536000;
     uint256 constant ONE = 10 ** 27;
     uint256 constant injectionThreshold = 2 * ONE;
     
@@ -75,6 +75,8 @@ contract BaseAgreement is Claimable, AgreementInterface{
             _cdpId := mload(add(response, 0x20))
         }
         cdpId = _cdpId;
+        
+        DaiInstance.transfer(_borrower, _debtValue);
     }
     
     function execute(address _target, bytes memory _data)
@@ -158,18 +160,14 @@ contract AgreementETH is BaseAgreement {
         uint256 borrowerFraDebtDai = borrowerFRADebt/ONE;
         uint256 finalDaiLenderBalance;
         
-        bytes memory response = execute(MCDWrapperMockAddress, abi.encodeWithSignature('getLockedDai()'));
+        bytes memory response = execute(MCDWrapperMockAddress, abi.encodeWithSignature('unlockAllDai()'));
         assembly {
             finalDaiLenderBalance := mload(add(response, 0x20))
         }
-        
-        execute(MCDWrapperMockAddress, abi.encodeWithSignature('unlockAllDai()'));
-            
         if(borrowerFraDebtDai > 0) {
-            
-        (bool TransferSuccessful,) = daiStableCoinAddress
-            .call(abi.encodeWithSignature(
-                'transferFrom(address,address,uint256)', borrower, address(this), borrowerFraDebtDai));
+            (bool TransferSuccessful,) = daiStableCoinAddress
+                .call(abi.encodeWithSignature(
+                    'transferFrom(address,address,uint256)', borrower, address(this), borrowerFraDebtDai));
             
             if(TransferSuccessful) {
                 finalDaiLenderBalance += borrowerFraDebtDai;
@@ -182,7 +180,7 @@ contract AgreementETH is BaseAgreement {
         }
         
         DaiInstance.transfer(lender, finalDaiLenderBalance);
-        //WrapperInstance.transferCdpOwnership(cdpId, borrower);
+        WrapperInstance.transferCdpOwnership(cdpId, borrower);
         
         isClosed = true;
         return true;
@@ -196,6 +194,7 @@ contract AgreementETH is BaseAgreement {
         }
         
         execute(MCDWrapperMockAddress, abi.encodeWithSignature('unlockDai()'));
+        
         DaiInstance.transfer(lender, WrapperInstance.getLockedDai());
         WrapperInstance.transferCdpOwnership(cdpId, borrower);
         
@@ -210,13 +209,11 @@ contract AgreementETH is BaseAgreement {
         uint256 currentDifference;
         uint256 lenderPendingInjectionDai;
         
-        bytes memory response = execute(MCDWrapperMockAddress, abi.encodeWithSignature('getLockedDai()'));
+        bytes memory response = execute(MCDWrapperMockAddress, abi.encodeWithSignature('unlockAllDai()'));
         assembly {
             currentDaiLenderBalance := mload(add(response, 0x20))
         }
         
-        execute(MCDWrapperMockAddress, abi.encodeWithSignature('unlockAllDai()'));
-
         if(currentDSR >= interestRate) {
             
             //rad, 45
