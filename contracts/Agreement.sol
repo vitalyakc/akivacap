@@ -52,7 +52,7 @@ contract BaseAgreement is Claimable, AgreementInterface{
     
     // test version, should be extended after stable 
     // multicollaterall makerDAO release
-    bytes32 constant collateralType =
+    bytes32 public collateralType =
     0x4554482d41000000000000000000000000000000000000000000000000000000; // ETH-A
     //
     
