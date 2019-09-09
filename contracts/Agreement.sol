@@ -26,10 +26,10 @@ contract BaseAgreement is Claimable, AgreementInterface{
     using SafeMath for uint256;
     
     address constant daiStableCoinAddress = address(0xc7cC3413f169a027dccfeffe5208Ca4f38eF0c40);
-    address constant MCDWrapperMockAddress = address(0x0E823942b5eeD059635d82Da8E869B129DE4771c); 
+    address constant McdWrapperAddress = address(0x4aF6f757e5a9ef79C038bF380ea85c1AbbB3099a); 
     
     DaiInterface DaiInstance = DaiInterface(daiStableCoinAddress);
-    McdWrapper WrapperInstance = McdWrapper(MCDWrapperMockAddress);
+    McdWrapper WrapperInstance = McdWrapper(McdWrapperAddress);
 
     uint256 constant TWENTY_FOUR_HOURS = 86399;
     uint256 constant YEAR =  31536000;
@@ -86,7 +86,7 @@ contract BaseAgreement is Claimable, AgreementInterface{
         borrowerCollateralValue = _borrowerCollateralValue;
         
         bytes memory response = execute(
-            MCDWrapperMockAddress, abi.encodeWithSignature('openEthaCdp(uint256)', _debtValue));
+            McdWrapperAddress, abi.encodeWithSignature('openEthaCdp(uint256)', _debtValue));
         assembly {
             _cdpId := mload(add(response, 0x20))
         }
@@ -102,7 +102,7 @@ contract BaseAgreement is Claimable, AgreementInterface{
         require(msg.sender == borrower, 'Accessible only for borrower');
         
         execute(
-            MCDWrapperMockAddress, 
+            McdWrapperAddress, 
             abi.encodeWithSignature('transferCdpOwnership(uint256,address)', cdpId, msg.sender));
         
         isClosed = true;
@@ -164,7 +164,7 @@ contract AgreementETH is BaseAgreement {
         
         lender = msg.sender;
         startDate = now;
-        execute(MCDWrapperMockAddress, abi.encodeWithSignature('lockDai(uint256)', debtValue));
+        execute(McdWrapperAddress, abi.encodeWithSignature('lockDai(uint256)', debtValue));
 
         lastCheckTime = now;
         
@@ -201,7 +201,7 @@ contract AgreementETH is BaseAgreement {
         uint256 finalDaiLenderBalance;
         
         bytes memory response = execute(
-            MCDWrapperMockAddress, abi.encodeWithSignature('unlockAllDai()'));
+            McdWrapperAddress, abi.encodeWithSignature('unlockAllDai()'));
         assembly {
             finalDaiLenderBalance := mload(add(response, 0x20))
         }
@@ -221,7 +221,7 @@ contract AgreementETH is BaseAgreement {
         
         DaiInstance.transfer(lender, finalDaiLenderBalance);
         execute(
-            MCDWrapperMockAddress, 
+            McdWrapperAddress, 
             abi.encodeWithSignature('transferCdpOwnership(uint256,address)', cdpId, borrower));
         
         isClosed = true;
@@ -235,7 +235,7 @@ contract AgreementETH is BaseAgreement {
             borrower.transfer(address(this).balance);
         }
         
-        execute(MCDWrapperMockAddress, abi.encodeWithSignature('unlockDai()'));
+        execute(McdWrapperAddress, abi.encodeWithSignature('unlockDai()'));
         
         DaiInstance.transfer(lender, WrapperInstance.getLockedDai());
         WrapperInstance.transferCdpOwnership(cdpId, borrower);
@@ -252,7 +252,7 @@ contract AgreementETH is BaseAgreement {
         uint256 lenderPendingInjectionDai;
         
         bytes memory response = execute(
-            MCDWrapperMockAddress, abi.encodeWithSignature('unlockAllDai()'));
+            McdWrapperAddress, abi.encodeWithSignature('unlockAllDai()'));
         assembly {
             currentDaiLenderBalance := mload(add(response, 0x20))
         }
@@ -275,7 +275,7 @@ contract AgreementETH is BaseAgreement {
                     //wad, 18
                     lenderPendingInjectionDai = lenderPendingInjection/ONE;
                     execute(
-                        MCDWrapperMockAddress, 
+                        McdWrapperAddress, 
                         abi.encodeWithSignature(
                         'injectToCdp(uint256,uint256)', cdpId, lenderPendingInjectionDai));
                     //wad, 18
@@ -294,7 +294,7 @@ contract AgreementETH is BaseAgreement {
         }
         
         execute(
-            MCDWrapperMockAddress, 
+            McdWrapperAddress, 
             abi.encodeWithSignature(
             'lockDai(uint256)', currentDaiLenderBalance));
         
