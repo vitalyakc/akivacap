@@ -265,12 +265,12 @@ contract AgreementETH is BaseAgreement {
             
             if(currentDifference <= borrowerFRADebt) {
                 //rad, 45
-                borrowerFRADebt -= currentDifference;
+                borrowerFRADebt = borrowerFRADebt.sub(currentDifference);
             } else {
-                currentDifference -= borrowerFRADebt;
+                currentDifference = currentDifference.sub(borrowerFRADebt);
                 borrowerFRADebt = 0;
                 //rad, 45
-                lenderPendingInjection += currentDifference;
+                lenderPendingInjection = lenderPendingInjection.add(currentDifference);
                 if(lenderPendingInjection >= injectionThreshold) {
                     //wad, 18
                     lenderPendingInjectionDai = lenderPendingInjection/ONE;
@@ -279,7 +279,8 @@ contract AgreementETH is BaseAgreement {
                         abi.encodeWithSignature(
                         'injectToCdp(uint256,uint256)', cdpId, lenderPendingInjectionDai));
                     //wad, 18
-                    lenderPendingInjection -= lenderPendingInjectionDai * ONE;
+                    lenderPendingInjection = lenderPendingInjection.sub(lenderPendingInjectionDai * ONE);
+                    currentDaiLenderBalance = currentDaiLenderBalance.sub(lenderPendingInjectionDai);
                 } 
             }
         } else {
