@@ -3,12 +3,12 @@ pragma solidity 0.5.11;
 contract Ownable {
     address public owner;
     
-    constructor () public {
+    constructor() public {
         owner = msg.sender;
     }
     
     modifier onlyContractOwner() {
-        require(owner == msg.sender);
+        require(owner == msg.sender, 'Not a contract owner');
         _;
     }
 }
@@ -21,7 +21,7 @@ contract Claimable is Ownable {
     }
     
     function claimOwnership() public {
-        require(msg.sender == pendingOwner);
+        require(msg.sender == pendingOwner, 'Not a pending owner');
         owner = msg.sender;
         pendingOwner = address(0);
     }

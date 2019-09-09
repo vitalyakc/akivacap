@@ -16,7 +16,8 @@ interface AgreementInterface {
     event AgreementInitiated(address _borrower, uint256 _borrowerCollateralValue, 
         uint256 _debtValue, uint256 _expireDate, uint256 _interestRate);
     event AgreementMatched(address _lender, uint256 _startDate, uint256 _lastCheckTime);
-    event AgreementUpdated(uint256 _borrowerFRADebt, uint256 _lenderPendingInjection, uint256 _injectedDaiAmount);
+    event AgreementUpdated(uint256 _borrowerFRADebt, 
+        uint256 _lenderPendingInjection, uint256 _injectedDaiAmount);
     event AgreementTerminated(uint256 _borrowerFraDebtDai, uint256 _finalDaiLenderBalance);
     event AgreementLiquidated(uint256 _lenderEthReward, uint256 _borrowerEthResedual);
 }
@@ -49,8 +50,10 @@ contract BaseAgreement is Claimable, AgreementInterface{
     uint256 public cdpId;
     uint256 public lastCheckTime;
     
-    // test version, should be extended after stable multicollaterall makerDAO release
-    bytes32 constant collateralType = 0x4554482d41000000000000000000000000000000000000000000000000000000; // ETH-A
+    // test version, should be extended after stable 
+    // multicollaterall makerDAO release
+    bytes32 constant collateralType =
+    0x4554482d41000000000000000000000000000000000000000000000000000000; // ETH-A
     //
     
     modifier isNotClosed() {
@@ -63,8 +66,11 @@ contract BaseAgreement is Claimable, AgreementInterface{
         _;
     }
     
-    constructor(address payable _borrower, uint256 _borrowerCollateralValue, uint256 _debtValue, uint256 _expireDate, uint256 _interestRate) public payable {
-        require(_debtValue > 0);
+    constructor(address payable _borrower, uint256 _borrowerCollateralValue, 
+        uint256 _debtValue, uint256 _expireDate, uint256 _interestRate) 
+    public payable 
+    {
+        require(_debtValue > 0, 'debt cannot be 0');
         require(_interestRate <= ONE, 'interestRate');
         
         expireDate = now.add(_expireDate.mul(60));
@@ -79,7 +85,8 @@ contract BaseAgreement is Claimable, AgreementInterface{
         interestRate = _interestRate + ONE;
         borrowerCollateralValue = _borrowerCollateralValue;
         
-        bytes memory response = execute(MCDWrapperMockAddress, abi.encodeWithSignature('openEthaCdp(uint256)', _debtValue));
+        bytes memory response = execute(
+            MCDWrapperMockAddress, abi.encodeWithSignature('openEthaCdp(uint256)', _debtValue));
         assembly {
             _cdpId := mload(add(response, 0x20))
         }
@@ -87,13 +94,17 @@ contract BaseAgreement is Claimable, AgreementInterface{
         
         DaiInstance.transfer(_borrower, _debtValue);
         
-        emit AgreementInitiated(_borrower, _borrowerCollateralValue, _debtValue, _expireDate, _interestRate);
+        emit AgreementInitiated(
+            _borrower, _borrowerCollateralValue, _debtValue, _expireDate, _interestRate);
     }
     
     function closePendingAgreement() public isNotClosed() onlyPending() returns(bool _success) {
-        require(msg.sender == borrower);
+        require(msg.sender == borrower, 'Accessible only for borrower');
         
-        execute(MCDWrapperMockAddress, abi.encodeWithSignature('transferCdpOwnership(uint256,address)', cdpId, msg.sender));
+        execute(
+            MCDWrapperMockAddress, 
+            abi.encodeWithSignature('transferCdpOwnership(uint256,address)', cdpId, msg.sender));
+        
         isClosed = true;
         
         return true;
@@ -110,7 +121,7 @@ contract BaseAgreement is Claimable, AgreementInterface{
         payable
         returns (bytes memory response)
     {
-        require(_target != address(0), "ds-proxy-target-address-required");
+        require(_target != address(0), 'ds-proxy-target-address-required');
 
         // call contract in current context
         assembly {
@@ -135,7 +146,10 @@ contract AgreementETH is BaseAgreement {
     
     uint256 public dsrTest = 105 * 10 ** 25;
     
-    constructor (address payable _borrower, uint256 _borrowerCollateralValue, uint256 _debtValue, uint256 _expairyDate, uint256 _interestRate) public payable
+    constructor (
+        address payable _borrower, uint256 _borrowerCollateralValue, 
+        uint256 _debtValue, uint256 _expairyDate, uint256 _interestRate) 
+    public payable
     BaseAgreement(_borrower, _borrowerCollateralValue, _debtValue, _expairyDate, _interestRate) {}
     
     function setdsrTest(uint256 _dsrTest) public {
@@ -144,7 +158,8 @@ contract AgreementETH is BaseAgreement {
     
     function matchAgreement() public isNotClosed() onlyPending() returns(bool _success) {
         (bool transferSuccess,) = daiStableCoinAddress.call(
-            abi.encodeWithSignature('transferFrom(address,address,uint256)', msg.sender, address(this), debtValue));
+            abi.encodeWithSignature(
+            'transferFrom(address,address,uint256)', msg.sender, address(this), debtValue));
         require(transferSuccess, 'Impossible to transfer DAI tokens, make valid allowance');
         
         lender = msg.sender;
@@ -157,7 +172,8 @@ contract AgreementETH is BaseAgreement {
         return true;
     }
     
-    function checkAgreement() public onlyContractOwner() isNotClosed() returns(bool _success) { // is supposed to be called in loop externaly
+    // is supposed to be called in loop externaly
+    function checkAgreement() public onlyContractOwner() isNotClosed() returns(bool _success) { 
         if (!isPending()) {
             _updateCurrentStateOrMakeInjection();
             
@@ -184,14 +200,14 @@ contract AgreementETH is BaseAgreement {
         uint256 borrowerFraDebtDai = borrowerFRADebt/ONE;
         uint256 finalDaiLenderBalance;
         
-        bytes memory response = execute(MCDWrapperMockAddress, abi.encodeWithSignature('unlockAllDai()'));
+        bytes memory response = execute(
+            MCDWrapperMockAddress, abi.encodeWithSignature('unlockAllDai()'));
         assembly {
             finalDaiLenderBalance := mload(add(response, 0x20))
         }
         if(borrowerFraDebtDai > 0) {
-            (bool TransferSuccessful,) = daiStableCoinAddress
-                .call(abi.encodeWithSignature(
-                    'transferFrom(address,address,uint256)', borrower, address(this), borrowerFraDebtDai));
+            (bool TransferSuccessful,) = daiStableCoinAddress.call(abi.encodeWithSignature(
+                'transferFrom(address,address,uint256)', borrower, address(this), borrowerFraDebtDai));
             
             if(TransferSuccessful) {
                 finalDaiLenderBalance = finalDaiLenderBalance.add(borrowerFraDebtDai);
@@ -204,7 +220,9 @@ contract AgreementETH is BaseAgreement {
         }
         
         DaiInstance.transfer(lender, finalDaiLenderBalance);
-        execute(MCDWrapperMockAddress, abi.encodeWithSignature('transferCdpOwnership(uint256,address)', cdpId, borrower));
+        execute(
+            MCDWrapperMockAddress, 
+            abi.encodeWithSignature('transferCdpOwnership(uint256,address)', cdpId, borrower));
         
         isClosed = true;
         return true;
@@ -233,7 +251,8 @@ contract AgreementETH is BaseAgreement {
         uint256 currentDifference;
         uint256 lenderPendingInjectionDai;
         
-        bytes memory response = execute(MCDWrapperMockAddress, abi.encodeWithSignature('unlockAllDai()'));
+        bytes memory response = execute(
+            MCDWrapperMockAddress, abi.encodeWithSignature('unlockAllDai()'));
         assembly {
             currentDaiLenderBalance := mload(add(response, 0x20))
         }
@@ -241,7 +260,8 @@ contract AgreementETH is BaseAgreement {
         if(currentDSR >= interestRate) {
             
             //rad, 45
-            currentDifference = ((debtValue.mul((currentDSR.sub(interestRate)))).mul(timeInterval)) / YEAR; 
+            currentDifference = ((debtValue.mul(
+                (currentDSR.sub(interestRate)))).mul(timeInterval)) / YEAR; 
             
             if(currentDifference <= borrowerFRADebt) {
                 //rad, 45
@@ -254,13 +274,17 @@ contract AgreementETH is BaseAgreement {
                 if(lenderPendingInjection >= injectionThreshold) {
                     //wad, 18
                     lenderPendingInjectionDai = lenderPendingInjection/ONE;
-                    execute(MCDWrapperMockAddress, abi.encodeWithSignature('injectToCdp(uint256,uint256)', cdpId, lenderPendingInjectionDai));
+                    execute(
+                        MCDWrapperMockAddress, 
+                        abi.encodeWithSignature(
+                        'injectToCdp(uint256,uint256)', cdpId, lenderPendingInjectionDai));
                     //wad, 18
                     lenderPendingInjection -= lenderPendingInjectionDai * ONE;
                 } 
             }
         } else {
-            currentDifference = ((debtValue.mul((interestRate.sub(currentDSR)))).mul(timeInterval)) / YEAR; 
+            currentDifference = ((debtValue.mul(
+                (interestRate.sub(currentDSR)))).mul(timeInterval)) / YEAR;
             if(lenderPendingInjection >= currentDifference) {
                 lenderPendingInjection = lenderPendingInjection.sub(currentDifference);
             } else {
@@ -268,18 +292,23 @@ contract AgreementETH is BaseAgreement {
             }
         }
         
-        execute(MCDWrapperMockAddress, abi.encodeWithSignature('lockDai(uint256)', currentDaiLenderBalance));
+        execute(
+            MCDWrapperMockAddress, 
+            abi.encodeWithSignature(
+            'lockDai(uint256)', currentDaiLenderBalance));
         
         emit AgreementUpdated(borrowerFRADebt, lenderPendingInjection, lenderPendingInjectionDai);
         return true;
     }
     
     function _refundUsersAfterCDPLiquidation() internal returns(bool _success) {
-        uint256 ethFRADebtEquivalent = WrapperInstance.getCollateralEquivalent(collateralType, borrowerFRADebt);
+        uint256 ethFRADebtEquivalent = WrapperInstance.getCollateralEquivalent(
+            collateralType, borrowerFRADebt);
         lender.transfer(ethFRADebtEquivalent);
         borrower.transfer(address(this).balance.sub(ethFRADebtEquivalent));
         
-        emit AgreementLiquidated(ethFRADebtEquivalent, address(this).balance.sub(ethFRADebtEquivalent));
+        emit AgreementLiquidated(
+            ethFRADebtEquivalent, address(this).balance.sub(ethFRADebtEquivalent));
         return true;
     }
     
