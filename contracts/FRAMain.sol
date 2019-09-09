@@ -29,7 +29,13 @@ contract FRAMain is Claimable {
             }
         }
     }
-    
+
+    function checkAgreement(address _agreement) public { //onlyContractOwner()
+        if (!AgreementInterface(_agreement).isClosed()) {
+            AgreementInterface(_agreement).checkAgreement();
+        }
+    }
+
     function getAgreementList() public view returns(address[] memory _agreementList) {
         return agreementList;
     }

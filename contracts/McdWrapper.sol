@@ -139,7 +139,7 @@ contract McdWrapper {
     }
 
     function getPrice(bytes32 ilk) public view returns(uint) {
-        return getSafePrice(ilk) * getLiquidationRatio(ilk) / ONE;
+        return getSafePrice(ilk) * getLiquidationRatio(ilk) / ONE; //
     }
 
     function getSafePrice(bytes32 ilk) public view returns(uint) {
