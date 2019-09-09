@@ -33,7 +33,7 @@ contract BaseAgreement is Claimable, AgreementInterface{
     uint256 constant TWENTY_FOUR_HOURS = 86399;
     uint256 constant YEAR =  31536000;
     uint256 constant ONE = 10 ** 27;
-    uint256 constant injectionThreshold = 2 * ONE;
+    uint256 public injectionThreshold = 2 * ONE;
     
     address payable public borrower;
     address payable public lender;
@@ -51,12 +51,9 @@ contract BaseAgreement is Claimable, AgreementInterface{
     
     // test version, should be extended after stable multicollaterall makerDAO release
     bytes32 constant collateralType = 0x4554482d41000000000000000000000000000000000000000000000000000000; // ETH-A
-    uint256 public ethAmountAfterLiquidation;
-    uint256 public currentDaiLenderBalanceTestStorage;
-    uint256 public currentDifferenceTestStorage; 
     //
     
-    modifier isActive() {
+    modifier isNotClosed() {
         require(!isClosed, 'Agreement is closed');
         _;
     }
@@ -93,7 +90,7 @@ contract BaseAgreement is Claimable, AgreementInterface{
         emit AgreementInitiated(_borrower, _borrowerCollateralValue, _debtValue, _expireDate, _interestRate);
     }
     
-    function closePendingAgreement() public isActive() onlyPending() returns(bool _success) {
+    function closePendingAgreement() public isNotClosed() onlyPending() returns(bool _success) {
         require(msg.sender == borrower);
         
         execute(MCDWrapperMockAddress, abi.encodeWithSignature('transferCdpOwnership(uint256,address)', cdpId, msg.sender));
@@ -105,6 +102,8 @@ contract BaseAgreement is Claimable, AgreementInterface{
     function isPending() public view returns(bool) {
         return (lender == address(0));
     }
+    
+    function() external payable {}
     
     function execute(address _target, bytes memory _data)
         public
@@ -143,7 +142,7 @@ contract AgreementETH is BaseAgreement {
         dsrTest = _dsrTest;
     }
     
-    function matchAgreement() public isActive() onlyPending() returns(bool _success) {
+    function matchAgreement() public isNotClosed() onlyPending() returns(bool _success) {
         (bool transferSuccess,) = daiStableCoinAddress.call(
             abi.encodeWithSignature('transferFrom(address,address,uint256)', msg.sender, address(this), debtValue));
         require(transferSuccess, 'Impossible to transfer DAI tokens, make valid allowance');
@@ -158,7 +157,7 @@ contract AgreementETH is BaseAgreement {
         return true;
     }
     
-    function checkAgreement() public onlyContractOwner() isActive() returns(bool _success) { // is supposed to be called in loop externaly
+    function checkAgreement() public onlyContractOwner() isNotClosed() returns(bool _success) { // is supposed to be called in loop externaly
         if (!isPending()) {
             _updateCurrentStateOrMakeInjection();
             
@@ -199,7 +198,7 @@ contract AgreementETH is BaseAgreement {
                 
                 emit AgreementTerminated(borrowerFraDebtDai, finalDaiLenderBalance);
             } else {
-                ethAmountAfterLiquidation = WrapperInstance.forceLiquidate(collateralType, cdpId);
+                WrapperInstance.forceLiquidate(collateralType, cdpId);
                 _refundUsersAfterCDPLiquidation();
             }
         }
@@ -270,11 +269,6 @@ contract AgreementETH is BaseAgreement {
         }
         
         execute(MCDWrapperMockAddress, abi.encodeWithSignature('lockDai(uint256)', currentDaiLenderBalance));
-        
-        //test
-        currentDaiLenderBalanceTestStorage = currentDaiLenderBalance;
-        currentDifferenceTestStorage = currentDifference;
-        //
         
         emit AgreementUpdated(borrowerFRADebt, lenderPendingInjection, lenderPendingInjectionDai);
         return true;
