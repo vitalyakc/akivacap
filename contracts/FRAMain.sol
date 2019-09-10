@@ -40,6 +40,10 @@ contract FraMain is Claimable {
         return agreementList;
     }
     
+    function approveAgreement(address _agreement) public onlyContractOwner() returns(bool _success) {
+        return AgreementInterface(_agreement).approve();
+    }
+    
     function getNow () public view returns(uint256) { // for testing
         return now;
     }
