@@ -290,6 +290,7 @@ contract AgreementETH is BaseAgreement {
                 lenderPendingInjection = lenderPendingInjection.sub(currentDifference);
             } else {
                 borrowerFRADebt = currentDifference.sub(lenderPendingInjection);
+                lenderPendingInjection = 0;
             }
         }
         
