@@ -84,6 +84,10 @@ contract McdWrapper {
     function openEthaCdp(uint wadD) public payable returns (uint cdp) {
         return openLockETHAndDraw(mcdJoinEthaAddr, ETH_A, wadD);
     }
+
+    function openEthaCdpNonPayable(uint wadC, uint wadD) public returns (uint cdp) {
+        return this.openEthaCdp.value(wadC)(wadD);
+    }
     
     function openEthbCdp(uint wadD) public payable returns (uint cdp) {
         return openLockETHAndDraw(mcdJoinEthbAddr, ETH_B, wadD);
