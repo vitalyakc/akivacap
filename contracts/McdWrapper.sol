@@ -69,6 +69,10 @@ contract McdWrapper {
         return ProxyRegistry(proxyRegistryAddr).build();
     }
     
+    function proxyAddress(address _proxyOwner) public view returns (address) {
+        return address(ProxyRegistry(proxyRegistryAddr).proxies(_proxyOwner));
+    }
+
     function proxy() public view returns (DSProxy) {
         return ProxyRegistry(proxyRegistryAddr).proxies(address(this));
     }
@@ -136,6 +140,15 @@ contract McdWrapper {
             return ethAmount;
         }
         else return ethAmount + 1;
+    }
+
+    function getCdpInfo(bytes32 ilk, uint cdpId) public view returns(uint ink, uint art) {
+        address urn = ManagerLike(cdpManagerAddr).urns(cdpId);
+        (ink, art) = VatLike(mcdVatAddr).urns(ilk, urn);
+    }
+
+    function getPie(address _proxy) public view returns(uint256) {
+        return PotLike(mcdPotAddr).pie(_proxy);
     }
 
     function getPrice(bytes32 ilk) public view returns(uint) {
