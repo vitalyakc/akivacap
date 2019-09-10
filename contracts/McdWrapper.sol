@@ -86,7 +86,7 @@ contract McdWrapper {
     }
 
     function openEthaCdpNonPayable(uint wadC, uint wadD) public returns (uint cdp) {
-        return this.openEthaCdp.value(wadC)(wadD);
+        return openLockETHAndDrawNonPayable(mcdJoinEthaAddr, ETH_A, wadD, wadC);
     }
     
     function openEthbCdp(uint wadD) public payable returns (uint cdp) {
@@ -221,6 +221,27 @@ contract McdWrapper {
         bytes memory data = abi.encodeWithSignature('execute(address,bytes)', proxyLib, abi.encodeWithSignature('openLockETHAndDraw(address,address,address,bytes32,uint256)', cdpManagerAddr, mcdJoinCollateralAddr, mcdJoinDaiAddr, ilk, wadD));
         assembly {
             let succeeded := call(sub(gas, 5000), target, callvalue, add(data, 0x20), mload(data), 0, 0)
+            let size := returndatasize
+            let response := mload(0x40)
+            mstore(0x40, add(response, and(add(add(size, 0x20), 0x1f), not(0x1f))))
+            mstore(response, size)
+            returndatacopy(add(response, 0x20), 0, size)
+
+                cdp := mload(add(response, 0x60))
+
+            switch iszero(succeeded)
+            case 1 {
+                // throw if delegatecall failed
+                revert(add(response, 0x20), size)
+            }
+        }
+    }
+    
+    function openLockETHAndDrawNonPayable(address mcdJoinCollateralAddr, bytes32 ilk, uint wadD, uint wadC) public returns (uint cdp) {
+        address payable target = buildProxy();
+        bytes memory data = abi.encodeWithSignature('execute(address,bytes)', proxyLib, abi.encodeWithSignature('openLockETHAndDraw(address,address,address,bytes32,uint256)', cdpManagerAddr, mcdJoinCollateralAddr, mcdJoinDaiAddr, ilk, wadD));
+        assembly {
+            let succeeded := call(sub(gas, 5000), target, wadC, add(data, 0x20), mload(data), 0, 0)
             let size := returndatasize
             let response := mload(0x40)
             mstore(0x40, add(response, and(add(add(size, 0x20), 0x1f), not(0x1f))))
