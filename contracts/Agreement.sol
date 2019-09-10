@@ -26,7 +26,7 @@ contract BaseAgreement is Claimable, AgreementInterface{
     using SafeMath for uint256;
     
     address constant daiStableCoinAddress = address(0xc7cC3413f169a027dccfeffe5208Ca4f38eF0c40);
-    address constant McdWrapperAddress = address(0x4aF6f757e5a9ef79C038bF380ea85c1AbbB3099a); 
+    address constant McdWrapperAddress = address(0xb7662135a5E9202750f44BC50054D93ec136E4cb); 
     
     DaiInterface DaiInstance = DaiInterface(daiStableCoinAddress);
     McdWrapper WrapperInstance = McdWrapper(McdWrapperAddress);
