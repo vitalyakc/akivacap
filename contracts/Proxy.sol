@@ -17,8 +17,8 @@
 
 pragma solidity >=0.5.0 <0.6.0;
 
-import "./Auth.sol";
-import "./Note.sol";
+import './Auth.sol';
+import './Note.sol';
 
 // DSProxy
 // Allows code execution using a persistant identity This can be very
@@ -57,7 +57,7 @@ contract DSProxy is DSAuth, DSNote {
         payable
         returns (bytes memory response)
     {
-        require(_target != address(0), "ds-proxy-target-address-required");
+        require(_target != address(0), 'ds-proxy-target-address-required');
 
         // call contract in current context
         assembly {
@@ -84,7 +84,7 @@ contract DSProxy is DSAuth, DSNote {
         note
         returns (bool)
     {
-        require(_cacheAddr != address(0), "ds-proxy-cache-address-required");
+        require(_cacheAddr != address(0), 'ds-proxy-cache-address-required');
         cache = DSProxyCache(_cacheAddr);  // overwrite cache
         return true;
     }

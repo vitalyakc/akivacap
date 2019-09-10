@@ -5,7 +5,7 @@ import './Claimable.sol';
 import './Agreement.sol';
 
 
-contract FRAMain is Claimable {
+contract FraMain is Claimable {
     mapping(address => address[]) public agreements;
     address[] public agreementList;
 
@@ -29,13 +29,7 @@ contract FRAMain is Claimable {
             }
         }
     }
-
-    function checkAgreement(address _agreement) public { //onlyContractOwner()
-        if (!AgreementInterface(_agreement).isClosed()) {
-            AgreementInterface(_agreement).checkAgreement();
-        }
-    }
-
+    
     function getAgreementList() public view returns(address[] memory _agreementList) {
         return agreementList;
     }
