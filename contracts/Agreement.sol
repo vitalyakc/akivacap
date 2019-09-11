@@ -339,7 +339,7 @@ contract AgreementETH is BaseAgreement {
         uint256 ethFRADebtEquivalent = WrapperInstance.getCollateralEquivalent(
             collateralType, borrowerFRADebt / ONE);
         lender.transfer(ethFRADebtEquivalent);
-        borrower.transfer(address(this).balance.sub(ethFRADebtEquivalent));
+        borrower.transfer(address(this).balance);
         
         emit AgreementLiquidated(
             ethFRADebtEquivalent, address(this).balance.sub(ethFRADebtEquivalent));
