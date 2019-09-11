@@ -317,12 +317,11 @@ contract AgreementETH is BaseAgreement {
                 } 
             }
         } else {
-            currentDifference = ((debtValue.mul(
-                (interestRate.sub(currentDSR)))).mul(timeInterval)) / YEAR;
+            currentDifference = debtValue.mul(interestRate.sub(currentDSR)).mul(timeInterval) / YEAR;
             if(lenderPendingInjection >= currentDifference) {
                 lenderPendingInjection = lenderPendingInjection.sub(currentDifference);
             } else {
-                borrowerFRADebt = currentDifference.sub(lenderPendingInjection);
+                borrowerFRADebt = borrowerFRADebt.add(currentDifference.sub(lenderPendingInjection));
                 lenderPendingInjection = 0;
             }
         }
@@ -338,7 +337,7 @@ contract AgreementETH is BaseAgreement {
     
     function _refundUsersAfterCDPLiquidation() internal returns(bool _success) {
         uint256 ethFRADebtEquivalent = WrapperInstance.getCollateralEquivalent(
-            collateralType, borrowerFRADebt);
+            collateralType, borrowerFRADebt / ONE);
         lender.transfer(ethFRADebtEquivalent);
         borrower.transfer(address(this).balance.sub(ethFRADebtEquivalent));
         
