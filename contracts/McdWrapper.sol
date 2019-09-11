@@ -1,6 +1,6 @@
 pragma solidity >=0.5.0;
 
-import "./ProxyRegistry.sol";
+import './ProxyRegistry.sol';
 
 contract DaiLike {
     function approve(address usr, uint wad) external returns (bool);
@@ -69,6 +69,10 @@ contract McdWrapper {
         return ProxyRegistry(proxyRegistryAddr).build();
     }
     
+    function proxyAddress(address _proxyOwner) public view returns (address) {
+        return address(ProxyRegistry(proxyRegistryAddr).proxies(_proxyOwner));
+    }
+
     function proxy() public view returns (DSProxy) {
         return ProxyRegistry(proxyRegistryAddr).proxies(address(this));
     }
@@ -79,6 +83,10 @@ contract McdWrapper {
     
     function openEthaCdp(uint wadD) public payable returns (uint cdp) {
         return openLockETHAndDraw(mcdJoinEthaAddr, ETH_A, wadD);
+    }
+
+    function openEthaCdpNonPayable(uint wadC, uint wadD) public returns (uint cdp) {
+        return openLockETHAndDrawNonPayable(mcdJoinEthaAddr, ETH_A, wadD, wadC);
     }
     
     function openEthbCdp(uint wadD) public payable returns (uint cdp) {
@@ -92,11 +100,11 @@ contract McdWrapper {
     
     function lockDai(uint wad) public {
         approveDai(address(proxy()), wad);
-        proxy().execute(proxyLib, abi.encodeWithSignature("dsrJoin(address,address,uint256)", mcdJoinDaiAddr, mcdPotAddr, wad));
+        proxy().execute(proxyLib, abi.encodeWithSignature('dsrJoin(address,address,uint256)', mcdJoinDaiAddr, mcdPotAddr, wad));
     }
     
     function unlockDai(uint wad) public {
-        proxy().execute(proxyLib, abi.encodeWithSignature("dsrExit(address,address,uint256)", mcdJoinDaiAddr, mcdPotAddr, wad));
+        proxy().execute(proxyLib, abi.encodeWithSignature('dsrExit(address,address,uint256)', mcdJoinDaiAddr, mcdPotAddr, wad));
     }
     
     function unlockAllDai() public returns(uint pie) {
@@ -120,7 +128,7 @@ contract McdWrapper {
     function forceLiquidate(bytes32 ilk, uint cdpId) public view returns(uint) {
         address urn = ManagerLike(cdpManagerAddr).urns(cdpId);
         (uint ink, uint art) = VatLike(mcdVatAddr).urns(ilk, urn);
-        (,uint rate,,,) = VatLike(mcdVatAddr).ilks(ilk); // in single collateral it is: The ratio of PETH/ETH is 1.012
+        (,uint rate,,,) = VatLike(mcdVatAddr).ilks(ilk); // need to be clarified what it os in mcd. In single collateral it is: The ratio of PETH/ETH is 1.012
         (,uint chop,) = CatLike(mcdCatAddr).ilks(ilk); // penalty
         chop = 1100000000000000000000000000;
         uint price = getPrice(ilk);
@@ -136,6 +144,15 @@ contract McdWrapper {
             return ethAmount;
         }
         else return ethAmount + 1;
+    }
+
+    function getCdpInfo(bytes32 ilk, uint cdpId) public view returns(uint ink, uint art) {
+        address urn = ManagerLike(cdpManagerAddr).urns(cdpId);
+        (ink, art) = VatLike(mcdVatAddr).urns(ilk, urn);
+    }
+
+    function getPie(address _proxy) public view returns(uint256) {
+        return PotLike(mcdPotAddr).pie(_proxy);
     }
 
     function getPrice(bytes32 ilk) public view returns(uint) {
@@ -157,7 +174,7 @@ contract McdWrapper {
     }
      
     function wipe(uint cdp, uint wad) public {
-        proxy().execute(proxyLib, abi.encodeWithSignature("wipe(address,address,uint256,uint256)", cdpManagerAddr, mcdJoinDaiAddr, cdp, wad));
+        proxy().execute(proxyLib, abi.encodeWithSignature('wipe(address,address,uint256,uint256)', cdpManagerAddr, mcdJoinDaiAddr, cdp, wad));
     }
     
     function approveDai(address to, uint amount) public returns(bool) {
@@ -166,42 +183,42 @@ contract McdWrapper {
     }
     
     function open(bytes32 ilk) public returns(uint cdp)  {
-        bytes memory response = proxy().execute(proxyLib,  abi.encodeWithSignature("open(address,bytes32)", cdpManagerAddr, ilk));
+        bytes memory response = proxy().execute(proxyLib,  abi.encodeWithSignature('open(address,bytes32)', cdpManagerAddr, ilk));
         assembly {
             cdp := mload(add(response, 0x20))
         }
     }
     
     function transferCdpOwnership(uint cdp, address guy) public {
-        proxy().execute(proxyLib,  abi.encodeWithSignature("give(address,uint256,address)", cdpManagerAddr, cdp, guy));
+        proxy().execute(proxyLib,  abi.encodeWithSignature('give(address,uint256,address)', cdpManagerAddr, cdp, guy));
     }
     
     function allow(uint cdp, address guy, uint ok) public {
-        proxy().execute(proxyLib,  abi.encodeWithSignature("allow(uint256,address,uint256)", cdpManagerAddr, cdp, guy, ok));
+        proxy().execute(proxyLib,  abi.encodeWithSignature('allow(uint256,address,uint256)', cdpManagerAddr, cdp, guy, ok));
     }
     
      function lockETH(address, address, uint) public payable {
-        (bool success,) = address(proxy()).call.value(msg.value)(abi.encodeWithSignature("execute(address,bytes)", proxyLib, msg.data));
-        require(success, "");
+        (bool success,) = address(proxy()).call.value(msg.value)(abi.encodeWithSignature('execute(address,bytes)', proxyLib, msg.data));
+        require(success, '');
     }
     
     function lockETHWrapper(uint cdp) public payable {
-        (bool success,) = address(proxy()).call.value(msg.value)(abi.encodeWithSignature("execute(address,bytes)", proxyLib, abi.encodeWithSignature("lockETH(address,address,uint256)", cdpManagerAddr, mcdJoinEthaAddr, cdp)));
-        require(success, "");
+        (bool success,) = address(proxy()).call.value(msg.value)(abi.encodeWithSignature('execute(address,bytes)', proxyLib, abi.encodeWithSignature('lockETH(address,address,uint256)', cdpManagerAddr, mcdJoinEthaAddr, cdp)));
+        require(success, '');
     }
     
     function freeETH(uint cdp, uint wad) public {
-        proxy().execute(proxyLib,  abi.encodeWithSignature("freeETH(address,address,uint256,uint256)", cdpManagerAddr, mcdJoinEthaAddr, cdp, wad));
+        proxy().execute(proxyLib,  abi.encodeWithSignature('freeETH(address,address,uint256,uint256)', cdpManagerAddr, mcdJoinEthaAddr, cdp, wad));
     }
     
     function lockETHAndDraw(uint cdp, uint wadD) public payable {        
-        (bool success,) = address(proxy()).call.value(msg.value)(abi.encodeWithSignature("execute(address,bytes)", proxyLib, abi.encodeWithSignature("lockETHAndDraw(address,address,address,uint256,uint256)", cdpManagerAddr, mcdJoinEthaAddr, mcdJoinDaiAddr, cdp, wadD)));
-        require(success, "");
+        (bool success,) = address(proxy()).call.value(msg.value)(abi.encodeWithSignature('execute(address,bytes)', proxyLib, abi.encodeWithSignature('lockETHAndDraw(address,address,address,uint256,uint256)', cdpManagerAddr, mcdJoinEthaAddr, mcdJoinDaiAddr, cdp, wadD)));
+        require(success, '');
     }
     
     function openLockETHAndDraw(address mcdJoinCollateralAddr, bytes32 ilk, uint wadD) public payable returns (uint cdp) {
         address payable target = buildProxy();
-        bytes memory data = abi.encodeWithSignature("execute(address,bytes)", proxyLib, abi.encodeWithSignature("openLockETHAndDraw(address,address,address,bytes32,uint256)", cdpManagerAddr, mcdJoinCollateralAddr, mcdJoinDaiAddr, ilk, wadD));
+        bytes memory data = abi.encodeWithSignature('execute(address,bytes)', proxyLib, abi.encodeWithSignature('openLockETHAndDraw(address,address,address,bytes32,uint256)', cdpManagerAddr, mcdJoinCollateralAddr, mcdJoinDaiAddr, ilk, wadD));
         assembly {
             let succeeded := call(sub(gas, 5000), target, callvalue, add(data, 0x20), mload(data), 0, 0)
             let size := returndatasize
@@ -220,15 +237,36 @@ contract McdWrapper {
         }
     }
     
+    function openLockETHAndDrawNonPayable(address mcdJoinCollateralAddr, bytes32 ilk, uint wadD, uint wadC) public returns (uint cdp) {
+        address payable target = buildProxy();
+        bytes memory data = abi.encodeWithSignature('execute(address,bytes)', proxyLib, abi.encodeWithSignature('openLockETHAndDraw(address,address,address,bytes32,uint256)', cdpManagerAddr, mcdJoinCollateralAddr, mcdJoinDaiAddr, ilk, wadD));
+        assembly {
+            let succeeded := call(sub(gas, 5000), target, wadC, add(data, 0x20), mload(data), 0, 0)
+            let size := returndatasize
+            let response := mload(0x40)
+            mstore(0x40, add(response, and(add(add(size, 0x20), 0x1f), not(0x1f))))
+            mstore(response, size)
+            returndatacopy(add(response, 0x20), 0, size)
+
+                cdp := mload(add(response, 0x60))
+
+            switch iszero(succeeded)
+            case 1 {
+                // throw if delegatecall failed
+                revert(add(response, 0x20), size)
+            }
+        }
+    }
+    
     function wipeAndFreeETH(uint cdp, uint wadC, uint wadD) public {
-        proxy().execute(proxyLib, abi.encodeWithSignature("wipeAndFreeETH(address,address,address,uint256,uint256,uint256)", cdpManagerAddr, mcdJoinEthaAddr, mcdJoinDaiAddr, cdp, wadC, wadD));
+        proxy().execute(proxyLib, abi.encodeWithSignature('wipeAndFreeETH(address,address,address,uint256,uint256,uint256)', cdpManagerAddr, mcdJoinEthaAddr, mcdJoinDaiAddr, cdp, wadC, wadD));
     }
     
     function draw(uint cdp, uint wad) public {
-        proxy().execute(proxyLib, abi.encodeWithSignature("draw(address,address,uint256,uint256)", cdpManagerAddr, mcdJoinDaiAddr, cdp, wad));
+        proxy().execute(proxyLib, abi.encodeWithSignature('draw(address,address,uint256,uint256)', cdpManagerAddr, mcdJoinDaiAddr, cdp, wad));
     }
     
     function quit(uint cdp, address dst) public {
-        proxy().execute(proxyLib, abi.encodeWithSignature("draw(address,address,uint256,uint256)", cdpManagerAddr, cdp, dst));
+        proxy().execute(proxyLib, abi.encodeWithSignature('draw(address,address,uint256,uint256)', cdpManagerAddr, cdp, dst));
     }
 }
