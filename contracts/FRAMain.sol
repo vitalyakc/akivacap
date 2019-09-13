@@ -9,34 +9,26 @@ contract FraMain is Claimable {
     mapping(address => address[]) public agreements;
     address[] public agreementList;
 
-    function requestAgreementOnETH (uint256 _debtValue, uint256 _expairyDate, uint256 _interestRate) 
+    function requestAgreementOnETH (
+        uint256 _debtValue, uint256 _expairyDate, 
+        uint256 _interestRate, bytes32 _collateralType) 
     public payable returns(address _newAgreement) {
         
-        AgreementETH agreement = 
-            (new AgreementETH).value(msg.value)(msg.sender, msg.value, _debtValue, _expairyDate, _interestRate);
+        AgreementETH agreement = (new AgreementETH).value(msg.value)(
+            msg.sender, msg.value, _debtValue, _expairyDate, _interestRate, _collateralType);
             
         agreements[msg.sender].push(address(agreement));
         agreementList.push(address(agreement));
         return address(agreement);
     }
     
-    function checkAllAgreements() public onlyContractOwner() {
-        for(uint256 i = 0; i < agreementList.length; i++) {
-            if (!AgreementInterface(agreementList[i]).isClosed()) {
-                AgreementInterface(agreementList[i]).checkAgreement();
-            } else {
-                continue;
-            }
-        }
-    }
-    
     function requestAgreementOnERC20 (uint256 _debtValue, uint256 _expairyDate, 
         uint256 _interestRate, bytes32 _collateralType, address _erc20ContractAddress)
     public payable returns(address _newAgreement) {
         
-        AgreementERC20 agreement = 
-            (new AgreementERC20).value(msg.value)(msg.sender, msg.value, 
-            _debtValue, _expairyDate, _interestRate, _collateralType, _erc20ContractAddress);
+        AgreementERC20 agreement = (new AgreementERC20).value(msg.value)(
+            msg.sender, msg.value, _debtValue, _expairyDate, 
+            _interestRate, _collateralType, _erc20ContractAddress);
         
             
         agreements[msg.sender].push(address(agreement));
