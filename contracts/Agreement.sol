@@ -2,7 +2,6 @@ pragma solidity 0.5.11;
 
 import './Claimable.sol';
 import './McdWrapper.sol';
-import './DaiInterface.sol';
 import './SafeMath.sol';
 import './ERC20Interface.sol';
 
@@ -32,7 +31,7 @@ contract BaseAgreement is Claimable, AgreementInterface {
     address constant daiStableCoinAddress = address(0xc7cC3413f169a027dccfeffe5208Ca4f38eF0c40);
     address constant McdWrapperAddress = address(0x36dEb52Eab3B17BccF68f5FD5F5282789640F26E); 
     
-    DaiInterface DaiInstance = DaiInterface(daiStableCoinAddress);
+    ERC20Interface DaiInstance = ERC20Interface(daiStableCoinAddress);
     McdWrapper WrapperInstance = McdWrapper(McdWrapperAddress);
 
     uint256 constant TWENTY_FOUR_HOURS = 86399;
