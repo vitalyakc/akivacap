@@ -49,6 +49,7 @@ contract BaseAgreement is Claimable, AgreementInterface {
     uint256 public initialDate;
     uint256 public expireDate;
     uint256 public interestRate;
+    bytes32 public collateralType;
     uint256 public borrowerFRADebt;
     uint256 public lenderPendingInjection;
     bool public isClosed;
@@ -58,8 +59,6 @@ contract BaseAgreement is Claimable, AgreementInterface {
     
     // test version, should be extended after stable 
     // multicollaterall makerDAO release
-    bytes32 public collateralType =
-    0x4554482d41000000000000000000000000000000000000000000000000000000; // ETH-A
     uint256 public dsrTest = 105 * 10 ** 25;
     //
     
@@ -79,7 +78,7 @@ contract BaseAgreement is Claimable, AgreementInterface {
     }
     
     constructor(address payable _borrower, uint256 _borrowerCollateralValue, 
-        uint256 _debtValue, uint256 _expireDate, uint256 _interestRate) 
+        uint256 _debtValue, uint256 _expireDate, uint256 _interestRate, bytes32 _collateralType) 
     public payable 
     {
         require(_debtValue > 0, 'debt cannot be 0');
@@ -94,9 +93,35 @@ contract BaseAgreement is Claimable, AgreementInterface {
         initialDate = now;
         interestRate = _interestRate + ONE;
         borrowerCollateralValue = _borrowerCollateralValue;
+        collateralType = _collateralType;
         
         emit AgreementInitiated(
             _borrower, _borrowerCollateralValue, _debtValue, _expireDate, _interestRate);
+    }
+    
+    function approve() public onlyContractOwner() isNotClosed() returns(bool _success) {
+        require(!isApproved, 'Agreement is already approved');
+        
+        uint256 _cdpId;
+        
+        bytes memory response = execute(
+            McdWrapperAddress, 
+            abi.encodeWithSignature(
+                'openLockETHAndDraw(bytes32,uint256,uint256)', 
+                collateralType, debtValue, borrowerCollateralValue));
+        assembly {
+            _cdpId := mload(add(response, 0x20))
+        }
+        cdpId = _cdpId;
+        
+        DaiInstance.transfer(borrower, debtValue);
+        
+        isApproved = true;
+        
+        emit AgreementApproved(
+            borrower, borrowerCollateralValue, debtValue, expireDate, interestRate);
+        
+        return true;
     }
     
     function matchAgreement() public isNotClosed() onlyPending() onlyApproved() returns(bool _success) {
@@ -311,12 +336,14 @@ contract BaseAgreement is Claimable, AgreementInterface {
 }
 
 contract AgreementETH is BaseAgreement {
-    
     constructor (
         address payable _borrower, uint256 _borrowerCollateralValue, 
-        uint256 _debtValue, uint256 _expairyDate, uint256 _interestRate) 
+        uint256 _debtValue, uint256 _expairyDate, uint256 _interestRate, bytes32 _collateralType) 
     public payable
-    BaseAgreement(_borrower, _borrowerCollateralValue, _debtValue, _expairyDate, _interestRate) {
+    BaseAgreement(
+        _borrower, _borrowerCollateralValue, _debtValue, 
+        _expairyDate, _interestRate, _collateralType) 
+    {
         require(msg.value == _borrowerCollateralValue, 'Actual ehter value is not correct');
     }
     
@@ -326,93 +353,58 @@ contract AgreementETH is BaseAgreement {
         isClosed = true;
     }
     
-    function approve() public onlyContractOwner() isNotClosed() returns(bool _success) {
-        require(!isApproved, 'Agreement is already approved');
-        
-        uint256 _cdpId;
-        
-        bytes memory response = execute(
-            McdWrapperAddress, 
-            abi.encodeWithSignature('openLockETHAndDraw(bytes32,uint256,uint256)', collateralType, debtValue, borrowerCollateralValue));
-        assembly {
-            _cdpId := mload(add(response, 0x20))
-        }
-        cdpId = _cdpId;
-        
-        DaiInstance.transfer(borrower, debtValue);
-        
-        isApproved = true;
-        
-        emit AgreementApproved(
-            borrower, borrowerCollateralValue, debtValue, expireDate, interestRate);
-        
-        return true;
-    }
-    
     function _refundUsersAfterCDPLiquidation() internal returns(bool _success) {
-        uint256 ethFRADebtEquivalent = WrapperInstance.getCollateralEquivalent(
+        uint256 collateralFRADebtEquivalent = WrapperInstance.getCollateralEquivalent(
             collateralType, borrowerFRADebt);
-        lender.transfer(ethFRADebtEquivalent);
-        borrower.transfer(address(this).balance);
+            
+        lender.transfer(collateralFRADebtEquivalent);
+        
+        uint256 lenderRefundAmount = address(this).balance;
+        borrower.transfer(lenderRefundAmount);
         
         emit AgreementLiquidated(
-            ethFRADebtEquivalent, address(this).balance.sub(ethFRADebtEquivalent));
+            collateralFRADebtEquivalent, lenderRefundAmount);
         return true;
     }
 }
 
-/*contract AgreementERC20 is BaseAgreement {
+contract AgreementERC20 is BaseAgreement {
     address erc20ContractAddress;
-    ERC20Interface erc20Instance;
+    ERC20Interface Erc20Instance;
     
     constructor (
         address payable _borrower, uint256 _borrowerCollateralValue, 
-        uint256 _debtValue, uint256 _expairyDate, uint256 _interestRate, address _erc20ContractAddress) 
+        uint256 _debtValue, uint256 _expairyDate, uint256 _interestRate, 
+        bytes32 _collateralType, address _erc20ContractAddress) 
     public payable
-    BaseAgreement(_borrower, _borrowerCollateralValue, _debtValue, _expairyDate, _interestRate) {
+    BaseAgreement(
+        _borrower, _borrowerCollateralValue, _debtValue, 
+        _expairyDate, _interestRate, _collateralType) 
+    {
         require(_erc20ContractAddress != address(0));
         erc20ContractAddress = _erc20ContractAddress;
-        erc20Instance = ERC20Interface(_erc20ContractAddress);
+        Erc20Instance = ERC20Interface(_erc20ContractAddress);
+        
+        Erc20Instance.transferFrom(borrower, address(this), _borrowerCollateralValue);
     }
     
     function _closeRejectedAgreement() isNotClosed() internal {
-        erc20Instance.transfer(borrower, borrowerCollateralValue);
+        Erc20Instance.transfer(borrower, borrowerCollateralValue);
         
         isClosed = true;
     }
     
-    function approve() public onlyContractOwner() isNotClosed() returns(bool _success) {
-        require(!isApproved, 'Agreement is already approved');
-        
-        uint256 _cdpId;
-        
-        
-        bytes memory response = execute(
-            McdWrapperAddress, 
-            abi.encodeWithSignature('openEthaCdpNonPayable(uint256,uint256)', borrowerCollateralValue, debtValue));
-        assembly {
-            _cdpId := mload(add(response, 0x20))
-        }
-        cdpId = _cdpId;
-        
-        DaiInstance.transfer(borrower, debtValue);
-        
-        isApproved = true;
-        
-        emit AgreementApproved(
-            borrower, borrowerCollateralValue, debtValue, expireDate, interestRate);
-        
-        return true;
-    }
-    
     function _refundUsersAfterCDPLiquidation() internal returns(bool _success) {
-        uint256 ethFRADebtEquivalent = WrapperInstance.getCollateralEquivalent(
+        uint256 collateralFRADebtEquivalent = WrapperInstance.getCollateralEquivalent(
             collateralType, borrowerFRADebt);
-        lender.transfer(ethFRADebtEquivalent);
-        borrower.transfer(address(this).balance);
+            
+        Erc20Instance.transfer(lender, collateralFRADebtEquivalent);
         
+        uint256 lenderRefundAmount = Erc20Instance.balanceOf(address(this));
+        Erc20Instance.transfer(borrower, lenderRefundAmount);
+
         emit AgreementLiquidated(
-            ethFRADebtEquivalent, address(this).balance.sub(ethFRADebtEquivalent));
+            collateralFRADebtEquivalent, lenderRefundAmount);
         return true;
     }
-}*/
+}
