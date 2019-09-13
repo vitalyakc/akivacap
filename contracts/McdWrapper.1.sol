@@ -205,6 +205,7 @@ contract McdWrapper {
 
     function openLockERC20AndDraw(bytes32 ilk, uint wadD, uint wadC) public returns (uint cdp) {
         address payable proxy = buildProxy();
+        //approveDai(address(proxy()), wad);
         bytes memory response = DSProxy(proxy).execute(proxyLib, abi.encodeWithSignature('openLockGemAndDraw(address,address,address,bytes32,uint256,uint256)', cdpManagerAddr, _mcdJoinERC20Address(ilk), mcdJoinDaiAddr, ilk, wadC, wadD));
         assembly {
             cdp := mload(add(response, 0x20))

@@ -30,7 +30,7 @@ contract BaseAgreement is Claimable, AgreementInterface {
     using SafeMath for uint256;
     
     address constant daiStableCoinAddress = address(0xc7cC3413f169a027dccfeffe5208Ca4f38eF0c40);
-    address constant McdWrapperAddress = address(0x0f08888710B58aFC942843CFC5D12DF86211eD45); 
+    address constant McdWrapperAddress = address(0x36dEb52Eab3B17BccF68f5FD5F5282789640F26E); 
     
     DaiInterface DaiInstance = DaiInterface(daiStableCoinAddress);
     McdWrapper WrapperInstance = McdWrapper(McdWrapperAddress);
@@ -333,7 +333,7 @@ contract AgreementETH is BaseAgreement {
         
         bytes memory response = execute(
             McdWrapperAddress, 
-            abi.encodeWithSignature('openEthaCdpNonPayable(uint256,uint256)', borrowerCollateralValue, debtValue));
+            abi.encodeWithSignature('openLockETHAndDraw(bytes32,uint256,uint256)', collateralType, debtValue, borrowerCollateralValue));
         assembly {
             _cdpId := mload(add(response, 0x20))
         }
