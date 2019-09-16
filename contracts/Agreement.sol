@@ -29,7 +29,7 @@ contract BaseAgreement is Claimable, AgreementInterface {
     using SafeMath for uint256;
     
     address constant daiStableCoinAddress = address(0xc7cC3413f169a027dccfeffe5208Ca4f38eF0c40);
-    address constant McdWrapperAddress = address(0x36dEb52Eab3B17BccF68f5FD5F5282789640F26E); 
+    address constant McdWrapperAddress = address(0xc6b730627dE1DDd16132C62AB94CF9610B40FfdF); 
     
     ERC20Interface DaiInstance = ERC20Interface(daiStableCoinAddress);
     McdWrapper WrapperInstance = McdWrapper(McdWrapperAddress);
@@ -101,17 +101,7 @@ contract BaseAgreement is Claimable, AgreementInterface {
     function approve() public onlyContractOwner() isNotClosed() returns(bool _success) {
         require(!isApproved, 'Agreement is already approved');
         
-        uint256 _cdpId;
-        
-        bytes memory response = execute(
-            McdWrapperAddress, 
-            abi.encodeWithSignature(
-                'openLockETHAndDraw(bytes32,uint256,uint256)', 
-                collateralType, debtValue, borrowerCollateralValue));
-        assembly {
-            _cdpId := mload(add(response, 0x20))
-        }
-        cdpId = _cdpId;
+        cdpId = _openCdp();
         
         DaiInstance.transfer(borrower, debtValue);
         
@@ -307,6 +297,7 @@ contract BaseAgreement is Claimable, AgreementInterface {
     
     function _closeRejectedAgreement() internal {}
     function _refundUsersAfterCDPLiquidation() internal returns(bool _success) {}
+    function _openCdp() internal returns(uint256) {}
     
     function execute(address _target, bytes memory _data)
         public
@@ -352,6 +343,21 @@ contract AgreementETH is BaseAgreement {
         isClosed = true;
     }
     
+    function _openCdp() internal returns(uint256) {
+        uint256 _cdpId;
+        
+        bytes memory response = execute(
+            McdWrapperAddress, 
+            abi.encodeWithSignature(
+                'openLockETHAndDraw(bytes32,uint256,uint256)', 
+                collateralType, debtValue, borrowerCollateralValue));
+        assembly {
+            _cdpId := mload(add(response, 0x20))
+        }
+        
+        return _cdpId;
+    }
+    
     function _refundUsersAfterCDPLiquidation() internal returns(bool _success) {
         uint256 collateralFRADebtEquivalent = WrapperInstance.getCollateralEquivalent(
             collateralType, borrowerFRADebt);
@@ -382,6 +388,21 @@ contract AgreementERC20 is BaseAgreement {
     {
         erc20ContractAddress = _erc20ContractAddress;
         Erc20Instance = ERC20Interface(_erc20ContractAddress);
+    }
+    
+    function _openCdp() internal returns(uint256) {
+        uint256 _cdpId;
+        
+        bytes memory response = execute(
+            McdWrapperAddress, 
+            abi.encodeWithSignature(
+                'openLockERC20AndDraw(bytes32,uint256,uint256)', 
+                collateralType, debtValue, borrowerCollateralValue));
+        assembly {
+            _cdpId := mload(add(response, 0x20))
+        }
+        
+        return _cdpId;
     }
     
     function _closeRejectedAgreement() isNotClosed() internal {
