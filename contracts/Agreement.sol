@@ -5,7 +5,7 @@ import './McdWrapper.sol';
 import './SafeMath.sol';
 import './ERC20Interface.sol';
 
-
+/// @title Interface for Agreement contract
 interface AgreementInterface {
     
     function isClosed() external view returns(bool);
@@ -25,6 +25,10 @@ interface AgreementInterface {
     event AgreementLiquidated(uint256 _lenderEthReward, uint256 _borrowerEthResedual);
 }
 
+/**
+ * @title Base Agreement contract
+ * @dev Should not be deployed. It is being used as an abstract class
+ */
 contract BaseAgreement is Claimable, AgreementInterface {
     using SafeMath for uint256;
     
@@ -61,16 +65,19 @@ contract BaseAgreement is Claimable, AgreementInterface {
     uint256 public dsrTest = 105 * 10 ** 25;
     //
     
+    /// @notice Grants access only if agreement is not terminated yet
     modifier isNotClosed() {
         require(!isClosed, 'Agreement is closed');
         _;
     }
     
+    ///@notice Grants access only if agreement does not have lender address yet
     modifier onlyPending() {
         require(isPending(), 'Agreement has its lender already');
         _;
     }
     
+    /// Grants access only if agreement is approved
     modifier onlyApproved() {
         require(isApproved, 'Agreement is not approved');
         _;
@@ -98,6 +105,10 @@ contract BaseAgreement is Claimable, AgreementInterface {
             _borrower, _borrowerCollateralValue, _debtValue, _expireDate, _interestRate);
     }
     
+    /**
+     * @notice Approves the agreement. Only for contract owner
+     * @return Operation success
+     */
     function approve() public onlyContractOwner() isNotClosed() returns(bool _success) {
         require(!isApproved, 'Agreement is already approved');
         
@@ -113,6 +124,10 @@ contract BaseAgreement is Claimable, AgreementInterface {
         return true;
     }
     
+    /**
+     * @notice Connects lender to the agreement.
+     * @return Operation success
+     */
     function matchAgreement() public isNotClosed() onlyPending() onlyApproved() returns(bool _success) {
         (bool transferSuccess,) = daiStableCoinAddress.call(
             abi.encodeWithSignature(
@@ -129,7 +144,11 @@ contract BaseAgreement is Claimable, AgreementInterface {
         return true;
     }
     
-    // is supposed to be called in loop externaly
+    /**
+     * @notice Updates the state of Agreement
+     * @dev Executes lots of external calls
+     * @return Operation success
+     */
     function checkAgreement() public onlyContractOwner() isNotClosed() returns(bool _success) { 
         if(!isApproved && now > initialDate + TWENTY_FOUR_HOURS) {
             _closeRejectedAgreement();
@@ -360,15 +379,15 @@ contract AgreementETH is BaseAgreement {
     
     function _refundUsersAfterCDPLiquidation() internal returns(bool _success) {
         uint256 collateralFRADebtEquivalent = WrapperInstance.getCollateralEquivalent(
-            collateralType, borrowerFRADebt);
+            collateralType, borrowerFRADebt/ONE);
             
         lender.transfer(collateralFRADebtEquivalent);
         
-        uint256 lenderRefundAmount = address(this).balance;
-        borrower.transfer(lenderRefundAmount);
+        uint256 borrowerRefundAmount = address(this).balance;
+        borrower.transfer(borrowerRefundAmount);
         
         emit AgreementLiquidated(
-            collateralFRADebtEquivalent, lenderRefundAmount);
+            collateralFRADebtEquivalent, borrowerRefundAmount);
         return true;
     }
 }
@@ -413,15 +432,15 @@ contract AgreementERC20 is BaseAgreement {
     
     function _refundUsersAfterCDPLiquidation() internal returns(bool _success) {
         uint256 collateralFRADebtEquivalent = WrapperInstance.getCollateralEquivalent(
-            collateralType, borrowerFRADebt);
+            collateralType, borrowerFRADebt/ONE);
             
         Erc20Instance.transfer(lender, collateralFRADebtEquivalent);
         
-        uint256 lenderRefundAmount = Erc20Instance.balanceOf(address(this));
-        Erc20Instance.transfer(borrower, lenderRefundAmount);
+        uint256 borrowerRefundAmount = Erc20Instance.balanceOf(address(this));
+        Erc20Instance.transfer(borrower, borrowerRefundAmount);
 
         emit AgreementLiquidated(
-            collateralFRADebtEquivalent, lenderRefundAmount);
+            collateralFRADebtEquivalent, borrowerRefundAmount);
         return true;
     }
 }
