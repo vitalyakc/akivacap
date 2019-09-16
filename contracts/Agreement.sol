@@ -380,11 +380,8 @@ contract AgreementERC20 is BaseAgreement {
         _borrower, _borrowerCollateralValue, _debtValue, 
         _expairyDate, _interestRate, _collateralType) 
     {
-        require(_erc20ContractAddress != address(0));
         erc20ContractAddress = _erc20ContractAddress;
         Erc20Instance = ERC20Interface(_erc20ContractAddress);
-        
-        Erc20Instance.transferFrom(borrower, address(this), _borrowerCollateralValue);
     }
     
     function _closeRejectedAgreement() isNotClosed() internal {

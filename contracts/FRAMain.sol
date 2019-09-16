@@ -1,6 +1,6 @@
 pragma solidity 0.5.11;
 
-import './DaiInterface.sol';
+import './ERC20Interface.sol';
 import './Claimable.sol';
 import './Agreement.sol';
 
@@ -22,14 +22,16 @@ contract FraMain is Claimable {
         return address(agreement);
     }
     
-    function requestAgreementOnERC20 (uint256 _debtValue, uint256 _expairyDate, 
+    function requestAgreementOnERC20 (uint256 _collateralValue,uint256 _debtValue, uint256 _expairyDate, 
         uint256 _interestRate, bytes32 _collateralType, address _erc20ContractAddress)
     public payable returns(address _newAgreement) {
+        require(_erc20ContractAddress != address(0));
         
-        AgreementERC20 agreement = (new AgreementERC20).value(msg.value)(
-            msg.sender, msg.value, _debtValue, _expairyDate, 
+        AgreementERC20 agreement = new AgreementERC20(
+            msg.sender, _collateralValue, _debtValue, _expairyDate, 
             _interestRate, _collateralType, _erc20ContractAddress);
         
+        ERC20Interface(_erc20ContractAddress).transferFrom(msg.sender, address(agreement), _collateralValue);
             
         agreements[msg.sender].push(address(agreement));
         agreementList.push(address(agreement));
