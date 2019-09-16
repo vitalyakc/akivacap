@@ -128,7 +128,8 @@ contract BaseAgreement is Claimable, AgreementInterface {
      * @notice Connects lender to the agreement.
      * @return Operation success
      */
-    function matchAgreement() public isNotClosed() onlyPending() onlyApproved() returns(bool _success) {
+    function matchAgreement() 
+    public isNotClosed() onlyPending() onlyApproved() returns(bool _success) {
         (bool transferSuccess,) = daiStableCoinAddress.call(
             abi.encodeWithSignature(
             'transferFrom(address,address,uint256)', msg.sender, address(this), debtValue));
@@ -176,7 +177,8 @@ contract BaseAgreement is Claimable, AgreementInterface {
      * @notice Allows borrower to terminate agreement if it has no lender yet 
      * @return Operation success
      */
-    function closePendingAgreement() public isNotClosed() onlyPending() onlyApproved() returns(bool _success) {
+    function closePendingAgreement()
+     public isNotClosed() onlyPending() onlyApproved() returns(bool _success) {
         require(msg.sender == borrower, 'Accessible only for borrower');
         
         execute(
@@ -334,10 +336,12 @@ contract BaseAgreement is Claimable, AgreementInterface {
         return true;
     }
     
+    // solium-disable no-empty-blocks
     function _closeRejectedAgreement() internal {}
     function _refundUsersAfterCDPLiquidation() internal returns(bool _success) {}
     function _openCdp() internal returns(uint256) {}
-    
+    // solium-enable no-empty-blocks
+
     /// @notice Makes a delegatecall and gives a possibility 
     /// to get a returning value
     function execute(address _target, bytes memory _data)
@@ -394,11 +398,10 @@ contract AgreementETH is BaseAgreement {
     function _openCdp() internal returns(uint256) {
         uint256 _cdpId;
         
-        bytes memory response = execute(
-            McdWrapperAddress, 
-            abi.encodeWithSignature(
-                'openLockETHAndDraw(bytes32,uint256,uint256)', 
-                collateralType, debtValue, borrowerCollateralValue));
+        // solium-disable-next-line indentation
+        bytes memory response = execute(McdWrapperAddress, abi.encodeWithSignature(
+            'openLockETHAndDraw(bytes32,uint256,uint256)', 
+            collateralType, debtValue, borrowerCollateralValue));
         assembly {
             _cdpId := mload(add(response, 0x20))
         }
@@ -445,7 +448,7 @@ contract AgreementERC20 is BaseAgreement {
     
     /// @notice Closes rejected agreement and 
     /// transfers collateral tokens back to user
-    function _closeRejectedAgreement() isNotClosed() internal {
+    function _closeRejectedAgreement() internal isNotClosed() {
         Erc20Instance.transfer(borrower, borrowerCollateralValue);
         
         isClosed = true;
@@ -458,11 +461,10 @@ contract AgreementERC20 is BaseAgreement {
     function _openCdp() internal returns(uint256) {
         uint256 _cdpId;
         
-        bytes memory response = execute(
-            McdWrapperAddress, 
-            abi.encodeWithSignature(
-                'openLockERC20AndDraw(bytes32,uint256,uint256)', 
-                collateralType, debtValue, borrowerCollateralValue));
+        // solium-disable-next-line indentation
+        bytes memory response = execute(McdWrapperAddress, abi.encodeWithSignature(
+            'openLockERC20AndDraw(bytes32,uint256,uint256)', 
+            collateralType, debtValue, borrowerCollateralValue));
         assembly {
             _cdpId := mload(add(response, 0x20))
         }

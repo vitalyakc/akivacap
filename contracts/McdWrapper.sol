@@ -63,9 +63,12 @@ contract McdWrapper {
     address public constant wethAddr = 0xb39862D7D1b11CD9B781B1473e142Cbb545A6871;
     address public constant col1Addr = 0xC644e83399F3c0b4011D3dd3C61bc8b1617253E5;
 
-    bytes32 public constant ETH_A = 0x4554482d41000000000000000000000000000000000000000000000000000000;
-    bytes32 public constant ETH_B = 0x4554482d42000000000000000000000000000000000000000000000000000000;
-    bytes32 public constant COL1_A = 0x434f4c312d410000000000000000000000000000000000000000000000000000;
+    bytes32 public constant ETH_A = 
+    0x4554482d41000000000000000000000000000000000000000000000000000000;
+    bytes32 public constant ETH_B = 
+    0x4554482d42000000000000000000000000000000000000000000000000000000;
+    bytes32 public constant COL1_A = 
+    0x434f4c312d410000000000000000000000000000000000000000000000000000;
     uint256 constant ONE = 10 ** 27;
 
     /**
@@ -107,7 +110,10 @@ contract McdWrapper {
      * @param wad amount of dai tokens
      */
     function wipe(uint cdp, uint wad) public {
-        proxy().execute(proxyLib, abi.encodeWithSignature('wipe(address,address,uint256,uint256)', cdpManagerAddr, mcdJoinDaiAddr, cdp, wad));
+        proxy().execute(
+            proxyLib, 
+            abi.encodeWithSignature('wipe(address,address,uint256,uint256)', 
+            cdpManagerAddr, mcdJoinDaiAddr, cdp, wad));
     }
 
     /**
@@ -117,7 +123,10 @@ contract McdWrapper {
      */
     function lockDai(uint wad) public {
         approveDai(address(proxy()), wad);
-        proxy().execute(proxyLib, abi.encodeWithSignature('dsrJoin(address,address,uint256)', mcdJoinDaiAddr, mcdPotAddr, wad));
+        proxy().execute(
+            proxyLib, 
+            abi.encodeWithSignature('dsrJoin(address,address,uint256)', 
+            mcdJoinDaiAddr, mcdPotAddr, wad));
     }
     
     /**
@@ -125,7 +134,10 @@ contract McdWrapper {
      * @param wad amount of dai tokens
      */
     function unlockDai(uint wad) public {
-        proxy().execute(proxyLib, abi.encodeWithSignature('dsrExit(address,address,uint256)', mcdJoinDaiAddr, mcdPotAddr, wad));
+        proxy().execute(
+            proxyLib, 
+            abi.encodeWithSignature('dsrExit(address,address,uint256)', 
+            mcdJoinDaiAddr, mcdPotAddr, wad));
     }
     
     /**
@@ -167,7 +179,12 @@ contract McdWrapper {
     function forceLiquidate(bytes32 ilk, uint cdpId) public view returns(uint) {
         address urn = ManagerLike(cdpManagerAddr).urns(cdpId);
         (uint ink, uint art) = VatLike(mcdVatAddr).urns(ilk, urn);
-        (,uint rate,,,) = VatLike(mcdVatAddr).ilks(ilk); // need to be clarified what it is in mcd. In single collateral it is: The ratio of PETH/ETH is 1.012
+
+        // need to be clarified what it is in mcd. 
+        // In single collateral it is: The ratio of PETH/ETH is 1.012
+        // solium-disable-next-line no-unused-vars
+        (,uint rate,,,) = VatLike(mcdVatAddr).ilks(ilk); 
+
         (,uint chop,) = CatLike(mcdCatAddr).ilks(ilk); // penalty
         uint price = getPrice(ilk);
         return (ink * price - (chop - ONE) * art) / price;
@@ -270,7 +287,10 @@ contract McdWrapper {
      * @param   guy     address, ownership should be transfered to
      */
     function transferCdpOwnership(uint cdp, address guy) public {
-        proxy().execute(proxyLib,  abi.encodeWithSignature('give(address,uint256,address)', cdpManagerAddr, cdp, guy));
+        proxy().execute(
+            proxyLib,  
+            abi.encodeWithSignature('give(address,uint256,address)', 
+            cdpManagerAddr, cdp, guy));
     }
     
     /**
@@ -283,7 +303,11 @@ contract McdWrapper {
      */
     function openLockETHAndDraw(bytes32 ilk, uint wadD, uint wadC) public returns (uint cdp) {
         address payable target = buildProxy();
-        bytes memory data = abi.encodeWithSignature('execute(address,bytes)', proxyLib, abi.encodeWithSignature('openLockETHAndDraw(address,address,address,bytes32,uint256)', cdpManagerAddr, _mcdJoinAddress(ilk), mcdJoinDaiAddr, ilk, wadD));
+        bytes memory data = abi.encodeWithSignature(
+            'execute(address,bytes)', 
+            proxyLib, 
+            abi.encodeWithSignature('openLockETHAndDraw(address,address,address,bytes32,uint256)', 
+            cdpManagerAddr, _mcdJoinAddress(ilk), mcdJoinDaiAddr, ilk, wadD));
         assembly {
             let succeeded := call(sub(gas, 5000), target, wadC, add(data, 0x20), mload(data), 0, 0)
             let size := returndatasize
@@ -313,7 +337,9 @@ contract McdWrapper {
     function openLockERC20AndDraw(bytes32 ilk, uint wadD, uint wadC) public returns (uint cdp) {
         address payable proxy = buildProxy();
         approveERC20(ilk, proxy, wadC);
-        bytes memory response = DSProxy(proxy).execute(proxyLib, abi.encodeWithSignature('openLockGemAndDraw(address,address,address,bytes32,uint256,uint256)', cdpManagerAddr, _mcdJoinAddress(ilk), mcdJoinDaiAddr, ilk, wadC, wadD));
+        bytes memory response = DSProxy(proxy).execute(proxyLib, abi.encodeWithSignature(
+            'openLockGemAndDraw(address,address,address,bytes32,uint256,uint256)', 
+            cdpManagerAddr, _mcdJoinAddress(ilk), mcdJoinDaiAddr, ilk, wadC, wadD));
         assembly {
             cdp := mload(add(response, 0x20))
         }

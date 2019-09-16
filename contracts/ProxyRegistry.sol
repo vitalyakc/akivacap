@@ -20,7 +20,10 @@ contract ProxyRegistry {
     // deploys a new proxy instance
     // sets custom owner of proxy
     function build(address owner) public returns (address payable proxy) {
-        require(proxies[owner] == DSProxy(0) || proxies[owner].owner() != owner); // Not allow new proxy if the user already has one and remains being the owner
+        // Not allow new proxy if the user already has one and remains being the owner
+        require(
+            proxies[owner] == DSProxy(0) || proxies[owner].owner() != owner,
+            'User is already an owner of proxy'); 
         proxy = factory.build(owner);
         proxies[owner] = DSProxy(proxy);
     }

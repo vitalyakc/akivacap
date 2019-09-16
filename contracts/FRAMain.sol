@@ -39,16 +39,19 @@ contract FraMain is Claimable {
      * @param _collateralType type of collateral, should be passed as bytes32
      * @return agreement address
      */
-    function requestAgreementOnERC20 (uint256 _collateralValue,uint256 _debtValue, uint256 _expairyDate, 
-        uint256 _interestRate, bytes32 _collateralType, address _erc20ContractAddress)
+    function requestAgreementOnERC20 (
+        uint256 _collateralValue,uint256 _debtValue, 
+        uint256 _expairyDate, uint256 _interestRate, 
+        bytes32 _collateralType, address _erc20ContractAddress)
     public payable returns(address _newAgreement) {
-        require(_erc20ContractAddress != address(0));
+        require(_erc20ContractAddress != address(0), 'Contract address has to be not 0x0');
         
         AgreementERC20 agreement = new AgreementERC20(
             msg.sender, _collateralValue, _debtValue, _expairyDate, 
             _interestRate, _collateralType, _erc20ContractAddress);
         
-        ERC20Interface(_erc20ContractAddress).transferFrom(msg.sender, address(agreement), _collateralValue);
+        ERC20Interface(_erc20ContractAddress).transferFrom(
+            msg.sender, address(agreement), _collateralValue);
             
         agreements[msg.sender].push(address(agreement));
         agreementList.push(address(agreement));
@@ -95,7 +98,8 @@ contract FraMain is Claimable {
      * @notice Makes the specific agreement valid
      * @return operation success
      */
-    function approveAgreement(address _agreement) public onlyContractOwner() returns(bool _success) {
+    function approveAgreement(address _agreement) 
+    public onlyContractOwner() returns(bool _success) {
         return AgreementInterface(_agreement).approve();
     }
 }
