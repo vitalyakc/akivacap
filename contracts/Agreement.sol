@@ -145,7 +145,8 @@ contract BaseAgreement is Claimable, AgreementInterface {
     }
     
     /**
-     * @notice Updates the state of Agreement
+     * @notice Calls needed function according to the expireDate
+     * (terminates or updates the agreement)
      * @dev Executes lots of external calls
      * @return Operation success
      */
@@ -171,6 +172,10 @@ contract BaseAgreement is Claimable, AgreementInterface {
         return true;
     }
     
+    /**
+     * @notice Allows borrower to terminate agreement if it has no lender yet 
+     * @return Operation success
+     */
     function closePendingAgreement() public isNotClosed() onlyPending() onlyApproved() returns(bool _success) {
         require(msg.sender == borrower, 'Accessible only for borrower');
         
@@ -183,6 +188,7 @@ contract BaseAgreement is Claimable, AgreementInterface {
         return true;
     }
     
+    /// @notice returns lender existence
     function isPending() public view returns(bool) {
         return (lender == address(0));
     }
@@ -199,6 +205,10 @@ contract BaseAgreement is Claimable, AgreementInterface {
     
     function() external payable {}
     
+    /**
+     * @notice Updates the state of Agreement
+     * @return Operation success
+     */
     function _updateCurrentStateOrMakeInjection() internal returns(bool _success) { 
         uint256 currentDSR = dsrTest; //WrapperInstance.getDsr();
         uint256 currentDaiLenderBalance;
@@ -258,10 +268,15 @@ contract BaseAgreement is Claimable, AgreementInterface {
         return true;
     }
     
+    /// @notice checks whether expireDate has come
     function _checkExpiringDate() internal view returns(bool _isExpired) {
         return (now > expireDate || isPending() && now > (initialDate + TWENTY_FOUR_HOURS));
     }
-        
+    
+    /**
+     * @notice Terminates agreement
+     * @return Operation success
+     */
     function _terminateAgreement() internal returns(bool _success) {
         uint256 borrowerFraDebtDai = borrowerFRADebt/ONE;
         uint256 finalDaiLenderBalance;
@@ -294,6 +309,11 @@ contract BaseAgreement is Claimable, AgreementInterface {
         return true;
     }
     
+    /**
+     * @notice Liquidates agreement, mostly the sam as terminate 
+     * but also covers collateral transfers after liquidation
+     * @return Operation success
+     */
     function _liquidateAgreement() internal returns(bool _success) {
         uint256 finalDaiLenderBalance;
         
@@ -318,6 +338,8 @@ contract BaseAgreement is Claimable, AgreementInterface {
     function _refundUsersAfterCDPLiquidation() internal returns(bool _success) {}
     function _openCdp() internal returns(uint256) {}
     
+    /// @notice Makes a delegatecall and gives a possibility 
+    /// to get a returning value
     function execute(address _target, bytes memory _data)
         public
         payable
@@ -344,6 +366,7 @@ contract BaseAgreement is Claimable, AgreementInterface {
     }
 }
 
+/// @title Inherited from BaseAgreement, should be deployed for ETH collateral
 contract AgreementETH is BaseAgreement {
     constructor (
         address payable _borrower, uint256 _borrowerCollateralValue, 
@@ -356,12 +379,18 @@ contract AgreementETH is BaseAgreement {
         require(msg.value == _borrowerCollateralValue, 'Actual ehter value is not correct');
     }
     
-    function _closeRejectedAgreement() isNotClosed() internal {
+    /// @notice Closes rejected agreement and 
+    /// transfers collateral ETH back to user
+    function _closeRejectedAgreement() internal isNotClosed() {
         borrower.transfer(borrowerCollateralValue);
         
         isClosed = true;
     }
     
+    /**
+     * @notice Opens CDP contract in makerDAO system with ETH
+     * @return cdpId - id of cdp contract in makerDAO
+     */
     function _openCdp() internal returns(uint256) {
         uint256 _cdpId;
         
@@ -377,6 +406,10 @@ contract AgreementETH is BaseAgreement {
         return _cdpId;
     }
     
+    /**
+     * @notice Executes all required transfers after liquidation
+     * @return Operation success
+     */
     function _refundUsersAfterCDPLiquidation() internal returns(bool _success) {
         uint256 collateralFRADebtEquivalent = WrapperInstance.getCollateralEquivalent(
             collateralType, borrowerFRADebt/ONE);
@@ -392,6 +425,7 @@ contract AgreementETH is BaseAgreement {
     }
 }
 
+/// @title Inherited from BaseAgreement, should be deployed for ERC20 collateral
 contract AgreementERC20 is BaseAgreement {
     address erc20ContractAddress;
     ERC20Interface Erc20Instance;
@@ -409,6 +443,18 @@ contract AgreementERC20 is BaseAgreement {
         Erc20Instance = ERC20Interface(_erc20ContractAddress);
     }
     
+    /// @notice Closes rejected agreement and 
+    /// transfers collateral tokens back to user
+    function _closeRejectedAgreement() isNotClosed() internal {
+        Erc20Instance.transfer(borrower, borrowerCollateralValue);
+        
+        isClosed = true;
+    }
+    
+    /**
+     * @notice Opens CDP contract in makerDAO system with ERC20
+     * @return cdpId - id of cdp contract in makerDAO
+     */
     function _openCdp() internal returns(uint256) {
         uint256 _cdpId;
         
@@ -424,12 +470,10 @@ contract AgreementERC20 is BaseAgreement {
         return _cdpId;
     }
     
-    function _closeRejectedAgreement() isNotClosed() internal {
-        Erc20Instance.transfer(borrower, borrowerCollateralValue);
-        
-        isClosed = true;
-    }
-    
+    /**
+     * @notice Executes all required transfers after liquidation
+     * @return Operation success
+     */
     function _refundUsersAfterCDPLiquidation() internal returns(bool _success) {
         uint256 collateralFRADebtEquivalent = WrapperInstance.getCollateralEquivalent(
             collateralType, borrowerFRADebt/ONE);
