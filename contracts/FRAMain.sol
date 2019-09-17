@@ -5,7 +5,9 @@ import './Claimable.sol';
 import './Agreement.sol';
 
 
-/// @title Handler of all agreements
+/**
+ * @title Handler of all agreements
+ */ 
 contract FraMain is Claimable {
     mapping(address => address[]) public agreements;
     address[] public agreementList;

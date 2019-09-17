@@ -5,7 +5,9 @@ import './McdWrapper.sol';
 import './SafeMath.sol';
 import './ERC20Interface.sol';
 
-/// @title Interface for Agreement contract
+/**
+ * @title Interface for Agreement contract
+ */
 interface AgreementInterface {
     
     function isClosed() external view returns(bool);
@@ -33,7 +35,7 @@ contract BaseAgreement is Claimable, AgreementInterface {
     using SafeMath for uint256;
     
     address constant daiStableCoinAddress = address(0xc7cC3413f169a027dccfeffe5208Ca4f38eF0c40);
-    address constant McdWrapperAddress = address(0xc6b730627dE1DDd16132C62AB94CF9610B40FfdF); 
+    address constant McdWrapperAddress = address(0x89DCC7caa7E5e33C712C2641254c91676b2c568d);
     
     ERC20Interface DaiInstance = ERC20Interface(daiStableCoinAddress);
     McdWrapper WrapperInstance = McdWrapper(McdWrapperAddress);
@@ -63,21 +65,26 @@ contract BaseAgreement is Claimable, AgreementInterface {
     // test version, should be extended after stable 
     // multicollaterall makerDAO release
     uint256 public dsrTest = 105 * 10 ** 25;
-    //
     
-    /// @notice Grants access only if agreement is not terminated yet
+    /**
+     * @notice Grants access only if agreement is not terminated yet
+     */ 
     modifier isNotClosed() {
         require(!isClosed, 'Agreement is closed');
         _;
     }
-    
-    ///@notice Grants access only if agreement does not have lender address yet
+
+    /**
+     * @notice Grants access only if agreement does not have lender address yet
+     */
     modifier onlyPending() {
         require(isPending(), 'Agreement has its lender already');
         _;
     }
     
-    /// Grants access only if agreement is approved
+    /**
+     * @notice Grants access only if agreement is approved
+     */ 
     modifier onlyApproved() {
         require(isApproved, 'Agreement is not approved');
         _;
@@ -151,7 +158,7 @@ contract BaseAgreement is Claimable, AgreementInterface {
      * @dev Executes lots of external calls
      * @return Operation success
      */
-    function checkAgreement() public onlyContractOwner() isNotClosed() returns(bool _success) { 
+     function checkAgreement() public onlyContractOwner() isNotClosed() returns(bool _success) { 
         if(!isApproved && now > initialDate + TWENTY_FOUR_HOURS) {
             _closeRejectedAgreement();
         } else {
@@ -174,7 +181,7 @@ contract BaseAgreement is Claimable, AgreementInterface {
     }
     
     /**
-     * @notice Allows borrower to terminate agreement if it has no lender yet 
+     * @notice Allows borrower to terminate agreement if it has no lender yet
      * @return Operation success
      */
     function closePendingAgreement()
@@ -190,23 +197,26 @@ contract BaseAgreement is Claimable, AgreementInterface {
         return true;
     }
     
-    /// @notice returns lender existence
+    /**
+     * @notice returns lender existence
+     */
     function isPending() public view returns(bool) {
         return (lender == address(0));
     }
     
-    //should be removed after testing!!!
+    /**
+     * @notice should be removed after testing!!!
+     */
     function setBorrowerFraDebt(uint256 _borrowerFraDebt) public {
         borrowerFRADebt = _borrowerFraDebt;
-    } 
+    }
     
     function setdsrTest(uint256 _dsrTest) public {
         dsrTest = _dsrTest;
     }
-    //
     
     function() external payable {}
-    
+
     /**
      * @notice Updates the state of Agreement
      * @return Operation success
@@ -269,8 +279,10 @@ contract BaseAgreement is Claimable, AgreementInterface {
         emit AgreementUpdated(borrowerFRADebt, lenderPendingInjection, lenderPendingInjectionDai);
         return true;
     }
-    
-    /// @notice checks whether expireDate has come
+
+    /**
+     * @notice checks whether expireDate has come
+     */
     function _checkExpiringDate() internal view returns(bool _isExpired) {
         return (now > expireDate || isPending() && now > (initialDate + TWENTY_FOUR_HOURS));
     }
@@ -342,8 +354,10 @@ contract BaseAgreement is Claimable, AgreementInterface {
     function _openCdp() internal returns(uint256) {}
     // solium-enable no-empty-blocks
 
-    /// @notice Makes a delegatecall and gives a possibility 
-    /// to get a returning value
+    /**
+     * @notice Makes a delegatecall and gives a possibility 
+     * to get a returning value
+     */
     function execute(address _target, bytes memory _data)
         public
         payable
@@ -370,7 +384,9 @@ contract BaseAgreement is Claimable, AgreementInterface {
     }
 }
 
-/// @title Inherited from BaseAgreement, should be deployed for ETH collateral
+/**
+ * @title Inherited from BaseAgreement, should be deployed for ETH collateral
+ */
 contract AgreementETH is BaseAgreement {
     constructor (
         address payable _borrower, uint256 _borrowerCollateralValue, 
@@ -383,8 +399,10 @@ contract AgreementETH is BaseAgreement {
         require(msg.value == _borrowerCollateralValue, 'Actual ehter value is not correct');
     }
     
-    /// @notice Closes rejected agreement and 
-    /// transfers collateral ETH back to user
+    /**
+     * @notice Closes rejected agreement and 
+     * transfers collateral ETH back to user
+     */
     function _closeRejectedAgreement() internal isNotClosed() {
         borrower.transfer(borrowerCollateralValue);
         
@@ -428,7 +446,9 @@ contract AgreementETH is BaseAgreement {
     }
 }
 
-/// @title Inherited from BaseAgreement, should be deployed for ERC20 collateral
+/**
+ * @title Inherited from BaseAgreement, should be deployed for ERC20 collateral
+ */
 contract AgreementERC20 is BaseAgreement {
     address erc20ContractAddress;
     ERC20Interface Erc20Instance;
@@ -446,8 +466,10 @@ contract AgreementERC20 is BaseAgreement {
         Erc20Instance = ERC20Interface(_erc20ContractAddress);
     }
     
-    /// @notice Closes rejected agreement and 
-    /// transfers collateral tokens back to user
+    /**
+     * @notice Closes rejected agreement and 
+     * transfers collateral tokens back to user
+     */
     function _closeRejectedAgreement() internal isNotClosed() {
         Erc20Instance.transfer(borrower, borrowerCollateralValue);
         
