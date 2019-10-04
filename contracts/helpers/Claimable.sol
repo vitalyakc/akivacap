@@ -1,10 +1,20 @@
 pragma solidity 0.5.11;
 
-contract Ownable {
+import './Context.sol';
+import './Initializable.sol';
+
+contract Ownable is Initializable, Context {
     address public owner;
     
-    constructor() public {
-        owner = msg.sender;
+    event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
+
+    /**
+     * @dev The Ownable constructor sets the original `owner` of the contract to the sender
+     * account.
+     */
+    function initialize(address _sender) public initializer {
+        owner = _sender;
+        emit OwnershipTransferred(address(0), owner);
     }
     
     modifier onlyContractOwner() {
