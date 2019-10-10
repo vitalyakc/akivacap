@@ -12,18 +12,20 @@ import './interfaces/AgreementInterface.sol';
  * @notice Contract will be deployed only once as logic(implementation), proxy will be deployed for each agreement as storage
  * @dev Should not be deployed. It is being used as an abstract class
  */
-contract BaseAgreement is AgreementInterface, Claimable, Config, McdWrapper {
+contract BaseAgreement is Initializable, AgreementInterface, Claimable, Config, McdWrapper {
     using SafeMath for uint;
     using SafeMath for int;
-    
+
     uint status;
 
+    /**
+     * @dev set of statuses
+     */
     uint constant STATUS_PENDING = 0;
     uint constant STATUS_OPEN = 1;              // 0001
     uint constant STATUS_ACTIVE = 2;            // 0010
 
     /**
-     * @dev set of closed statuses
      * in all closed statused the third bit = 1, binary AND will equa
      * STATUS_ENDED & STATUS_CLOSED -> true
      * STATUS_LIQUIDATED & STATUS_CLOSED -> true
@@ -60,7 +62,7 @@ contract BaseAgreement is AgreementInterface, Claimable, Config, McdWrapper {
      * @dev Grants access only to agreement borrower
      */
     modifier onlyBorrower() {
-        require(msg.sender == borrower, 'Accessible only for borrower');
+        require(msg.sender == borrower, 'BaseAgreement: Accessible only for borrower');
         _;
     }
 
@@ -68,7 +70,7 @@ contract BaseAgreement is AgreementInterface, Claimable, Config, McdWrapper {
      * @dev Grants access only if agreement is not closed in any way yet
      */
     modifier onlyNotClosed() {
-        require(!isClosed(), 'Agreement should be neither closed nor ended nor liquidated');
+        require(!isClosed(), 'BaseAgreement: Agreement should be neither closed nor ended nor liquidated');
         _;
     }
 
@@ -76,7 +78,7 @@ contract BaseAgreement is AgreementInterface, Claimable, Config, McdWrapper {
      * @dev Grants access only if agreement is not matched yet
      */
     modifier onlyBeforeMatched() {
-        require(isBeforeMatched(), 'Agreement should be pending or open');
+        require(isBeforeMatched(), 'BaseAgreement: Agreement should be pending or open');
         _;
     }
     
@@ -84,7 +86,7 @@ contract BaseAgreement is AgreementInterface, Claimable, Config, McdWrapper {
      * @dev Grants access only if agreement is pending
      */
     modifier onlyPending() {
-        require(isPending(), 'Agreement should be pending');
+        require(isPending(), 'BaseAgreement: Agreement should be pending');
         _;
     }
     
@@ -92,7 +94,7 @@ contract BaseAgreement is AgreementInterface, Claimable, Config, McdWrapper {
      * @dev Grants access only if agreement is approved
      */
     modifier onlyOpen() {
-        require(isOpen(), 'Agreement should be approved');
+        require(isOpen(), 'BaseAgreement: Agreement should be approved');
         _;
     }
 
@@ -100,17 +102,17 @@ contract BaseAgreement is AgreementInterface, Claimable, Config, McdWrapper {
      * @dev Grants access only if agreement is active
      */
     modifier onlyActive() {
-        require(isActive(), 'Agreement should be active');
+        require(isActive(), 'BaseAgreement: Agreement should be active');
         _;
     }
 
     function initialize(address payable _borrower, uint256 _collateralAmount,
         uint256 _debtValue, uint256 _durationMins, uint256 _interestRatePercent, bytes32 _collateralType)
     public payable initializer {
-        // super.initialize();
-        require(_debtValue > 0, 'debt cannot be 0');
-        require((_interestRatePercent > 0) && (_interestRatePercent <= 100), 'interestRate is more than 100 percent');
-        require(_durationMins > 0);
+        Ownable.initialize();
+        require(_debtValue > 0, 'BaseAgreement: debt is zero');
+        require((_interestRatePercent > 0) && (_interestRatePercent <= 100), 'BaseAgreement: interestRate should be between 0 and 100');
+        require(_durationMins > 0, 'BaseAgreement: duration is zero');
         
         borrower = _borrower;
         debtValue = _debtValue;
@@ -288,13 +290,13 @@ contract BaseAgreement is AgreementInterface, Claimable, Config, McdWrapper {
         return now > expireDate;
     }
 
-    function _checkTimeToCancel() internal returns(bool){
+    function _checkTimeToCancel() internal view returns(bool){
         if ((isPending() && (now > initialDate.add(approveLimit)))
             || (isOpen() && (now > approveDate.add(matchLimit)))) {
             return true;
         }
     }
-    
+
     /**
      * @dev Terminates agreement
      * @return Operation success
@@ -352,13 +354,13 @@ contract BaseAgreement is AgreementInterface, Claimable, Config, McdWrapper {
 /**
  * @title Inherited from BaseAgreement, should be deployed for ETH collateral
  */
-contract AgreementETH is BaseAgreement {
-    // function initialize(address payable _borrower, uint256 _collateralAmount,
-    //     uint256 _debtValue, uint256 _durationMins, uint256 _interestRate, bytes32 _collateralType)
-    // public payable initializer {
-    //     require(msg.value == _collateralAmount, 'Actual ehter value is not correct');
-    //     super.initialize(_borrower, _collateralAmount, _debtValue, _durationMins, _interestRate, _collateralType);
-    // }
+contract AgreementETH is Initializable, BaseAgreement {
+    function initialize(address payable _borrower, uint256 _collateralAmount,
+        uint256 _debtValue, uint256 _durationMins, uint256 _interestRate, bytes32 _collateralType)
+    public payable initializer {
+        require(msg.value == _collateralAmount, 'Actual ehter value is not correct');
+        super.initialize(_borrower, _collateralAmount, _debtValue, _durationMins, _interestRate, _collateralType);
+    }
 
     /**
      * @dev Closes agreement before it is matched and
@@ -406,14 +408,7 @@ contract AgreementETH is BaseAgreement {
 /**
  * @title Inherited from BaseAgreement, should be deployed for ERC20 collateral
  */
-contract AgreementERC20 is BaseAgreement {
-    function initialize(address payable _borrower, uint256 _collateralAmount,
-        uint256 _debtValue, uint256 _durationMins, uint256 _interestRate, bytes32 _collateralType)
-    public payable initializer {
-        // require(msg.value == _collateralAmount, 'Actual ehter value is not correct');
-        super.initialize(_borrower, _collateralAmount, _debtValue, _durationMins, _interestRate, _collateralType);
-    }
-
+contract AgreementERC20 is Initializable, BaseAgreement {
     /**
      * @dev Closes rejected agreement and
      * transfers collateral tokens back to user

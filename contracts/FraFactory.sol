@@ -9,13 +9,13 @@ import 'zos-lib/contracts/upgradeability/UpgradeabilityProxy.sol';
 /**
  * @title Handler of all agreements
  */
-contract FraMain is Claimable {
+contract FraFactory is Initializable, Claimable {
     mapping(address => address[]) public agreements;
     address[] public agreementList;
     address agreementImpl;
 
-    constructor(address _agreementImpl) public {
-        // super.initialize();
+    function initialize(address _agreementImpl) public initializer {
+        Ownable.initialize();
         setAgreementImpl(_agreementImpl);
     }
 
@@ -35,7 +35,7 @@ contract FraMain is Claimable {
         uint256 _interestRate, bytes32 _collateralType)
     public payable returns(address _newAgreement) {
         AgreementETH agreement = AgreementETH(address(new UpgradeabilityProxy(agreementImpl, "")));
-        agreement.initialize.value(msg.value)(msg.sender, msg.value, _debtValue, _durationMins, _interestRate, _collateralType);
+        // agreement.initialize.value(msg.value)(msg.sender, msg.value, _debtValue, _durationMins, _interestRate, _collateralType);
 
         agreements[msg.sender].push(address(agreement));
         agreementList.push(address(agreement));
@@ -56,7 +56,7 @@ contract FraMain is Claimable {
         bytes32 _collateralType)
     public payable returns(address _newAgreement) {
         AgreementERC20 agreement = AgreementERC20(address(new UpgradeabilityProxy(agreementImpl, "")));
-        agreement.initialize(msg.sender, _collateralValue, _debtValue, _durationMins, _interestRate, _collateralType);
+        // agreement.initialize(msg.sender, _collateralValue, _debtValue, _durationMins, _interestRate, _collateralType);
 
         agreement.erc20TokenContract(_collateralType).transferFrom(
             msg.sender, address(agreement), _collateralValue);
