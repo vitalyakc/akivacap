@@ -1,12 +1,11 @@
 pragma solidity 0.5.11;
 
-import '../helpers/RaySupport.sol';
 import './McdAddresses.sol';
 
 /**
  * @title Collateral addresses and details contract
  */
-contract McdConfig is McdAddressesR14, RaySupport {
+contract McdConfig is McdAddressesR14 {
     struct CollateralAddresses{
         bytes32 ilk;
         address mcdJoinAddr;

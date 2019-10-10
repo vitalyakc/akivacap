@@ -12,14 +12,14 @@ import 'zos-lib/contracts/upgradeability/UpgradeabilityProxy.sol';
 contract FraFactory is Initializable, Claimable {
     mapping(address => address[]) public agreements;
     address[] public agreementList;
-    address agreementImpl;
+    address payable agreementImpl;
 
-    function initialize(address _agreementImpl) public initializer {
+    function initialize(address payable _agreementImpl) public initializer {
         Ownable.initialize();
         setAgreementImpl(_agreementImpl);
     }
 
-    function setAgreementImpl(address _agreementImpl) public onlyContractOwner() {
+    function setAgreementImpl(address payable _agreementImpl) public onlyContractOwner() {
         agreementImpl = _agreementImpl;
     }
     /**
@@ -34,12 +34,12 @@ contract FraFactory is Initializable, Claimable {
         uint256 _debtValue, uint256 _durationMins,
         uint256 _interestRate, bytes32 _collateralType)
     public payable returns(address _newAgreement) {
-        AgreementETH agreement = AgreementETH(address(new UpgradeabilityProxy(agreementImpl, "")));
-        // agreement.initialize.value(msg.value)(msg.sender, msg.value, _debtValue, _durationMins, _interestRate, _collateralType);
+        address payable agreementProxyAddr = address(new UpgradeabilityProxy(agreementImpl, ""));
+        AgreementETH(agreementProxyAddr).initialize(msg.sender, msg.value, _debtValue, _durationMins, _interestRate, _collateralType);
 
-        agreements[msg.sender].push(address(agreement));
-        agreementList.push(address(agreement));
-        return address(agreement);
+        agreements[msg.sender].push(agreementProxyAddr);
+        agreementList.push(agreementProxyAddr);
+        return agreementProxyAddr; //address(agreement);
     }
 
     /**
@@ -55,15 +55,15 @@ contract FraFactory is Initializable, Claimable {
         uint256 _durationMins, uint256 _interestRate,
         bytes32 _collateralType)
     public payable returns(address _newAgreement) {
-        AgreementERC20 agreement = AgreementERC20(address(new UpgradeabilityProxy(agreementImpl, "")));
-        // agreement.initialize(msg.sender, _collateralValue, _debtValue, _durationMins, _interestRate, _collateralType);
+        address payable agreementProxyAddr = address(new UpgradeabilityProxy(agreementImpl, ""));
+        AgreementInterface(agreementProxyAddr).initialize(msg.sender, _collateralValue, _debtValue, _durationMins, _interestRate, _collateralType);
 
-        agreement.erc20TokenContract(_collateralType).transferFrom(
-            msg.sender, address(agreement), _collateralValue);
+        AgreementInterface(agreementProxyAddr).erc20TokenContract(_collateralType).transferFrom(
+            msg.sender, address(agreementProxyAddr), _collateralValue);
 
-        agreements[msg.sender].push(address(agreement));
-        agreementList.push(address(agreement));
-        return address(agreement);
+        agreements[msg.sender].push(agreementProxyAddr);
+        agreementList.push(agreementProxyAddr);
+        return agreementProxyAddr;
     }
 
     /**

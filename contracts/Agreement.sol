@@ -116,7 +116,7 @@ contract BaseAgreement is Initializable, AgreementInterface, Claimable, Config, 
         
         borrower = _borrower;
         debtValue = _debtValue;
-        initialDate = now;
+        initialDate = getCurrentTime();
         duration = _durationMins.mul(1 minutes);
         interestRate = fromPercentToRay(_interestRatePercent);
         collateralAmount = _collateralAmount;
@@ -135,7 +135,7 @@ contract BaseAgreement is Initializable, AgreementInterface, Claimable, Config, 
      */
     function approveAgreement() public onlyContractOwner() onlyPending() returns(bool _success) {
         status = STATUS_OPEN;
-        approveDate = now;
+        approveDate = getCurrentTime();
         emit AgreementApproved();
 
         return true;
@@ -150,11 +150,11 @@ contract BaseAgreement is Initializable, AgreementInterface, Claimable, Config, 
         _lockAndDraw();
         _transferDai(borrower, debtValue);
         
-        matchDate = now;
+        matchDate = getCurrentTime();
         status = STATUS_ACTIVE;
         expireDate = matchDate.add(duration);
         lender = msg.sender;
-        lastCheckTime = now;
+        lastCheckTime = getCurrentTime();
         
         emit AgreementMatched(lender);
         return true;
@@ -179,7 +179,7 @@ contract BaseAgreement is Initializable, AgreementInterface, Claimable, Config, 
                 _terminateAgreement();
             }
         }
-        lastCheckTime = now;
+        lastCheckTime = getCurrentTime();
         return true;
     }
 
@@ -239,12 +239,16 @@ contract BaseAgreement is Initializable, AgreementInterface, Claimable, Config, 
     /**
      * @dev borrower debt according to FRA
      */
-    function borrowerFraDebt() public returns(uint) {
+    function borrowerFraDebt() public view returns(uint) {
         if (delta < 0) {
             fromRay(-delta);
         } else {
             return 0;
         }
+    }
+
+    function getCurrentTime() public view returns(uint) {
+        return now;
     }
 
     /**
@@ -253,7 +257,7 @@ contract BaseAgreement is Initializable, AgreementInterface, Claimable, Config, 
      */
     function _updateAgreementState() internal returns(bool _success) {
         uint currentDSR = getDsr(); //WrapperInstance.getDsr();
-        uint timeInterval = now.sub(lastCheckTime);
+        uint timeInterval = getCurrentTime().sub(lastCheckTime);
         int savingsDifference;
         uint injectionAmount;
 
@@ -287,12 +291,12 @@ contract BaseAgreement is Initializable, AgreementInterface, Claimable, Config, 
      * @dev checks whether expireDate has come
      */
     function _checkExpiringDate() internal view returns(bool) {
-        return now > expireDate;
+        return getCurrentTime() > expireDate;
     }
 
     function _checkTimeToCancel() internal view returns(bool){
-        if ((isPending() && (now > initialDate.add(approveLimit)))
-            || (isOpen() && (now > approveDate.add(matchLimit)))) {
+        if ((isPending() && (getCurrentTime() > initialDate.add(approveLimit)))
+            || (isOpen() && (getCurrentTime() > approveDate.add(matchLimit)))) {
             return true;
         }
     }
@@ -303,7 +307,7 @@ contract BaseAgreement is Initializable, AgreementInterface, Claimable, Config, 
      */
     function _terminateAgreement() internal returns(bool _success) {
         _refund(false);
-        closeDate = now;
+        closeDate = getCurrentTime();
         status = STATUS_ENDED;
 
         emit AgreementTerminated();
@@ -317,7 +321,7 @@ contract BaseAgreement is Initializable, AgreementInterface, Claimable, Config, 
      */
     function _liquidateAgreement() internal returns(bool _success) {
         _refund(true);
-        closeDate = now;
+        closeDate = getCurrentTime();
         status = STATUS_LIQUIDATED;
 
         emit AgreementLiquidated();
@@ -368,7 +372,7 @@ contract AgreementETH is Initializable, BaseAgreement {
      */
     function _cancelAgreement() internal onlyBeforeMatched() {
         borrower.transfer(collateralAmount);
-        closeDate = now;
+        closeDate = getCurrentTime();
         emit AgreementCanceled(msg.sender);
         status = STATUS_CANCELED;
     }

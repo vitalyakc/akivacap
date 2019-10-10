@@ -3,23 +3,25 @@ pragma solidity >=0.5.0;
 import './config/McdConfig.sol';
 import './interfaces/McdInterfaces.sol';
 import './interfaces/ERC20Interface.sol';
+import './helpers/RaySupport.sol';
 
 /**
  * @title Agreement multicollateral dai wrapper for maker dao system interaction.
  * @dev delegates calls to proxy. Oriented to exact MCD release. Current version oriented to 6th release mcd cdp.
  */
-contract McdWrapper is McdConfig {
+contract McdWrapper is McdConfig, RaySupport {
     address payable public proxyAddress;
     mapping(bytes32 => bool) collateralTypesAvailable;
 
-    function _initMcdWrapper() public {
+    function _initMcdWrapper() internal {
         _initMcdConfig();
         _buildProxy();
     }
+
     /**
      * @dev Build proxy for current caller (msg.sender address)
      */
-    function _buildProxy() public {
+    function _buildProxy() internal {
         proxyAddress = ProxyRegistryLike(proxyRegistryAddr).build();
     }
 
@@ -27,11 +29,11 @@ contract McdWrapper is McdConfig {
      * @dev Change proxy owner to a new one
      * @param newOwner new owner address
      */
-    function _setOwnerProxy(address newOwner) public {
+    function _setOwnerProxy(address newOwner) internal {
         proxy().setOwner(newOwner);
     }
 
-    function _openCdp(bytes32 ilk) public returns (uint cdp) {
+    function _openCdp(bytes32 ilk) internal returns (uint cdp) {
         bytes memory response = proxy().execute(proxyLib, abi.encodeWithSignature(
             'open(address,bytes32,uint256,uint256)',
             cdpManagerAddr, ilk));
@@ -40,7 +42,7 @@ contract McdWrapper is McdConfig {
         }
     }
 
-    function _lockETHAndDraw(bytes32 ilk, uint cdp, uint wadC, uint wadD) public {
+    function _lockETHAndDraw(bytes32 ilk, uint cdp, uint wadC, uint wadD) internal {
         bytes memory data;
         data = abi.encodeWithSignature(
             'lockETHAndDraw(address,address,address,address,uint256,uint256)',
@@ -56,7 +58,7 @@ contract McdWrapper is McdConfig {
      * @param   wadC    collateral amount to be locked in cdp contract
      * @return  cdp     cdp ID
      */
-    function _lockERC20AndDraw(bytes32 ilk, uint cdp, uint wadD, uint wadC, bool transferFrom) public {
+    function _lockERC20AndDraw(bytes32 ilk, uint cdp, uint wadD, uint wadC, bool transferFrom) internal {
         _approveERC20(ilk, proxyAddress, wadC);
         proxy().execute(proxyLib, abi.encodeWithSignature(
             'lockGemAndDraw(address,address,address,address,uint256,uint256,uint256,bool)',
@@ -71,7 +73,7 @@ contract McdWrapper is McdConfig {
      * @param   wadC    collateral amount to be locked in cdp contract
      * @return  cdp     cdp ID
      */
-    function _openLockETHAndDraw(bytes32 ilk, uint wadD, uint wadC) public returns (uint cdp) {
+    function _openLockETHAndDraw(bytes32 ilk, uint wadD, uint wadC) internal returns (uint cdp) {
         address payable target = proxyAddress;
         bytes memory data = abi.encodeWithSignature(
             'execute(address,bytes)',
@@ -104,7 +106,7 @@ contract McdWrapper is McdConfig {
      * @param   wadC    collateral amount to be locked in cdp contract
      * @return  cdp     cdp ID
      */
-    function _openLockERC20AndDraw(bytes32 ilk, uint wadD, uint wadC, bool transferFrom) public returns (uint cdp) {
+    function _openLockERC20AndDraw(bytes32 ilk, uint wadD, uint wadC, bool transferFrom) internal returns (uint cdp) {
         _approveERC20(ilk, proxyAddress, wadC);
         bytes memory response = proxy().execute(proxyLib, abi.encodeWithSignature(
             'openLockGemAndDraw(address,address,address,address,bytes32,uint256,uint256,bool)',
@@ -120,7 +122,7 @@ contract McdWrapper is McdConfig {
      * @param cdp cdp ID
      * @param wad amount of dai tokens
      */
-    function _injectToCdp(uint cdp, uint wad) public {
+    function _injectToCdp(uint cdp, uint wad) internal {
         _approveDai(address(proxy()), wad);
         _wipe(cdp, wad);
     }
@@ -130,7 +132,7 @@ contract McdWrapper is McdConfig {
      * @param cdp cdp ID
      * @param wad amount of dai tokens
      */
-    function _wipe(uint cdp, uint wad) public {
+    function _wipe(uint cdp, uint wad) internal {
         proxy().execute(
             proxyLib,
             abi.encodeWithSignature('wipe(address,address,uint256,uint256)',
@@ -142,7 +144,7 @@ contract McdWrapper is McdConfig {
      * @notice approves this amount of dai tokens to proxy before locking
      * @param wad amount of dai tokens
      */
-    function _lockDai(uint wad) public {
+    function _lockDai(uint wad) internal {
         // transfer dai from borrower to agreement
         _transferFromDai(msg.sender, address(this), wad);
         _approveDai(address(proxy()), wad);
@@ -156,7 +158,7 @@ contract McdWrapper is McdConfig {
      * @dev unlock dai tokens from dsr(pot) contract.
      * @param wad amount of dai tokens
      */
-    function _unlockDai(uint wad) public {
+    function _unlockDai(uint wad) internal {
         proxy().execute(
             proxyLibDsr,
             abi.encodeWithSignature('exit(address,address,uint256)',
@@ -167,14 +169,14 @@ contract McdWrapper is McdConfig {
      * @dev     unlock all dai tokens from dsr(pot) contract.
      * @return  pie amount of all dai tokens was unlocked in fact
      */
-    function _unlockAllDai() public returns(uint pie) {
+    function _unlockAllDai() internal returns(uint pie) {
         pie = getLockedDai();
         _unlockDai(pie);
         // function will be available in further releases (11)
         //proxy().execute(proxyLib, abi.encodeWithSignature("exitAll(address,address)", mcdJoinDaiAddr, mcdPotAddr));
     }
 
-    function _cashETH(bytes32 ilk, uint wad) public {
+    function _cashETH(bytes32 ilk, uint wad) internal {
         proxy().execute(
             proxyLibEnd,
             abi.encodeWithSignature('cashETH(address,address,bytes32,uint)',
@@ -190,7 +192,7 @@ contract McdWrapper is McdConfig {
      * @param   cdpId   cdp ID
      * @return  amount of collateral tokens returned after liquidation
      */
-    function _forceLiquidateCdp(bytes32 ilk, uint cdpId) public view returns(uint) {
+    function _forceLiquidateCdp(bytes32 ilk, uint cdpId) internal view returns(uint) {
         address urn = ManagerLike(cdpManagerAddr).urns(cdpId);
         (uint ink, uint art) = VatLike(mcdVatAddr).urns(ilk, urn);
 
@@ -209,7 +211,7 @@ contract McdWrapper is McdConfig {
      * @param   to      address allowed to call transferFrom
      * @param   amount  tokens amount for approval
      */
-    function _approveDai(address to, uint amount) public returns(bool) {
+    function _approveDai(address to, uint amount) internal returns(bool) {
         ERC20Interface(mcdDaiAddr).approve(to, amount);
         return true;
     }
@@ -220,7 +222,7 @@ contract McdWrapper is McdConfig {
      * @param   to      address allowed to call transferFrom
      * @param   amount  tokens amount for approval
      */
-    function _approveERC20(bytes32 ilk, address to, uint amount) public returns(bool) {
+    function _approveERC20(bytes32 ilk, address to, uint amount) internal returns(bool) {
         erc20TokenContract(ilk).approve(to, amount);
         return true;
     }
@@ -230,7 +232,7 @@ contract McdWrapper is McdConfig {
      * @param   to      address of recepient
      * @param   amount  tokens amount
      */
-    function _transferDai(address to, uint amount) public returns(bool) {
+    function _transferDai(address to, uint amount) internal returns(bool) {
         ERC20Interface(mcdDaiAddr).transfer(to, amount);
         return true;
     }
@@ -241,7 +243,7 @@ contract McdWrapper is McdConfig {
      * @param   to      address of recepient
      * @param   amount  tokens amount
      */
-    function _transferERC20(bytes32 ilk, address to, uint amount) public returns(bool) {
+    function _transferERC20(bytes32 ilk, address to, uint amount) internal returns(bool) {
         erc20TokenContract(ilk).transfer(to, amount);
         return true;
     }
@@ -252,7 +254,7 @@ contract McdWrapper is McdConfig {
      * @param   to      address of recepient
      * @param   amount  tokens amount
      */
-    function _transferFromDai(address from, address to, uint amount) public returns(bool) {
+    function _transferFromDai(address from, address to, uint amount) internal returns(bool) {
         ERC20Interface(mcdDaiAddr).transferFrom(from, to, amount);
         return true;
     }
@@ -263,7 +265,7 @@ contract McdWrapper is McdConfig {
      * @param   to      address of recepient
      * @param   amount  tokens amount
      */
-    function _callTransferFromDai(address from, address to, uint amount) public returns(bool) {
+    function _callTransferFromDai(address from, address to, uint amount) internal returns(bool) {
         (bool TransferSuccessful,) = mcdDaiAddr.call(abi.encodeWithSignature(
                 'transferFrom(address,address,uint256)', from, to, amount));
         return TransferSuccessful;
@@ -276,7 +278,7 @@ contract McdWrapper is McdConfig {
      * @param   to      address of recepient
      * @param   amount  tokens amount
      */
-    function _transferFromERC20(bytes32 ilk, address from, address to, uint amount) public returns(bool) {
+    function _transferFromERC20(bytes32 ilk, address from, address to, uint amount) internal returns(bool) {
         erc20TokenContract(ilk).transferFrom(from, to, amount);
         return true;
     }
@@ -286,7 +288,7 @@ contract McdWrapper is McdConfig {
      * @param   cdp     cdp ID
      * @param   guy     address, ownership should be transfered to
      */
-    function _transferCdpOwnership(uint cdp, address guy) public {
+    function _transferCdpOwnership(uint cdp, address guy) internal {
         proxy().execute(
             proxyLib,
             abi.encodeWithSignature('give(address,uint256,address)',

@@ -120,14 +120,14 @@ contract Ownable is Initializable, Context {
     
     event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
 
-    // /**
-    //  * @dev The Ownable constructor sets the original `owner` of the contract to the sender
-    //  * account.
-    //  */
-    // function initialize() public initializer {
-    //     owner = msg.sender;
-    //     emit OwnershipTransferred(address(0), owner);
-    // }
+    /**
+     * @dev The Ownable constructor sets the original `owner` of the contract to the sender
+     * account.
+     */
+    function initialize() public initializer {
+        owner = msg.sender;
+        emit OwnershipTransferred(address(0), owner);
+    }
     
     modifier onlyContractOwner() {
         require(owner == msg.sender, 'Not a contract owner');
@@ -271,82 +271,6 @@ contract Config {
     
 }
 
-// File: contracts/helpers/RaySupport.sol
-
-pragma solidity 0.5.11;
-
-
-contract RaySupport {
-    using SafeMath for uint256;
-    using SafeMath for int256;
-    uint constant public ONE = 10 ** 27;
-    uint constant public HUNDRED = 100;
-
-    function toRay(uint _val) public pure returns(uint) {
-        return _val.mul(ONE);
-    }
-
-    function fromRay(uint _val) public pure returns(uint) {
-        return _val / ONE;
-    }
-
-    function toRay(int _val) public pure returns(int) {
-        return _val.mul(int(ONE));
-    }
-
-    function fromRay(int _val) public pure returns(int) {
-        return _val / int(ONE);
-    }
-
-    function fromPercentToRay(uint _val) public pure returns(uint) {
-        return (_val.mul(ONE) / HUNDRED).add(ONE);
-    }
-
-    function fromRayToPercent(uint _val) public pure returns(uint) {
-        return _val.mul(HUNDRED) / ONE - HUNDRED;
-    }
-
-    function rpow(uint x, uint n, uint base) public pure returns (uint z) {
-        assembly {
-            switch x case 0 {switch n case 0 {z := base} default {z := 0}}
-            default {
-                switch mod(n, 2) case 0 { z := base } default { z := x }
-                let half := div(base, 2)  // for rounding.
-                for { n := div(n, 2) } n { n := div(n,2) } {
-                    let xx := mul(x, x)
-                    if iszero(eq(div(xx, x), x)) { revert(0,0) }
-                    let xxRound := add(xx, half)
-                    if lt(xxRound, xx) { revert(0,0) }
-                    x := div(xxRound, base)
-                    if mod(n,2) {
-                        let zx := mul(z, x)
-                        if and(iszero(iszero(x)), iszero(eq(div(zx, x), z))) { revert(0,0) }
-                        let zxRound := add(zx, half)
-                        if lt(zxRound, zx) { revert(0,0) }
-                        z := div(zxRound, base)
-                    }
-                }
-            }
-        }
-    }
-
-    function rmul(uint x, uint y) public pure returns (uint z) {
-        z = mul(x, y) / ONE;
-    }
-
-    function add(uint x, uint y) public pure returns (uint z) {
-        require((z = x + y) >= x);
-    }
-
-    function sub(uint x, uint y) public pure returns (uint z) {
-        require((z = x - y) <= x);
-    }
-
-    function mul(uint x, uint y) public pure returns (uint z) {
-        require(y == 0 || (z = x * y) / y == x);
-    }
-}
-
 // File: contracts/config/McdAddresses.sol
 
 pragma solidity 0.5.11;
@@ -433,11 +357,10 @@ contract McdAddressesR14 {
 pragma solidity 0.5.11;
 
 
-
 /**
  * @title Collateral addresses and details contract
  */
-contract McdConfig is McdAddressesR14, RaySupport {
+contract McdConfig is McdAddressesR14 {
     struct CollateralAddresses{
         bytes32 ilk;
         address mcdJoinAddr;
@@ -516,9 +439,86 @@ contract DSProxyLike {
     function setOwner(address owner_) public;
 }
 
+// File: contracts/helpers/RaySupport.sol
+
+pragma solidity 0.5.11;
+
+
+contract RaySupport {
+    using SafeMath for uint256;
+    using SafeMath for int256;
+    uint constant public ONE = 10 ** 27;
+    uint constant public HUNDRED = 100;
+
+    function toRay(uint _val) public pure returns(uint) {
+        return _val.mul(ONE);
+    }
+
+    function fromRay(uint _val) public pure returns(uint) {
+        return _val / ONE;
+    }
+
+    function toRay(int _val) public pure returns(int) {
+        return _val.mul(int(ONE));
+    }
+
+    function fromRay(int _val) public pure returns(int) {
+        return _val / int(ONE);
+    }
+
+    function fromPercentToRay(uint _val) public pure returns(uint) {
+        return (_val.mul(ONE) / HUNDRED).add(ONE);
+    }
+
+    function fromRayToPercent(uint _val) public pure returns(uint) {
+        return _val.mul(HUNDRED) / ONE - HUNDRED;
+    }
+
+    function rpow(uint x, uint n, uint base) public pure returns (uint z) {
+        assembly {
+            switch x case 0 {switch n case 0 {z := base} default {z := 0}}
+            default {
+                switch mod(n, 2) case 0 { z := base } default { z := x }
+                let half := div(base, 2)  // for rounding.
+                for { n := div(n, 2) } n { n := div(n,2) } {
+                    let xx := mul(x, x)
+                    if iszero(eq(div(xx, x), x)) { revert(0,0) }
+                    let xxRound := add(xx, half)
+                    if lt(xxRound, xx) { revert(0,0) }
+                    x := div(xxRound, base)
+                    if mod(n,2) {
+                        let zx := mul(z, x)
+                        if and(iszero(iszero(x)), iszero(eq(div(zx, x), z))) { revert(0,0) }
+                        let zxRound := add(zx, half)
+                        if lt(zxRound, zx) { revert(0,0) }
+                        z := div(zxRound, base)
+                    }
+                }
+            }
+        }
+    }
+
+    function rmul(uint x, uint y) public pure returns (uint z) {
+        z = mul(x, y) / ONE;
+    }
+
+    function add(uint x, uint y) public pure returns (uint z) {
+        require((z = x + y) >= x);
+    }
+
+    function sub(uint x, uint y) public pure returns (uint z) {
+        require((z = x - y) <= x);
+    }
+
+    function mul(uint x, uint y) public pure returns (uint z) {
+        require(y == 0 || (z = x * y) / y == x);
+    }
+}
+
 // File: contracts/McdWrapper.sol
 
 pragma solidity >=0.5.0;
+
 
 
 
@@ -527,7 +527,7 @@ pragma solidity >=0.5.0;
  * @title Agreement multicollateral dai wrapper for maker dao system interaction.
  * @dev delegates calls to proxy. Oriented to exact MCD release. Current version oriented to 6th release mcd cdp.
  */
-contract McdWrapper is McdConfig {
+contract McdWrapper is McdConfig, RaySupport {
     address payable public proxyAddress;
     mapping(bytes32 => bool) collateralTypesAvailable;
 
@@ -942,9 +942,7 @@ pragma solidity 0.5.11;
  * @title Interface for Agreement contract
  */
 interface AgreementInterface {
-    
     function approveAgreement() external returns(bool);
-    function rejectAgreement() external returns(bool);
     function matchAgreement() external returns(bool);
     function checkAgreement() external returns(bool);
     function cancelAgreement() external returns(bool);
@@ -977,18 +975,20 @@ pragma solidity 0.5.11;
  * @notice Contract will be deployed only once as logic(implementation), proxy will be deployed for each agreement as storage
  * @dev Should not be deployed. It is being used as an abstract class
  */
-contract BaseAgreement is AgreementInterface, Claimable, Config, McdWrapper {
+contract BaseAgreement is Initializable, AgreementInterface, Claimable, Config, McdWrapper {
     using SafeMath for uint;
     using SafeMath for int;
-    
+
     uint status;
 
+    /**
+     * @dev set of statuses
+     */
     uint constant STATUS_PENDING = 0;
     uint constant STATUS_OPEN = 1;              // 0001
     uint constant STATUS_ACTIVE = 2;            // 0010
 
     /**
-     * @dev set of closed statuses
      * in all closed statused the third bit = 1, binary AND will equa
      * STATUS_ENDED & STATUS_CLOSED -> true
      * STATUS_LIQUIDATED & STATUS_CLOSED -> true
@@ -1025,7 +1025,7 @@ contract BaseAgreement is AgreementInterface, Claimable, Config, McdWrapper {
      * @dev Grants access only to agreement borrower
      */
     modifier onlyBorrower() {
-        require(msg.sender == borrower, 'Accessible only for borrower');
+        require(msg.sender == borrower, 'BaseAgreement: Accessible only for borrower');
         _;
     }
 
@@ -1033,7 +1033,7 @@ contract BaseAgreement is AgreementInterface, Claimable, Config, McdWrapper {
      * @dev Grants access only if agreement is not closed in any way yet
      */
     modifier onlyNotClosed() {
-        require(!isClosed(), 'Agreement should be neither closed nor ended nor liquidated');
+        require(!isClosed(), 'BaseAgreement: Agreement should be neither closed nor ended nor liquidated');
         _;
     }
 
@@ -1041,7 +1041,7 @@ contract BaseAgreement is AgreementInterface, Claimable, Config, McdWrapper {
      * @dev Grants access only if agreement is not matched yet
      */
     modifier onlyBeforeMatched() {
-        require(isBeforeMatched(), 'Agreement should be pending or open');
+        require(isBeforeMatched(), 'BaseAgreement: Agreement should be pending or open');
         _;
     }
     
@@ -1049,7 +1049,7 @@ contract BaseAgreement is AgreementInterface, Claimable, Config, McdWrapper {
      * @dev Grants access only if agreement is pending
      */
     modifier onlyPending() {
-        require(isPending(), 'Agreement should be pending');
+        require(isPending(), 'BaseAgreement: Agreement should be pending');
         _;
     }
     
@@ -1057,7 +1057,7 @@ contract BaseAgreement is AgreementInterface, Claimable, Config, McdWrapper {
      * @dev Grants access only if agreement is approved
      */
     modifier onlyOpen() {
-        require(isOpen(), 'Agreement should be approved');
+        require(isOpen(), 'BaseAgreement: Agreement should be approved');
         _;
     }
 
@@ -1065,17 +1065,17 @@ contract BaseAgreement is AgreementInterface, Claimable, Config, McdWrapper {
      * @dev Grants access only if agreement is active
      */
     modifier onlyActive() {
-        require(isActive(), 'Agreement should be active');
+        require(isActive(), 'BaseAgreement: Agreement should be active');
         _;
     }
 
     function initialize(address payable _borrower, uint256 _collateralAmount,
         uint256 _debtValue, uint256 _durationMins, uint256 _interestRatePercent, bytes32 _collateralType)
     public payable initializer {
-        // super.initialize();
-        require(_debtValue > 0, 'debt cannot be 0');
-        require((_interestRatePercent > 0) && (_interestRatePercent <= 100), 'interestRate is more than 100 percent');
-        require(_durationMins > 0);
+        Ownable.initialize();
+        require(_debtValue > 0, 'BaseAgreement: debt is zero');
+        require((_interestRatePercent > 0) && (_interestRatePercent <= 100), 'BaseAgreement: interestRate should be between 0 and 100');
+        require(_durationMins > 0, 'BaseAgreement: duration is zero');
         
         borrower = _borrower;
         debtValue = _debtValue;
@@ -1202,7 +1202,7 @@ contract BaseAgreement is AgreementInterface, Claimable, Config, McdWrapper {
     /**
      * @dev borrower debt according to FRA
      */
-    function borrowerFraDebt() public returns(uint) {
+    function borrowerFraDebt() public view returns(uint) {
         if (delta < 0) {
             fromRay(-delta);
         } else {
@@ -1259,7 +1259,7 @@ contract BaseAgreement is AgreementInterface, Claimable, Config, McdWrapper {
             return true;
         }
     }
-    
+
     /**
      * @dev Terminates agreement
      * @return Operation success
@@ -1317,13 +1317,13 @@ contract BaseAgreement is AgreementInterface, Claimable, Config, McdWrapper {
 /**
  * @title Inherited from BaseAgreement, should be deployed for ETH collateral
  */
-contract AgreementETH is BaseAgreement {
-    // function initialize(address payable _borrower, uint256 _collateralAmount,
-    //     uint256 _debtValue, uint256 _durationMins, uint256 _interestRate, bytes32 _collateralType)
-    // public payable initializer {
-    //     require(msg.value == _collateralAmount, 'Actual ehter value is not correct');
-    //     super.initialize(_borrower, _collateralAmount, _debtValue, _durationMins, _interestRate, _collateralType);
-    // }
+contract AgreementETH is Initializable, BaseAgreement {
+    function initialize(address payable _borrower, uint256 _collateralAmount,
+        uint256 _debtValue, uint256 _durationMins, uint256 _interestRate, bytes32 _collateralType)
+    public payable initializer {
+        require(msg.value == _collateralAmount, 'Actual ehter value is not correct');
+        super.initialize(_borrower, _collateralAmount, _debtValue, _durationMins, _interestRate, _collateralType);
+    }
 
     /**
      * @dev Closes agreement before it is matched and
@@ -1371,14 +1371,7 @@ contract AgreementETH is BaseAgreement {
 /**
  * @title Inherited from BaseAgreement, should be deployed for ERC20 collateral
  */
-contract AgreementERC20 is BaseAgreement {
-    function initialize(address payable _borrower, uint256 _collateralAmount,
-        uint256 _debtValue, uint256 _durationMins, uint256 _interestRate, bytes32 _collateralType)
-    public payable initializer {
-        // require(msg.value == _collateralAmount, 'Actual ehter value is not correct');
-        super.initialize(_borrower, _collateralAmount, _debtValue, _durationMins, _interestRate, _collateralType);
-    }
-
+contract AgreementERC20 is Initializable, BaseAgreement {
     /**
      * @dev Closes rejected agreement and
      * transfers collateral tokens back to user
@@ -1628,17 +1621,17 @@ pragma solidity 0.5.11;
 /**
  * @title Handler of all agreements
  */
-contract FraFactory is Claimable {
+contract FraFactory is Initializable, Claimable {
     mapping(address => address[]) public agreements;
     address[] public agreementList;
-    address agreementImpl;
+    address payable agreementImpl;
 
-    constructor(address _agreementImpl) public {
-        // super.initialize();
+    function initialize(address payable _agreementImpl) public initializer {
+        Ownable.initialize();
         setAgreementImpl(_agreementImpl);
     }
 
-    function setAgreementImpl(address _agreementImpl) public onlyContractOwner() {
+    function setAgreementImpl(address payable _agreementImpl) public onlyContractOwner() {
         agreementImpl = _agreementImpl;
     }
     /**
@@ -1653,12 +1646,12 @@ contract FraFactory is Claimable {
         uint256 _debtValue, uint256 _durationMins,
         uint256 _interestRate, bytes32 _collateralType)
     public payable returns(address _newAgreement) {
-        AgreementETH agreement = AgreementETH(address(new UpgradeabilityProxy(agreementImpl, "")));
-        agreement.initialize.value(msg.value)(msg.sender, msg.value, _debtValue, _durationMins, _interestRate, _collateralType);
+        address payable agreementProxyAddr = address(new UpgradeabilityProxy(agreementImpl, ""));
+        AgreementETH(agreementProxyAddr).initialize(msg.sender, msg.value, _debtValue, _durationMins, _interestRate, _collateralType);
 
-        agreements[msg.sender].push(address(agreement));
-        agreementList.push(address(agreement));
-        return address(agreement);
+        agreements[msg.sender].push(agreementProxyAddr);
+        agreementList.push(agreementProxyAddr);
+        return agreementProxyAddr; //address(agreement);
     }
 
     /**
@@ -1674,15 +1667,15 @@ contract FraFactory is Claimable {
         uint256 _durationMins, uint256 _interestRate,
         bytes32 _collateralType)
     public payable returns(address _newAgreement) {
-        AgreementERC20 agreement = AgreementERC20(address(new UpgradeabilityProxy(agreementImpl, "")));
-        agreement.initialize(msg.sender, _collateralValue, _debtValue, _durationMins, _interestRate, _collateralType);
+        address payable agreementProxyAddr = address(new UpgradeabilityProxy(agreementImpl, ""));
+        AgreementERC20(agreementProxyAddr).initialize(msg.sender, _collateralValue, _debtValue, _durationMins, _interestRate, _collateralType);
 
-        agreement.erc20TokenContract(_collateralType).transferFrom(
-            msg.sender, address(agreement), _collateralValue);
+        AgreementERC20(agreementProxyAddr).erc20TokenContract(_collateralType).transferFrom(
+            msg.sender, address(agreementProxyAddr), _collateralValue);
 
-        agreements[msg.sender].push(address(agreement));
-        agreementList.push(address(agreement));
-        return address(agreement);
+        agreements[msg.sender].push(agreementProxyAddr);
+        agreementList.push(agreementProxyAddr);
+        return agreementProxyAddr;
     }
 
     /**

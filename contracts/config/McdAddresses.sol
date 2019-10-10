@@ -55,25 +55,25 @@ contract McdAddressesR13 {
 contract McdAddressesR14 {
     uint public constant RELEASE = 14;
     // address public constant proxyRegistryAddr = 0x64A436ae831C1672AE81F674CAb8B6775df3475C;
-    address public constant proxyRegistryAddr = 0xda657E86db3e76BDa6d88e6a09798F0BBF5bDf75;
-    address public constant proxyLib = 0xc21274797A01E133Ebd9D79b23498eDbD7166137;
-    address public constant proxyLibDsr = 0x8b31eF27d7708a7e24b43D352e837b9486B2b961;
-    address public constant proxyLibEnd = 0x45da208FB53A8d60EeEA2A055908ee82d0a6485A;
-    address public constant cdpManagerAddr = 0x1Cb0d969643aF4E929b3FafA5BA82950e31316b8;
-    address public constant mcdDaiAddr = 0x1f9BEAf12D8db1e50eA8a5eD53FB970462386aA0;
-    address public constant mcdJoinDaiAddr = 0x61Af28390D0B3E806bBaF09104317cb5d26E215D;
-    address public constant mcdVatAddr = 0x6e6073260e1a77dFaf57D0B92c44265122Da8028;
-    address public constant getCdpsAddr = 0xB5907a51e3b747DbF9D5125aB77efF3a55e50b7d;
-    address public constant mcdJoinEthaAddr = 0xc3AbbA566bb62c09b7f94704d8dFd9800935D3F9;
-    address public constant mcdJoinEthbAddr = 0x960Fb16406B56FDd7e2800fCA5457F524a393877;
-    address public constant mcdJoinZrxaAddr = 0x79f15B0DA982A99B7Bcf602c8F384C56f0B0E8CD;
-    address public constant mcdPotAddr = 0x24e89801DAD4603a3E2280eE30FB77f183Cb9eD9;
-    address public constant mcdSpotAddr = 0xF5cDfcE5A0b85fF06654EF35f4448E74C523c5Ac;
-    address public constant mcdCatAddr = 0xdD9eFf17f24F42adEf1B240fc5DAfba2aA6dCefD;
-    address public constant mcdJugAddr = 0x3793181eBbc1a72cc08ba90087D21c7862783FA5;
-    address public constant mcdEndAddr = 0xAF2bD74A519f824483E3a2cea9058fbe6bDAC036;
+    address constant proxyRegistryAddr = 0xda657E86db3e76BDa6d88e6a09798F0BBF5bDf75;
+    address constant proxyLib = 0xc21274797A01E133Ebd9D79b23498eDbD7166137;
+    address constant proxyLibDsr = 0x8b31eF27d7708a7e24b43D352e837b9486B2b961;
+    address constant proxyLibEnd = 0x45da208FB53A8d60EeEA2A055908ee82d0a6485A;
+    address constant cdpManagerAddr = 0x1Cb0d969643aF4E929b3FafA5BA82950e31316b8;
+    address constant mcdDaiAddr = 0x1f9BEAf12D8db1e50eA8a5eD53FB970462386aA0;
+    address constant mcdJoinDaiAddr = 0x61Af28390D0B3E806bBaF09104317cb5d26E215D;
+    address constant mcdVatAddr = 0x6e6073260e1a77dFaf57D0B92c44265122Da8028;
+    address constant getCdpsAddr = 0xB5907a51e3b747DbF9D5125aB77efF3a55e50b7d;
+    address constant mcdJoinEthaAddr = 0xc3AbbA566bb62c09b7f94704d8dFd9800935D3F9;
+    address constant mcdJoinEthbAddr = 0x960Fb16406B56FDd7e2800fCA5457F524a393877;
+    address constant mcdJoinZrxaAddr = 0x79f15B0DA982A99B7Bcf602c8F384C56f0B0E8CD;
+    address constant mcdPotAddr = 0x24e89801DAD4603a3E2280eE30FB77f183Cb9eD9;
+    address constant mcdSpotAddr = 0xF5cDfcE5A0b85fF06654EF35f4448E74C523c5Ac;
+    address constant mcdCatAddr = 0xdD9eFf17f24F42adEf1B240fc5DAfba2aA6dCefD;
+    address constant mcdJugAddr = 0x3793181eBbc1a72cc08ba90087D21c7862783FA5;
+    address constant mcdEndAddr = 0xAF2bD74A519f824483E3a2cea9058fbe6bDAC036;
     
-    address payable public constant wethAddr = 0xd0A1E359811322d97991E03f863a0C30C2cF029C;
-    address payable public constant zrxAddr = 0x18392097549390502069C17700d21403EA3C721A;
+    address payable constant wethAddr = 0xd0A1E359811322d97991E03f863a0C30C2cF029C;
+    address payable constant zrxAddr = 0x18392097549390502069C17700d21403EA3C721A;
 }
 
