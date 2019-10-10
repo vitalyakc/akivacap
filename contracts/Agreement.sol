@@ -12,7 +12,7 @@ import './interfaces/AgreementInterface.sol';
  * @notice Contract will be deployed only once as logic(implementation), proxy will be deployed for each agreement as storage
  * @dev Should not be deployed. It is being used as an abstract class
  */
-contract BaseAgreement is Initializable, AgreementInterface, Claimable, Config, McdWrapper {
+contract BaseAgreement is AgreementInterface, Claimable, Config, McdWrapper {
     using SafeMath for uint;
     using SafeMath for int;
 
@@ -361,7 +361,7 @@ contract BaseAgreement is Initializable, AgreementInterface, Claimable, Config, 
 /**
  * @title Inherited from BaseAgreement, should be deployed for ETH collateral
  */
-contract AgreementETH is Initializable, BaseAgreement {
+contract AgreementETH is BaseAgreement {
     function initialize(address payable _borrower, uint256 _collateralAmount,
         uint256 _debtValue, uint256 _durationMins, uint256 _interestRate, bytes32 _collateralType)
     public payable initializer {
@@ -415,7 +415,7 @@ contract AgreementETH is Initializable, BaseAgreement {
 /**
  * @title Inherited from BaseAgreement, should be deployed for ERC20 collateral
  */
-contract AgreementERC20 is Initializable, BaseAgreement {
+contract AgreementERC20 is BaseAgreement {
     /**
      * @dev Closes rejected agreement and
      * transfers collateral tokens back to user

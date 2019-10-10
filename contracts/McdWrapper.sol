@@ -35,7 +35,7 @@ contract McdWrapper is McdConfig, RaySupport {
 
     function _openCdp(bytes32 ilk) internal returns (uint cdp) {
         bytes memory response = proxy().execute(proxyLib, abi.encodeWithSignature(
-            'open(address,bytes32,uint256,uint256)',
+            'open(address,bytes32)',
             cdpManagerAddr, ilk));
         assembly {
             cdp := mload(add(response, 0x20))

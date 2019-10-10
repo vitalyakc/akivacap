@@ -35,7 +35,8 @@ contract FraFactory is Initializable, Claimable {
         uint256 _interestRate, bytes32 _collateralType)
     public payable returns(address _newAgreement) {
         address payable agreementProxyAddr = address(new UpgradeabilityProxy(agreementImpl, ""));
-        AgreementInterface(agreementProxyAddr).initialize(msg.sender, msg.value, _debtValue, _durationMins, _interestRate, _collateralType);
+        AgreementInterface(agreementProxyAddr).
+            initialize.value(msg.value)(msg.sender, msg.value, _debtValue, _durationMins, _interestRate, _collateralType);
 
         agreements[msg.sender].push(agreementProxyAddr);
         agreementList.push(agreementProxyAddr);
@@ -56,7 +57,8 @@ contract FraFactory is Initializable, Claimable {
         bytes32 _collateralType)
     public payable returns(address _newAgreement) {
         address payable agreementProxyAddr = address(new UpgradeabilityProxy(agreementImpl, ""));
-        AgreementInterface(agreementProxyAddr).initialize(msg.sender, _collateralValue, _debtValue, _durationMins, _interestRate, _collateralType);
+        AgreementInterface(agreementProxyAddr).
+            initialize(msg.sender, _collateralValue, _debtValue, _durationMins, _interestRate, _collateralType);
 
         AgreementInterface(agreementProxyAddr).erc20TokenContract(_collateralType).transferFrom(
             msg.sender, address(agreementProxyAddr), _collateralValue);
