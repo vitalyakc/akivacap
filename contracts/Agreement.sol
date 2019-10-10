@@ -26,10 +26,10 @@ contract BaseAgreement is Initializable, AgreementInterface, Claimable, Config, 
     uint constant STATUS_ACTIVE = 2;            // 0010
 
     /**
-     * in all closed statused the third bit = 1, binary AND will equa
-     * STATUS_ENDED & STATUS_CLOSED -> true
-     * STATUS_LIQUIDATED & STATUS_CLOSED -> true
-     * STATUS_CANCELED & STATUS_CLOSED -> true
+     * in all closed statused the forth bit = 1, binary "AND" will equal:
+     * STATUS_ENDED & STATUS_CLOSED -> STATUS_CLOSED
+     * STATUS_LIQUIDATED & STATUS_CLOSED -> STATUS_CLOSED
+     * STATUS_CANCELED & STATUS_CLOSED -> STATUS_CLOSED
      */
     uint constant STATUS_CLOSED = 8;            // 1000
     uint constant STATUS_ENDED = 9;             // 1001
@@ -288,12 +288,15 @@ contract BaseAgreement is Initializable, AgreementInterface, Claimable, Config, 
     }
 
     /**
-     * @dev checks whether expireDate has come
+     * @dev check whether active agreement period is expired
      */
     function _checkExpiringDate() internal view returns(bool) {
         return getCurrentTime() > expireDate;
     }
 
+    /**
+     * @dev check whether pending agreement should be canceled automatically
+     */
     function _checkTimeToCancel() internal view returns(bool){
         if ((isPending() && (getCurrentTime() > initialDate.add(approveLimit)))
             || (isOpen() && (getCurrentTime() > approveDate.add(matchLimit)))) {

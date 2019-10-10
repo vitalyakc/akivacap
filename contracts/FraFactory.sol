@@ -1,8 +1,8 @@
 pragma solidity 0.5.11;
 
 import './interfaces/ERC20Interface.sol';
+import './interfaces/AgreementInterface.sol';
 import './helpers/Claimable.sol';
-import './Agreement.sol';
 import 'zos-lib/contracts/upgradeability/UpgradeabilityProxy.sol';
 
 
@@ -35,7 +35,7 @@ contract FraFactory is Initializable, Claimable {
         uint256 _interestRate, bytes32 _collateralType)
     public payable returns(address _newAgreement) {
         address payable agreementProxyAddr = address(new UpgradeabilityProxy(agreementImpl, ""));
-        AgreementETH(agreementProxyAddr).initialize(msg.sender, msg.value, _debtValue, _durationMins, _interestRate, _collateralType);
+        AgreementInterface(agreementProxyAddr).initialize(msg.sender, msg.value, _debtValue, _durationMins, _interestRate, _collateralType);
 
         agreements[msg.sender].push(agreementProxyAddr);
         agreementList.push(agreementProxyAddr);
