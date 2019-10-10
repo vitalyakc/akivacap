@@ -14,7 +14,7 @@ contract McdConfig is McdAddressesR14, RaySupport {
     }
     mapping(bytes32 => CollateralAddresses) public collateralTypes;
 
-    constructor() public {
+    function _initMcdConfig() internal {
         collateralTypes["ETH-A"].ilk = "ETH-A";
         collateralTypes["ETH-A"].mcdJoinAddr = mcdJoinEthaAddr;
         collateralTypes["ETH-A"].baseAddr = wethAddr;

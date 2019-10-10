@@ -1,7 +1,10 @@
 pragma solidity 0.5.11;
 
+/**
+ * @title Mcd cdp maker dao system contracts deployed for 6th release
+ */
 contract McdAddressesR6 {
-    uint public constant release = 6;
+    uint public constant RELEASE = 6;
     address public constant proxyRegistryAddr = 0xda657E86db3e76BDa6d88e6a09798F0BBF5bDf75;
     address public constant proxyLib = 0x3B444f91f86d162C991D5EC048464C93b0890aE2;
     address public constant cdpManagerAddr = 0xd2e8d886Bc185Df6f437E22DF923DdF419daD4B8;
@@ -21,9 +24,13 @@ contract McdAddressesR6 {
     address payable public constant col1Addr = 0xC644e83399F3c0b4011D3dd3C61bc8b1617253E5;
 }
 
+/**
+ * @title Mcd cdp maker dao system contracts deployed for 13th release
+ */
 contract McdAddressesR13 {
-    uint public constant release = 13;
-    address public constant proxyRegistryAddr = 0x64A436ae831C1672AE81F674CAb8B6775df3475C;
+    uint public constant RELEASE = 13;
+    // address public constant proxyRegistryAddr = 0x64A436ae831C1672AE81F674CAb8B6775df3475C;
+    address public constant proxyRegistryAddr = 0xda657E86db3e76BDa6d88e6a09798F0BBF5bDf75;
     address public constant proxyLib = 0xfD561c946cD13A82962E1a28978b305560Ccd009;
     address public constant cdpManagerAddr = 0x89DB53B3A774e6c29c4Db596281F3CA3E1247610;
     address public constant mcdDaiAddr = 0x98738f2Ca303a7e8BF22B252E4418f2B14BbdFa2;
@@ -42,11 +49,16 @@ contract McdAddressesR13 {
     address payable public constant zrxAddr = 0x18392097549390502069C17700d21403EA3C721A;
 }
 
+/**
+ * @title Mcd cdp maker dao system contracts deployed for 14th release
+ */
 contract McdAddressesR14 {
     uint public constant RELEASE = 14;
-    address public constant proxyRegistryAddr = 0x64A436ae831C1672AE81F674CAb8B6775df3475C;
+    // address public constant proxyRegistryAddr = 0x64A436ae831C1672AE81F674CAb8B6775df3475C;
+    address public constant proxyRegistryAddr = 0xda657E86db3e76BDa6d88e6a09798F0BBF5bDf75;
     address public constant proxyLib = 0xc21274797A01E133Ebd9D79b23498eDbD7166137;
     address public constant proxyLibDsr = 0x8b31eF27d7708a7e24b43D352e837b9486B2b961;
+    address public constant proxyLibEnd = 0x45da208FB53A8d60EeEA2A055908ee82d0a6485A;
     address public constant cdpManagerAddr = 0x1Cb0d969643aF4E929b3FafA5BA82950e31316b8;
     address public constant mcdDaiAddr = 0x1f9BEAf12D8db1e50eA8a5eD53FB970462386aA0;
     address public constant mcdJoinDaiAddr = 0x61Af28390D0B3E806bBaF09104317cb5d26E215D;
@@ -59,6 +71,7 @@ contract McdAddressesR14 {
     address public constant mcdSpotAddr = 0xF5cDfcE5A0b85fF06654EF35f4448E74C523c5Ac;
     address public constant mcdCatAddr = 0xdD9eFf17f24F42adEf1B240fc5DAfba2aA6dCefD;
     address public constant mcdJugAddr = 0x3793181eBbc1a72cc08ba90087D21c7862783FA5;
+    address public constant mcdEndAddr = 0xAF2bD74A519f824483E3a2cea9058fbe6bDAC036;
     
     address payable public constant wethAddr = 0xd0A1E359811322d97991E03f863a0C30C2cF029C;
     address payable public constant zrxAddr = 0x18392097549390502069C17700d21403EA3C721A;

@@ -8,14 +8,14 @@ contract Ownable is Initializable, Context {
     
     event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
 
-    /**
-     * @dev The Ownable constructor sets the original `owner` of the contract to the sender
-     * account.
-     */
-    function initialize(address _sender) public initializer {
-        owner = _sender;
-        emit OwnershipTransferred(address(0), owner);
-    }
+    // /**
+    //  * @dev The Ownable constructor sets the original `owner` of the contract to the sender
+    //  * account.
+    //  */
+    // function initialize() public initializer {
+    //     owner = msg.sender;
+    //     emit OwnershipTransferred(address(0), owner);
+    // }
     
     modifier onlyContractOwner() {
         require(owner == msg.sender, 'Not a contract owner');

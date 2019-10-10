@@ -5,68 +5,75 @@ import './helpers/SafeMath.sol';
 import './config/Config.sol';
 import './McdWrapper.sol';
 import './interfaces/ERC20Interface.sol';
+import './interfaces/AgreementInterface.sol';
 
 /**
  * @title Base Agreement contract
+ * @notice Contract will be deployed only once as logic(implementation), proxy will be deployed for each agreement as storage
  * @dev Should not be deployed. It is being used as an abstract class
  */
-contract BaseAgreement is AgreementInterface, Claimable, Config, McdWrapper, RaySupport {
-    using SafeMath for uint256;
+contract BaseAgreement is AgreementInterface, Claimable, Config, McdWrapper {
+    using SafeMath for uint;
+    using SafeMath for int;
     
-    /**
-     * in all closed statused the third bit = 1,
-     * STATUS_ENDED & STATUS_CLOSED -> true
-     * STATUS_LIQUIDATED & STATUS_CLOSED -> true
-     * STATUS_CLOSED & STATUS_CLOSED -> true
-     */
-    uint constant STATUS_PENDING = 0;
-    uint constant STATUS_OPEN = 1;
-    uint constant STATUS_ACTIVE = 2;
-    uint constant STATUS_CLOSED = 4; // 100
-    uint constant STATUS_ENDED = 5; // 101
-    uint constant STATUS_LIQUIDATED = 6; // 110
-
     uint status;
 
-    // address constant daiStableCoinAddress = address(0xc7cC3413f169a027dccfeffe5208Ca4f38eF0c40);
-    //address constant McdWrapperAddress = address(0x89DCC7caa7E5e33C712C2641254c91676b2c568d);
-    
-    //ERC20Interface DaiInstance = ERC20Interface(daiStableCoinAddress);
-    //McdWrapper WrapperInstance = McdWrapper(McdWrapperAddress);
+    uint constant STATUS_PENDING = 0;
+    uint constant STATUS_OPEN = 1;              // 0001
+    uint constant STATUS_ACTIVE = 2;            // 0010
 
-    uint256 public durationMins;
+    /**
+     * @dev set of closed statuses
+     * in all closed statused the third bit = 1, binary AND will equa
+     * STATUS_ENDED & STATUS_CLOSED -> true
+     * STATUS_LIQUIDATED & STATUS_CLOSED -> true
+     * STATUS_CANCELED & STATUS_CLOSED -> true
+     */
+    uint constant STATUS_CLOSED = 8;            // 1000
+    uint constant STATUS_ENDED = 9;             // 1001
+    uint constant STATUS_LIQUIDATED = 10;       // 1010
+    uint constant STATUS_ENDED_LIQUIDATED = 11; // 1011
+    uint constant STATUS_CANCELED = 12;         // 1100
+
+
+    uint256 public duration;
     uint256 public initialDate;
     uint256 public approveDate;
     uint256 public matchDate;
     uint256 public expireDate;
-    
+    uint256 public closeDate;
+
     address payable public borrower;
     address payable public lender;
+    bytes32 public collateralType;
     uint256 public collateralAmount;
     uint256 public debtValue;
     uint256 public interestRate;
-    bytes32 public collateralType;
-    
+
     uint256 public cdpId;
     uint256 public lastCheckTime;
 
-    /**
-     * @notice Grants access only to agreement borrower
-     */
-    modifier onlyBorrrower() {
-        require(msg.sender == borrower, 'Accessible only for borrower');
-    }
+    int delta;
+    int deltaCommon;
 
     /**
-     * @notice Grants access only if agreement is not closed in any way yet
+     * @dev Grants access only to agreement borrower
      */
-    modifier onlyNotClosed() {
-        require(status < STATUS_CLOSED, 'Agreement should be neither closed nor ended nor liquidated');
+    modifier onlyBorrower() {
+        require(msg.sender == borrower, 'Accessible only for borrower');
         _;
     }
 
     /**
-     * @notice Grants access only if agreement is not matched yet
+     * @dev Grants access only if agreement is not closed in any way yet
+     */
+    modifier onlyNotClosed() {
+        require(!isClosed(), 'Agreement should be neither closed nor ended nor liquidated');
+        _;
+    }
+
+    /**
+     * @dev Grants access only if agreement is not matched yet
      */
     modifier onlyBeforeMatched() {
         require(isBeforeMatched(), 'Agreement should be pending or open');
@@ -74,7 +81,7 @@ contract BaseAgreement is AgreementInterface, Claimable, Config, McdWrapper, Ray
     }
     
     /**
-     * @notice Grants access only if agreement is pending
+     * @dev Grants access only if agreement is pending
      */
     modifier onlyPending() {
         require(isPending(), 'Agreement should be pending');
@@ -82,7 +89,7 @@ contract BaseAgreement is AgreementInterface, Claimable, Config, McdWrapper, Ray
     }
     
     /**
-     * @notice Grants access only if agreement is approved
+     * @dev Grants access only if agreement is approved
      */
     modifier onlyOpen() {
         require(isOpen(), 'Agreement should be approved');
@@ -90,83 +97,80 @@ contract BaseAgreement is AgreementInterface, Claimable, Config, McdWrapper, Ray
     }
 
     /**
-     * @notice Grants access only if agreement is active
+     * @dev Grants access only if agreement is active
      */
     modifier onlyActive() {
         require(isActive(), 'Agreement should be active');
         _;
     }
-    
-    
-    function initialize(address payable _borrower, uint256 _collateralAmount,uint256 _debtValue, uint256 _durationMins, uint256 _interestRate, bytes32 _collateralType) 
+
+    function initialize(address payable _borrower, uint256 _collateralAmount,
+        uint256 _debtValue, uint256 _durationMins, uint256 _interestRatePercent, bytes32 _collateralType)
     public payable initializer {
+        // super.initialize();
         require(_debtValue > 0, 'debt cannot be 0');
-        require(_interestRate <= ONE, 'interestRate is more than 100 percent');
+        require((_interestRatePercent > 0) && (_interestRatePercent <= 100), 'interestRate is more than 100 percent');
         require(_durationMins > 0);
         
         borrower = _borrower;
         debtValue = _debtValue;
         initialDate = now;
-        durationMins = _durationMins;
-        interestRate = _interestRate + ONE;
+        duration = _durationMins.mul(1 minutes);
+        interestRate = fromPercentToRay(_interestRatePercent);
         collateralAmount = _collateralAmount;
         collateralType = _collateralType;
+        
+        _initConfig();
+        _initMcdWrapper();
+        cdpId = _openCdp(collateralType);
 
-        cdpId = openCdp(collateralType);
-
-        emit AgreementInitiated(
-            borrower, collateralAmount, debtValue, durationMins, _interestRate);
+        emit AgreementInitiated(borrower, collateralAmount, debtValue, duration, interestRate);
     }
     
     /**
-     * @notice Approves the agreement. Only for contract owner
+     * @dev Approves the agreement. Only for contract owner
      * @return Operation success
      */
     function approveAgreement() public onlyContractOwner() onlyPending() returns(bool _success) {
-        //DaiInstance.transfer(borrower, debtValue);
-        
-        status = STATUS_APPROVED;
+        status = STATUS_OPEN;
         approveDate = now;
-        
-        emit AgreementApproved(borrower, borrowerCollateralValue, debtValue, expireDate, interestRate);
-        
+        emit AgreementApproved();
+
         return true;
     }
     
     /**
-     * @notice Connects lender to the agreement.
+     * @dev Connects lender to the agreement.
      * @return Operation success
      */
     function matchAgreement() public onlyOpen() returns(bool _success) {
-        lockDai(debtValue);
-        // lockEthAndDraw()
-        // _lockColateralAndDrawDai()
-
+        _lockDai(debtValue);
+        _lockAndDraw();
+        _transferDai(borrower, debtValue);
+        
         matchDate = now;
-        status = STATUS_MATCHED;
-        expireDate = matchDate.add(durationMins.mul(1 minutes));
+        status = STATUS_ACTIVE;
+        expireDate = matchDate.add(duration);
         lender = msg.sender;
         lastCheckTime = now;
         
-        emit AgreementMatched(msg.sender, matchDate);
+        emit AgreementMatched(lender);
         return true;
     }
-    
+
     /**
+     * @dev check for close
      * @notice Calls needed function according to the expireDate
      * (terminates or updates the agreement)
-     * @dev Executes lots of external calls
      * @return Operation success
      */
      function checkAgreement() public onlyContractOwner() onlyNotClosed() returns(bool _success) {
-        if (isPending() && (now > initialDate.add(approveLimitHours.mul(1 hours)))) {
-            _closePendingAgreement();
-        } else if (isOpen() && (now > approveDate.add(matchLimitHours.mul(1 hours)))) {
-            _closeOpenedAgreement();
+        if (_checkTimeToCancel()) {
+            _cancelAgreement();
         } else if (isActive()) {
             _updateAgreementState();
-        
-            if(WrapperInstance.isCDPLiquidated(collateralType, cdpId)) {
+
+            if(isCDPLiquidated(collateralType, cdpId)) {
                 _liquidateAgreement();
             }
             if(_checkExpiringDate()) {
@@ -177,33 +181,17 @@ contract BaseAgreement is AgreementInterface, Claimable, Config, McdWrapper, Ray
         return true;
     }
 
-    function closeAgreement() public onlyBeforeMatched() onlyBorrower() returns(bool _success)  {
-        if (isPending()) {
-            return _closePendingAgreement();
-        } else if (isOpen()) {
-            return _closeOpenedAgreement();
-        }
+    function cancelAgreement() public onlyBeforeMatched() onlyBorrower() onlyContractOwner() returns(bool _success)  {
+        _cancelAgreement();
     }
-    
-    /**
-     * @notice Allows borrower to terminate agreement if it has no lender yet
-     * @return Operation success
-     */
-    function _closeOpenedAgreement() public onlyOpen() onlyBorrower() returns(bool _success) {
-        transferCdpOwnership(cdpId, msg.sender);
-        
-        status = STATUS_CLOSED;
-        return true;
-    }
-    
-    
+
     /**
      * @dev check if status is pending
      */
     function isBeforeMatched() public view returns(bool) {
         return (status < STATUS_ACTIVE);
     }
-    
+
     /**
      * @dev check if status is pending
      */
@@ -224,7 +212,7 @@ contract BaseAgreement is AgreementInterface, Claimable, Config, McdWrapper, Ray
     function isActive() public view returns(bool) {
         return (status == STATUS_ACTIVE);
     }
-    
+
     /**
      * @dev check if status is pending
      */
@@ -243,232 +231,174 @@ contract BaseAgreement is AgreementInterface, Claimable, Config, McdWrapper, Ray
      * @dev check if status is pending
      */
     function isClosed() public view returns(bool) {
-        return (status == STATUS_CLOSED);
+        return (status & STATUS_CLOSED == STATUS_CLOSED);
     }
 
     /**
-     * @dev check if status is closed or ended or liquidated
+     * @dev borrower debt according to FRA
      */
-    function isAnyClosed() public view returns(bool) {
-        return (status >= STATUS_CLOSED);
+    function borrowerFraDebt() public returns(uint) {
+        if (delta < 0) {
+            fromRay(-delta);
+        } else {
+            return 0;
+        }
     }
-    
-    function() external payable {}
 
     /**
-     * @notice Updates the state of Agreement
+     * @dev Updates the state of Agreement
      * @return Operation success
      */
     function _updateAgreementState() internal returns(bool _success) {
-        uint256 currentDSR = getCurrentDSR(); //WrapperInstance.getDsr();
-        uint256 timeInterval = now.sub(lastCheckTime);
-        int256 savingsDifference;
-        uint256 injectionAmount;
+        uint currentDSR = getDsr(); //WrapperInstance.getDsr();
+        uint timeInterval = now.sub(lastCheckTime);
+        int savingsDifference;
+        uint injectionAmount;
 
-        uint256 lockedDai = unlockAllDai();
-        savingsDifference = debtValue.mul(rpow(currentDSR, timeInterval, ONE) - rpow(interestRate, timeInterval, ONE));
-        // OR (the same result, but different formula)
-        // uint currentDsrAnnual = rpow(currentDSR, 1 years, ONE);
-        // savingsDifference = debtValue.mul(currentDsrAnnual.sub(interestRate).mul(timeInterval) / 1 years);
+        uint lockedDai = _unlockAllDai();
+        uint currentDsrAnnual = rpow(currentDSR, YEAR_SECS, ONE);
+
+        savingsDifference = (currentDsrAnnual > interestRate) ?
+            int(debtValue.mul(currentDsrAnnual.sub(interestRate)).mul(timeInterval) / YEAR_SECS) :
+            -int(debtValue.mul(interestRate.sub(currentDsrAnnual)).mul(timeInterval) / YEAR_SECS);
+        // OR (the same result, but different formula and interest rate should be in the same format as dsr, e.g. multiplier per second)
+        //savingsDifference = debtValue.mul(rpow(currentDSR, timeInterval, ONE) - rpow(interestRate, timeInterval, ONE));
+
         delta = delta.add(savingsDifference);
+        deltaCommon = deltaCommon.add(savingsDifference);
 
-        if (fromWad(delta) >= injectionThreshold) {
-            injectionAmount = fromWad(delta);
+        if (fromRay(delta) >= int(injectionThreshold)) {
+            injectionAmount = uint(fromRay(delta));
 
-            injectToCdp(cdpId, injectionAmount);
+            _injectToCdp(cdpId, injectionAmount);
 
-            delta = delta.sub(injectionAmount * ONE);
+            delta = delta.sub(int(toRay(injectionAmount)));
             lockedDai = lockedDai.sub(injectionAmount);
         }
-        lockDai(lockedDai);
+        _lockDai(lockedDai);
 
-        emit AgreementUpdated(injectionAmount, delta, lockedDai);
+        emit AgreementUpdated(injectionAmount, delta, deltaCommon, lockedDai);
         return true;
     }
 
     /**
-     * @notice checks whether expireDate has come
+     * @dev checks whether expireDate has come
      */
-    function _checkExpiringDate() internal view returns(bool _isExpired) {
-        return (now > expireDate || isPending() && now > (initialDate + TWENTY_FOUR_HOURS));
+    function _checkExpiringDate() internal view returns(bool) {
+        return now > expireDate;
+    }
+
+    function _checkTimeToCancel() internal returns(bool){
+        if ((isPending() && (now > initialDate.add(approveLimit)))
+            || (isOpen() && (now > approveDate.add(matchLimit)))) {
+            return true;
+        }
     }
     
     /**
-     * @notice Terminates agreement
+     * @dev Terminates agreement
      * @return Operation success
      */
     function _terminateAgreement() internal returns(bool _success) {
-        uint256 borrowerFraDebtDai = borrowerFRADebt/ONE;
-        uint256 finalDaiLenderBalance;
-        
-        bytes memory response = execute(
-            McdWrapperAddress, abi.encodeWithSignature('unlockAllDai()'));
-        assembly {
-            finalDaiLenderBalance := mload(add(response, 0x20))
-        }
-        if(borrowerFraDebtDai > 0) {
-            (bool TransferSuccessful,) = daiStableCoinAddress.call(abi.encodeWithSignature(
-                'transferFrom(address,address,uint256)', borrower, address(this), borrowerFraDebtDai));
-            
-            if(TransferSuccessful) {
-                finalDaiLenderBalance = finalDaiLenderBalance.add(borrowerFraDebtDai);
-                
-                emit AgreementTerminated(borrowerFraDebtDai, finalDaiLenderBalance);
-            } else {
-                WrapperInstance.forceLiquidate(collateralType, cdpId);
-                _refundUsersAfterCDPLiquidation();
-            }
-        }
-        
-        DaiInstance.transfer(lender, finalDaiLenderBalance);
-        execute(
-            McdWrapperAddress, 
-            abi.encodeWithSignature('transferCdpOwnership(uint256,address)', cdpId, borrower));
-        
-        isClosed = true;
+        _refund(false);
+        closeDate = now;
         status = STATUS_ENDED;
+
+        emit AgreementTerminated();
         return true;
     }
-    
+
     /**
-     * @notice Liquidates agreement, mostly the sam as terminate 
+     * @dev Liquidates agreement, mostly the sam as terminate
      * but also covers collateral transfers after liquidation
      * @return Operation success
      */
     function _liquidateAgreement() internal returns(bool _success) {
-        uint256 finalDaiLenderBalance;
-        
-        _refundUsersAfterCDPLiquidation();
-        
-        bytes memory response = execute(
-            McdWrapperAddress, abi.encodeWithSignature('unlockAllDai()'));
-        assembly {
-            finalDaiLenderBalance := mload(add(response, 0x20))
-        }
-        
-        DaiInstance.transfer(lender, finalDaiLenderBalance);
-        execute(
-            McdWrapperAddress, 
-            abi.encodeWithSignature('transferCdpOwnership(uint256,address)', cdpId, borrower));
-        
+        _refund(true);
+        closeDate = now;
         status = STATUS_LIQUIDATED;
+
+        emit AgreementLiquidated();
         return true;
     }
-    
-    // solium-disable no-empty-blocks
-    function _closePendingAgreement() internal {}
-    function _refundUsersAfterCDPLiquidation() internal returns(bool _success) {}
-    function _openCdp() internal returns(uint256) {}
-    // solium-enable no-empty-blocks
 
-    /**
-     * @notice Makes a delegatecall and gives a possibility 
-     * to get a returning value
-     */
-    function execute(address _target, bytes memory _data)
-        public
-        payable
-        returns (bytes memory response)
-    {
-        require(_target != address(0), 'ds-proxy-target-address-required');
-
-        // call contract in current context
-        assembly {
-            let succeeded := delegatecall(sub(gas, 5000), _target, add(_data, 0x20), mload(_data), 0, 0)
-            let size := returndatasize
-
-            response := mload(0x40)
-            mstore(0x40, add(response, and(add(add(size, 0x20), 0x1f), not(0x1f))))
-            mstore(response, size)
-            returndatacopy(add(response, 0x20), 0, size)
-
-            switch iszero(succeeded)
-            case 1 {
-                // throw if delegatecall failed
-                revert(add(response, 0x20), size)
+    function _refund(bool _isCdpLiquidated) internal {
+        uint lenderRefundDai = _unlockAllDai();
+        uint borrowerFraDebtDai = borrowerFraDebt();
+        
+        if (borrowerFraDebtDai > 0) {
+            if (_isCdpLiquidated) {
+                _refundAfterCdpLiquidation(borrowerFraDebtDai);
+            } else {
+                if (_callTransferFromDai(borrower, address(this), borrowerFraDebtDai)) {
+                    lenderRefundDai = lenderRefundDai.add(borrowerFraDebtDai);
+                } else {
+                    _forceLiquidateCdp(collateralType, cdpId);
+                    _refundAfterCdpLiquidation(borrowerFraDebtDai);
+                }
             }
         }
+        _transferDai(lender, lenderRefundDai);
+        _transferCdpOwnership(cdpId, borrower);
+        emit RefundBase(lender, lenderRefundDai, borrower, cdpId);
     }
+    function() external payable {}
+
+    function _lockAndDraw() internal {}
+    function _cancelAgreement() internal {}
+    function _refundAfterCdpLiquidation(uint _borrowerFraDebtDai) internal returns(bool _success) {}
 }
 
 /**
  * @title Inherited from BaseAgreement, should be deployed for ETH collateral
  */
 contract AgreementETH is BaseAgreement {
-    constructor (
-        address payable _borrower, uint256 _borrowerCollateralValue, 
-        uint256 _debtValue, uint256 _expairyDate, uint256 _interestRate, bytes32 _collateralType) 
-    public payable
-    BaseAgreement(
-        _borrower, _borrowerCollateralValue, _debtValue, 
-        _expairyDate, _interestRate, _collateralType) 
-    {
-        require(msg.value == _borrowerCollateralValue, 'Actual ehter value is not correct');
-    }
-    
+    // function initialize(address payable _borrower, uint256 _collateralAmount,
+    //     uint256 _debtValue, uint256 _durationMins, uint256 _interestRate, bytes32 _collateralType)
+    // public payable initializer {
+    //     require(msg.value == _collateralAmount, 'Actual ehter value is not correct');
+    //     super.initialize(_borrower, _collateralAmount, _debtValue, _durationMins, _interestRate, _collateralType);
+    // }
+
     /**
-     * @notice Closes rejected agreement and 
+     * @dev Closes agreement before it is matched and
      * transfers collateral ETH back to user
      */
-    function _closePendingAgreement() internal isNotClosed() {
-        borrower.transfer(borrowerCollateralValue);
-        
-        status = STATUS_CLOSED;
+    function _cancelAgreement() internal onlyBeforeMatched() {
+        borrower.transfer(collateralAmount);
+        closeDate = now;
+        emit AgreementCanceled(msg.sender);
+        status = STATUS_CANCELED;
     }
     
     /**
-     * @notice Opens CDP contract in makerDAO system with ETH
+     * @dev Opens CDP contract in makerDAO system with ETH
      * @return cdpId - id of cdp contract in makerDAO
      */
-    function _lockCollateralAndDrawDai() internal returns(uint256) {
-        uint256 _cdpId;
-
-        lockETHAndDraw(collateralType, cdpId, collateralAmount, debtValue);
-
-        // solium-disable-next-line indentation
-        bytes memory response = execute(McdWrapperAddress, abi.encodeWithSignature(
-            'lockETHAndDraw(bytes32,uint256,uint256)', 
-            collateralType, debtValue, borrowerCollateralValue));
-        assembly {
-            _cdpId := mload(add(response, 0x20))
-        }
-        
-        return _cdpId;
+    function _lockAndDraw() internal {
+        return _lockETHAndDraw(collateralType, cdpId, collateralAmount, debtValue);
     }
 
     /**
-     * @notice Opens CDP contract in makerDAO system with ETH
+     * @dev Opens CDP contract in makerDAO system with ETH
      * @return cdpId - id of cdp contract in makerDAO
      */
-    function _openCdp() internal returns(uint256) {
-        uint256 _cdpId;
-        
-        // solium-disable-next-line indentation
-        bytes memory response = execute(McdWrapperAddress, abi.encodeWithSignature(
-            'openLockETHAndDraw(bytes32,uint256,uint256)', 
-            collateralType, debtValue, borrowerCollateralValue));
-        assembly {
-            _cdpId := mload(add(response, 0x20))
-        }
-        
-        return _cdpId;
+    function _openLockAndDraw() internal returns(uint256) {
+        return _openLockETHAndDraw(collateralType, debtValue, collateralAmount);
     }
-    
+
     /**
-     * @notice Executes all required transfers after liquidation
+     * @dev Executes all required transfers after liquidation
      * @return Operation success
      */
-    function _refundUsersAfterCDPLiquidation() internal returns(bool _success) {
-        uint256 collateralFRADebtEquivalent = WrapperInstance.getCollateralEquivalent(
-            collateralType, borrowerFRADebt/ONE);
-            
-        lender.transfer(collateralFRADebtEquivalent);
-        
-        uint256 borrowerRefundAmount = address(this).balance;
-        borrower.transfer(borrowerRefundAmount);
-        
-        emit AgreementLiquidated(
-            collateralFRADebtEquivalent, borrowerRefundAmount);
+    function _refundAfterCdpLiquidation(uint _borrowerFraDebtDai) internal returns(bool _success) {
+        uint256 lenderRefundCollateral = getCollateralEquivalent(collateralType, _borrowerFraDebtDai);
+        lender.transfer(lenderRefundCollateral);
+
+        uint borrowerRefundCollateral = address(this).balance;
+        borrower.transfer(borrowerRefundCollateral);
+
+        emit RefundLiquidated(_borrowerFraDebtDai, lenderRefundCollateral, borrowerRefundCollateral);
         return true;
     }
 }
@@ -477,65 +407,52 @@ contract AgreementETH is BaseAgreement {
  * @title Inherited from BaseAgreement, should be deployed for ERC20 collateral
  */
 contract AgreementERC20 is BaseAgreement {
-    address erc20ContractAddress;
-    ERC20Interface Erc20Instance;
-    
-    constructor (
-        address payable _borrower, uint256 _borrowerCollateralValue, 
-        uint256 _debtValue, uint256 _expairyDate, uint256 _interestRate, 
-        bytes32 _collateralType, address _erc20ContractAddress) 
-    public payable
-    BaseAgreement(
-        _borrower, _borrowerCollateralValue, _debtValue, 
-        _expairyDate, _interestRate, _collateralType) 
-    {
-        erc20ContractAddress = _erc20ContractAddress;
-        Erc20Instance = ERC20Interface(_erc20ContractAddress);
+    function initialize(address payable _borrower, uint256 _collateralAmount,
+        uint256 _debtValue, uint256 _durationMins, uint256 _interestRate, bytes32 _collateralType)
+    public payable initializer {
+        // require(msg.value == _collateralAmount, 'Actual ehter value is not correct');
+        super.initialize(_borrower, _collateralAmount, _debtValue, _durationMins, _interestRate, _collateralType);
     }
-    
+
     /**
-     * @notice Closes rejected agreement and 
+     * @dev Closes rejected agreement and
      * transfers collateral tokens back to user
      */
-    function _closePendingAgreement() internal isNotClosed() {
-        Erc20Instance.transfer(borrower, borrowerCollateralValue);
-        
-        status = STATUS_CLOSED;
+    function _cancelAgreement() internal onlyBeforeMatched() {
+        _transferERC20(collateralType, borrower, collateralAmount);
+
+        status = STATUS_CANCELED;
     }
-    
+
     /**
-     * @notice Opens CDP contract in makerDAO system with ERC20
+     * @dev Opens CDP contract in makerDAO system with ETH
      * @return cdpId - id of cdp contract in makerDAO
      */
-    function _openCdp() internal returns(uint256) {
-        uint256 _cdpId;
-        
-        // solium-disable-next-line indentation
-        bytes memory response = execute(McdWrapperAddress, abi.encodeWithSignature(
-            'openLockERC20AndDraw(bytes32,uint256,uint256)', 
-            collateralType, debtValue, borrowerCollateralValue));
-        assembly {
-            _cdpId := mload(add(response, 0x20))
-        }
-        
-        return _cdpId;
+    function _lockAndDraw() internal {
+        return _lockERC20AndDraw(collateralType, cdpId, collateralAmount, debtValue, true);
     }
-    
+
     /**
-     * @notice Executes all required transfers after liquidation
+     * @dev Opens CDP contract in makerDAO system with ERC20
+     * @return cdpId - id of cdp contract in makerDAO
+     */
+    function _openLockAndDraw() internal returns(uint256) {
+        return _openLockERC20AndDraw(collateralType, debtValue, collateralAmount, true);
+    }
+
+    /**
+     * @dev Executes all required transfers after liquidation
      * @return Operation success
      */
-    function _refundUsersAfterCDPLiquidation() internal returns(bool _success) {
-        uint256 collateralFRADebtEquivalent = WrapperInstance.getCollateralEquivalent(
-            collateralType, borrowerFRADebt/ONE);
-            
-        Erc20Instance.transfer(lender, collateralFRADebtEquivalent);
-        
-        uint256 borrowerRefundAmount = Erc20Instance.balanceOf(address(this));
-        Erc20Instance.transfer(borrower, borrowerRefundAmount);
+    function _refundAfterCdpLiquidation(uint _borrowerFraDebtDai) internal returns(bool _success) {
+        uint256 lenderRefundCollateral = getCollateralEquivalent(collateralType, _borrowerFraDebtDai);
+        _transferERC20(collateralType, lender, lenderRefundCollateral);
 
-        emit AgreementLiquidated(
-            collateralFRADebtEquivalent, borrowerRefundAmount);
+        uint borrowerRefundCollateral = address(this).balance;
+        _transferERC20(collateralType, borrower, borrowerRefundCollateral);
+
+        emit RefundLiquidated(_borrowerFraDebtDai, lenderRefundCollateral, borrowerRefundCollateral);
         return true;
     }
+
 }

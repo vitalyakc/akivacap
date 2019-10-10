@@ -1,17 +1,35 @@
 pragma solidity 0.5.11;
 
-import '../SafeMath.sol';
+import './SafeMath.sol';
 
 contract RaySupport {
     using SafeMath for uint256;
-    uint256 constant public ONE = 10 ** 27;
+    using SafeMath for int256;
+    uint constant public ONE = 10 ** 27;
+    uint constant public HUNDRED = 100;
 
-    function toWad(uint _val) public pure returns(uint) {
+    function toRay(uint _val) public pure returns(uint) {
         return _val.mul(ONE);
     }
 
-    function fromWad(uint _val) public pure returns(uint) {
-        return _val.div(ONE);
+    function fromRay(uint _val) public pure returns(uint) {
+        return _val / ONE;
+    }
+
+    function toRay(int _val) public pure returns(int) {
+        return _val.mul(int(ONE));
+    }
+
+    function fromRay(int _val) public pure returns(int) {
+        return _val / int(ONE);
+    }
+
+    function fromPercentToRay(uint _val) public pure returns(uint) {
+        return (_val.mul(ONE) / HUNDRED).add(ONE);
+    }
+
+    function fromRayToPercent(uint _val) public pure returns(uint) {
+        return _val.mul(HUNDRED) / ONE - HUNDRED;
     }
 
     function rpow(uint x, uint n, uint base) public pure returns (uint z) {
