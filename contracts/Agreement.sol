@@ -12,7 +12,7 @@ import './interfaces/AgreementInterface.sol';
  * @notice Contract will be deployed only once as logic(implementation), proxy will be deployed for each agreement as storage
  * @dev Should not be deployed. It is being used as an abstract class
  */
-contract BaseAgreement is AgreementInterface, Claimable, Config, McdWrapper {
+contract Agreement is AgreementInterface, Claimable, Config, McdWrapper {
     using SafeMath for uint;
     using SafeMath for int;
 
@@ -99,14 +99,6 @@ contract BaseAgreement is AgreementInterface, Claimable, Config, McdWrapper {
         _;
     }
 
-    /**
-     * @dev Grants access only if agreement is active
-     */
-    modifier onlyActive() {
-        require(isActive(), 'BaseAgreement: Agreement should be active');
-        _;
-    }
-
     function initialize(address payable _borrower, uint256 _collateralAmount,
         uint256 _debtValue, uint256 _durationMins, uint256 _interestRatePercent, bytes32 _collateralType, bool _isETH)
     public payable initializer {
@@ -154,7 +146,11 @@ contract BaseAgreement is AgreementInterface, Claimable, Config, McdWrapper {
      */
     function matchAgreement() public onlyOpen() returns(bool _success) {
         _lockDai(debtValue);
-        _lockAndDraw();
+        if (isETH) {
+            _lockETHAndDraw(collateralType, cdpId, collateralAmount, debtValue);
+        } else {
+            _lockERC20AndDraw(collateralType, cdpId, collateralAmount, debtValue, true);
+        }
         _transferDai(borrower, debtValue);
         
         matchDate = getCurrentTime();
@@ -179,9 +175,9 @@ contract BaseAgreement is AgreementInterface, Claimable, Config, McdWrapper {
         } else if (isActive()) {
             _updateAgreementState();
 
-            if(isCDPLiquidated(collateralType, cdpId)) {
-                _liquidateAgreement();
-            }
+            // if(isCDPLiquidated(collateralType, cdpId)) {
+            //     _liquidateAgreement();
+            // }
             if(_checkExpiringDate()) {
                 _terminateAgreement();
             }
@@ -190,7 +186,7 @@ contract BaseAgreement is AgreementInterface, Claimable, Config, McdWrapper {
         return true;
     }
 
-    function cancelAgreement() public onlyBeforeMatched() onlyBorrower() onlyContractOwner() returns(bool _success)  {
+    function cancelAgreement() public onlyBeforeMatched() onlyBorrower() returns(bool _success)  {
         _cancelAgreement();
     }
 
@@ -274,18 +270,6 @@ contract BaseAgreement is AgreementInterface, Claimable, Config, McdWrapper {
     }
 
     /**
-     * @dev Opens CDP contract in makerDAO system with ETH
-     * @return cdpId - id of cdp contract in makerDAO
-     */
-    function _lockAndDraw() internal {
-        if (isETH) {
-            return _lockETHAndDraw(collateralType, cdpId, collateralAmount, debtValue);
-        } else {
-            return _lockERC20AndDraw(collateralType, cdpId, collateralAmount, debtValue, true);
-        }
-    }
-
-    /**
      * @dev Updates the state of Agreement
      * @return Operation success
      */
@@ -349,19 +333,19 @@ contract BaseAgreement is AgreementInterface, Claimable, Config, McdWrapper {
         return true;
     }
 
-    /**
-     * @dev Liquidates agreement, mostly the sam as terminate
-     * but also covers collateral transfers after liquidation
-     * @return Operation success
-     */
-    function _liquidateAgreement() internal returns(bool _success) {
-        _refund(true);
-        closeDate = getCurrentTime();
-        status = STATUS_LIQUIDATED;
+    // /**
+    //  * @dev Liquidates agreement, mostly the sam as terminate
+    //  * but also covers collateral transfers after liquidation
+    //  * @return Operation success
+    //  */
+    // function _liquidateAgreement() internal returns(bool _success) {
+    //     _refund(true);
+    //     closeDate = getCurrentTime();
+    //     status = STATUS_LIQUIDATED;
 
-        emit AgreementLiquidated();
-        return true;
-    }
+    //     emit AgreementLiquidated();
+    //     return true;
+    // }
 
     function _refund(bool _isCdpLiquidated) internal {
         uint lenderRefundDai = _unlockAllDai();
