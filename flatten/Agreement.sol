@@ -1,5 +1,5 @@
 
-// File: contracts/helpers/Context.sol
+// File: contracts\helpers\Context.sol
 
 pragma solidity ^0.5.0;
 
@@ -29,7 +29,7 @@ contract Context {
     }
 }
 
-// File: contracts/helpers/Initializable.sol
+// File: contracts\helpers\Initializable.sol
 
 pragma solidity >=0.4.24 <0.6.0;
 
@@ -93,11 +93,9 @@ contract Initializable {
   uint256[50] private ______gap;
 }
 
-// File: contracts/helpers/Claimable.sol
+// File: contracts\helpers\Claimable.sol
 
-pragma solidity 0.5.11;
-
-
+pragma solidity 0.5.11;
 
 contract Ownable is Initializable, Context {
     address public owner;
@@ -133,7 +131,7 @@ contract Claimable is Ownable {
     }
 }
 
-// File: contracts/helpers/SafeMath.sol
+// File: contracts\helpers\SafeMath.sol
 
 pragma solidity >=0.5.0 <0.6.0;
 
@@ -212,7 +210,7 @@ library SafeMath {
 
 }
 
-// File: contracts/config/Config.sol
+// File: contracts\config\Config.sol
 
 pragma solidity 0.5.11;
 
@@ -255,7 +253,7 @@ contract Config {
     
 }
 
-// File: contracts/config/McdAddresses.sol
+// File: contracts\config\McdAddresses.sol
 
 pragma solidity 0.5.11;
 
@@ -336,10 +334,9 @@ contract McdAddressesR14 {
     address payable constant zrxAddr = 0x18392097549390502069C17700d21403EA3C721A;
 }
 
-// File: contracts/config/McdConfig.sol
+// File: contracts\config\McdConfig.sol
 
-pragma solidity 0.5.11;
-
+pragma solidity 0.5.11;
 
 /**
  * @title Collateral addresses and details contract
@@ -363,7 +360,7 @@ contract McdConfig is McdAddressesR14 {
     }
 }
 
-// File: contracts/interfaces/McdInterfaces.sol
+// File: contracts\interfaces\McdInterfaces.sol
 
 pragma solidity 0.5.11;
 
@@ -423,7 +420,7 @@ contract DSProxyLike {
     function setOwner(address owner_) public;
 }
 
-// File: contracts/interfaces/ERC20Interface.sol
+// File: contracts\interfaces\ERC20Interface.sol
 
 pragma solidity 0.5.11;
 
@@ -439,10 +436,9 @@ contract ERC20Interface {
     event Approval(address indexed tokenOwner, address indexed spender, uint tokens);
 }
 
-// File: contracts/helpers/RaySupport.sol
+// File: contracts\helpers\RaySupport.sol
 
-pragma solidity 0.5.11;
-
+pragma solidity 0.5.11;
 
 contract RaySupport {
     using SafeMath for uint256;
@@ -515,13 +511,9 @@ contract RaySupport {
     }
 }
 
-// File: contracts/McdWrapper.sol
+// File: contracts\McdWrapper.sol
 
-pragma solidity >=0.5.0;
-
-
-
-
+pragma solidity >=0.5.0;
 
 /**
  * @title Agreement multicollateral dai wrapper for maker dao system interaction.
@@ -935,17 +927,16 @@ contract McdWrapper is McdConfig, RaySupport {
     }
 }
 
-// File: contracts/interfaces/AgreementInterface.sol
+// File: contracts\interfaces\AgreementInterface.sol
 
-pragma solidity 0.5.11;
-
+pragma solidity 0.5.11;
 
 /**
  * @title Interface for Agreement contract
  */
 interface AgreementInterface {
-    // function initialize(address payable _borrower, uint256 _collateralAmount,
-    //     uint256 _debtValue, uint256 _durationMins, uint256 _interestRate, bytes32 _collateralType) external payable;
+    function initialize(address payable _borrower, uint256 _collateralAmount,
+        uint256 _debtValue, uint256 _durationMins, uint256 _interestRate, bytes32 _collateralType, bool _isETH) external payable;
     function approveAgreement() external returns(bool);
     function matchAgreement() external returns(bool);
     function checkAgreement() external returns(bool);
@@ -965,15 +956,9 @@ interface AgreementInterface {
     event RefundLiquidated(uint borrowerFraDebtDai, uint lenderRefundCollateral, uint borrowerRefundCollateral);
 }
 
-// File: contracts/Agreement.sol
+// File: contracts\Agreement.sol
 
-pragma solidity 0.5.11;
-
-
-
-
-
-
+pragma solidity 0.5.11;
 
 /**
  * @title Base Agreement contract
@@ -1226,7 +1211,7 @@ contract Agreement is AgreementInterface, Claimable, Config, McdWrapper {
      * @dev Closes agreement before it is matched and
      * transfers collateral ETH back to user
      */
-    function _cancelAgreement() internal onlyBeforeMatched() {
+    function _cancelAgreement() internal {
         if (isETH) {
             _transferERC20(collateralType, borrower, collateralAmount);
         } else {
