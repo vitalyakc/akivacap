@@ -6,7 +6,7 @@ import '../Agreement.sol';
  * @title Base Agreement Mock contract
  * @dev Should not be deployed. It is being used as an abstract class
  */
-contract BaseAgreementMock is BaseAgreement {
+contract AgreementMock is Agreement {
     uint public dsrTest = 105 * 10 ** 25;
 
     /**
@@ -25,14 +25,3 @@ contract BaseAgreementMock is BaseAgreement {
     }
 }
 
-/**
- * @title Inherited from BaseAgreementMock, should be deployed for ETH collateral
- */
-contract AgreementETHMock is BaseAgreementMock {
-}
-
-/**
- * @title Inherited from BaseAgreementMock, should be deployed for ERC20 collateral
- */
-contract AgreementERC20Mock is BaseAgreementMock {
-}

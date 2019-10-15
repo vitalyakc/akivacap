@@ -9,7 +9,7 @@ import 'zos-lib/contracts/upgradeability/UpgradeabilityProxy.sol';
 /**
  * @title Handler of all agreements
  */
-contract FraFactory is Initializable, Claimable {
+contract FraFactory is Claimable {
     mapping(address => address[]) public agreements;
     address[] public agreementList;
     address payable agreementImpl;
