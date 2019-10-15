@@ -226,7 +226,7 @@ contract McdWrapper is McdConfig, RaySupport {
         erc20TokenContract(ilk).approve(to, amount);
         return true;
     }
-    
+
     /**
      * @dev     transfer exact amount of dai tokens
      * @param   to      address of recepient
