@@ -258,7 +258,7 @@ contract Agreement is AgreementInterface, Claimable, Config, McdWrapper {
      * @dev Closes agreement before it is matched and
      * transfers collateral ETH back to user
      */
-    function _cancelAgreement() internal onlyBeforeMatched() {
+    function _cancelAgreement() internal {
         if (isETH) {
             _transferERC20(collateralType, borrower, collateralAmount);
         } else {
