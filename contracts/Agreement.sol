@@ -1,9 +1,9 @@
 pragma solidity 0.5.11;
 
+import './config/Config.sol';
 import './helpers/Claimable.sol';
 import './helpers/SafeMath.sol';
-import './config/Config.sol';
-import './McdWrapper.sol';
+import './mcd/McdWrapper.sol';
 import './interfaces/ERC20Interface.sol';
 import './interfaces/AgreementInterface.sol';
 
@@ -12,9 +12,10 @@ import './interfaces/AgreementInterface.sol';
  * @notice Contract will be deployed only once as logic(implementation), proxy will be deployed for each agreement as storage
  * @dev Should not be deployed. It is being used as an abstract class
  */
-contract Agreement is AgreementInterface, Claimable, Config, McdWrapper {
+contract Agreement is AgreementInterface, Claimable, McdWrapper {
     using SafeMath for uint;
     using SafeMath for int;
+    uint constant YEAR_SECS = 365 days;
 
     uint status;
 
@@ -59,11 +60,13 @@ contract Agreement is AgreementInterface, Claimable, Config, McdWrapper {
     int delta;
     int deltaCommon;
 
+    uint public injectionThreshold;
+
     /**
      * @dev Grants access only to agreement borrower
      */
     modifier onlyBorrower() {
-        require(msg.sender == borrower, 'BaseAgreement: Accessible only for borrower');
+        require(msg.sender == borrower, 'Agreement: Accessible only for borrower');
         _;
     }
 
@@ -71,7 +74,7 @@ contract Agreement is AgreementInterface, Claimable, Config, McdWrapper {
      * @dev Grants access only if agreement is not closed in any way yet
      */
     modifier onlyNotClosed() {
-        require(!isClosed(), 'BaseAgreement: Agreement should be neither closed nor ended nor liquidated');
+        require(!isClosed(), 'Agreement: Agreement should be neither closed nor ended nor liquidated');
         _;
     }
 
@@ -79,15 +82,23 @@ contract Agreement is AgreementInterface, Claimable, Config, McdWrapper {
      * @dev Grants access only if agreement is not matched yet
      */
     modifier onlyBeforeMatched() {
-        require(isBeforeMatched(), 'BaseAgreement: Agreement should be pending or open');
+        require(isBeforeMatched(), 'Agreement: Agreement should be pending or open');
         _;
     }
     
     /**
      * @dev Grants access only if agreement is pending
      */
+    modifier onlyActive() {
+        require(isActive(), 'Agreement: Agreement should be active');
+        _;
+    }
+
+    /**
+     * @dev Grants access only if agreement is pending
+     */
     modifier onlyPending() {
-        require(isPending(), 'BaseAgreement: Agreement should be pending');
+        require(isPending(), 'Agreement: Agreement should be pending');
         _;
     }
     
@@ -95,34 +106,43 @@ contract Agreement is AgreementInterface, Claimable, Config, McdWrapper {
      * @dev Grants access only if agreement is approved
      */
     modifier onlyOpen() {
-        require(isOpen(), 'BaseAgreement: Agreement should be approved');
+        require(isOpen(), 'Agreement: Agreement should be approved');
         _;
     }
 
-    function initAgreement(address payable _borrower, uint256 _collateralAmount,
-        uint256 _debtValue, uint256 _durationMins, uint256 _interestRatePercent, bytes32 _collateralType, bool _isETH)
-    public payable initializer {
+    function initAgreement(
+        address payable _borrower,
+        uint256 _collateralAmount,
+        uint256 _debtValue,
+        uint256 _durationMins,
+        uint256 _interestRatePercent,
+        bytes32 _collateralType,
+        bool _isETH,
+        address configAddr
+    ) public payable initializer {
         Ownable.initialize();
-        require(_debtValue > 0, 'BaseAgreement: debt is zero');
-        require((_interestRatePercent > 0) && (_interestRatePercent <= 100), 'BaseAgreement: interestRate should be between 0 and 100');
-        require(_durationMins > 0, 'BaseAgreement: duration is zero');
+        duration = _durationMins.mul(1 minutes);
+        
+        require((_collateralAmount > Config(configAddr).minCollateralAmount()) && (_collateralAmount < Config(configAddr).maxCollateralAmount()), 'FraFactory: collateral is zero');
+        require(_debtValue > 0, 'Agreement: debt is zero');
+        require((_interestRatePercent > 0) && (_interestRatePercent <= 100), 'Agreement: interestRate should be between 0 and 100');
+        require((duration > Config(configAddr).minDuration()) && (duration < Config(configAddr).maxDuration()), 'Agreement: duration is zero');
+        require(Config(configAddr).isCollateralEnabled(_collateralType), 'Agreement: collateral type is currencly disabled');
 
-        if (_isETH) {
+        _initMcdWrapper();
+
+        if (_isETH) {   
             require(msg.value == _collateralAmount, 'Actual ehter value is not correct');
         }
-
+        injectionThreshold = Config(configAddr).injectionThreshold();
         isETH = _isETH;
         borrower = _borrower;
         debtValue = _debtValue;
         initialDate = getCurrentTime();
-        duration = _durationMins.mul(1 minutes);
         interestRate = fromPercentToRay(_interestRatePercent);
         collateralAmount = _collateralAmount;
         collateralType = _collateralType;
         
-
-        _initConfig();
-        _initMcdWrapper();
         cdpId = _openCdp(collateralType);
 
         emit AgreementInitiated(borrower, collateralAmount, debtValue, duration, interestRate);
@@ -169,10 +189,10 @@ contract Agreement is AgreementInterface, Claimable, Config, McdWrapper {
      * (terminates or updates the agreement)
      * @return Operation success
      */
-     function checkAgreement() public onlyContractOwner() onlyNotClosed() returns(bool _success) {
-        if (_checkTimeToCancel()) {
-            _cancelAgreement();
-        } else if (isActive()) {
+     function updateAgreement() public onlyContractOwner() onlyActive() returns(bool _success) {
+        // if (_checkTimeToCancel()) {
+        //     _cancelAgreement();
+        // } else if (isActive()) {
             _updateAgreementState();
 
             // if(isCDPLiquidated(collateralType, cdpId)) {
@@ -181,13 +201,19 @@ contract Agreement is AgreementInterface, Claimable, Config, McdWrapper {
             if(_checkExpiringDate()) {
                 _terminateAgreement();
             }
-        }
+        // }
         lastCheckTime = getCurrentTime();
         return true;
     }
 
     function cancelAgreement() public onlyBeforeMatched() onlyBorrower() returns(bool _success)  {
         _cancelAgreement();
+        return true;
+    }
+
+    function rejectAgreement() public onlyBeforeMatched() onlyContractOwner() returns(bool _success)  {
+        _cancelAgreement();
+        return true;
     }
 
     /**
@@ -255,6 +281,16 @@ contract Agreement is AgreementInterface, Claimable, Config, McdWrapper {
     }
 
     /**
+     * @dev check whether pending agreement should be canceled automatically
+     */
+    function checkTimeToCancel(uint _approveLimit, uint _matchLimit) public view returns(bool){
+        if ((isPending() && (getCurrentTime() > initialDate.add(_approveLimit))) ||
+            (isOpen() && (getCurrentTime() > approveDate.add(_matchLimit)))) {
+            return true;
+        }
+    }
+
+    /**
      * @dev Closes agreement before it is matched and
      * transfers collateral ETH back to user
      */
@@ -310,15 +346,7 @@ contract Agreement is AgreementInterface, Claimable, Config, McdWrapper {
         return getCurrentTime() > expireDate;
     }
 
-    /**
-     * @dev check whether pending agreement should be canceled automatically
-     */
-    function _checkTimeToCancel() internal view returns(bool){
-        if ((isPending() && (getCurrentTime() > initialDate.add(approveLimit))) ||
-            (isOpen() && (getCurrentTime() > approveDate.add(matchLimit)))) {
-            return true;
-        }
-    }
+    
 
     /**
      * @dev Terminates agreement
@@ -358,7 +386,7 @@ contract Agreement is AgreementInterface, Claimable, Config, McdWrapper {
                 if (_callTransferFromDai(borrower, address(this), borrowerFraDebtDai)) {
                     lenderRefundDai = lenderRefundDai.add(borrowerFraDebtDai);
                 } else {
-                    _forceLiquidateCdp(collateralType, cdpId);
+                    //_forceLiquidateCdp(collateralType, cdpId);
                     _refundAfterCdpLiquidation(borrowerFraDebtDai);
                 }
             }

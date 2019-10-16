@@ -1,20 +1,18 @@
 pragma solidity >=0.5.0;
 
-import './config/McdConfig.sol';
-import './interfaces/McdInterfaces.sol';
-import './interfaces/ERC20Interface.sol';
-import './helpers/RaySupport.sol';
+import './McdAddresses.sol';
+import '../interfaces/McdInterfaces.sol';
+import '../interfaces/ERC20Interface.sol';
+import '../helpers/RaySupport.sol';
 
 /**
  * @title Agreement multicollateral dai wrapper for maker dao system interaction.
  * @dev delegates calls to proxy. Oriented to exact MCD release. Current version oriented to 6th release mcd cdp.
  */
-contract McdWrapper is McdConfig, RaySupport {
+contract McdWrapper is McdAddressesR14, RaySupport {
     address payable public proxyAddress;
-    mapping(bytes32 => bool) collateralTypesAvailable;
 
     function _initMcdWrapper() internal {
-        _initMcdConfig();
         _buildProxy();
     }
 
@@ -44,9 +42,10 @@ contract McdWrapper is McdConfig, RaySupport {
 
     function _lockETHAndDraw(bytes32 ilk, uint cdp, uint wadC, uint wadD) internal {
         bytes memory data;
+        (address collateralJoinAddr,) = _getCollateralAddreses(ilk);
         data = abi.encodeWithSignature(
             'lockETHAndDraw(address,address,address,address,uint256,uint256)',
-            cdpManagerAddr, mcdJugAddr, collateralTypes[ilk].mcdJoinAddr, mcdJoinDaiAddr, cdp, wadD);
+            cdpManagerAddr, mcdJugAddr, collateralJoinAddr, mcdJoinDaiAddr, cdp, wadD);
         proxyAddress.call.value(wadC)(abi.encodeWithSignature("execute(address,bytes)", proxyLib, data));
     }
 
@@ -60,9 +59,10 @@ contract McdWrapper is McdConfig, RaySupport {
      */
     function _lockERC20AndDraw(bytes32 ilk, uint cdp, uint wadD, uint wadC, bool transferFrom) internal {
         _approveERC20(ilk, proxyAddress, wadC);
+        (address collateralJoinAddr,) = _getCollateralAddreses(ilk);
         proxy().execute(proxyLib, abi.encodeWithSignature(
             'lockGemAndDraw(address,address,address,address,uint256,uint256,uint256,bool)',
-            cdpManagerAddr, mcdJugAddr, collateralTypes[ilk].mcdJoinAddr, mcdJoinDaiAddr, cdp, wadC, wadD, transferFrom));
+            cdpManagerAddr, mcdJugAddr, collateralJoinAddr, mcdJoinDaiAddr, cdp, wadC, wadD, transferFrom));
     }
 
     /**
@@ -75,11 +75,12 @@ contract McdWrapper is McdConfig, RaySupport {
      */
     function _openLockETHAndDraw(bytes32 ilk, uint wadD, uint wadC) internal returns (uint cdp) {
         address payable target = proxyAddress;
+        (address collateralJoinAddr,) = _getCollateralAddreses(ilk);
         bytes memory data = abi.encodeWithSignature(
             'execute(address,bytes)',
             proxyLib,
             abi.encodeWithSignature('openLockETHAndDraw(address,address,address,address,bytes32,uint256)',
-            cdpManagerAddr, mcdJugAddr, collateralTypes[ilk].mcdJoinAddr, mcdJoinDaiAddr, ilk, wadD));
+            cdpManagerAddr, mcdJugAddr, collateralJoinAddr, mcdJoinDaiAddr, ilk, wadD));
         assembly {
             let succeeded := call(sub(gas, 5000), target, wadC, add(data, 0x20), mload(data), 0, 0)
             let size := returndatasize
@@ -108,9 +109,10 @@ contract McdWrapper is McdConfig, RaySupport {
      */
     function _openLockERC20AndDraw(bytes32 ilk, uint wadD, uint wadC, bool transferFrom) internal returns (uint cdp) {
         _approveERC20(ilk, proxyAddress, wadC);
+        (address collateralJoinAddr,) = _getCollateralAddreses(ilk);
         bytes memory response = proxy().execute(proxyLib, abi.encodeWithSignature(
             'openLockGemAndDraw(address,address,address,address,bytes32,uint256,uint256,bool)',
-            cdpManagerAddr, mcdJugAddr, collateralTypes[ilk].mcdJoinAddr, mcdJoinDaiAddr, ilk, wadC, wadD, transferFrom));
+            cdpManagerAddr, mcdJugAddr, collateralJoinAddr, mcdJoinDaiAddr, ilk, wadC, wadD, transferFrom));
         assembly {
             cdp := mload(add(response, 0x20))
         }
@@ -177,10 +179,11 @@ contract McdWrapper is McdConfig, RaySupport {
     }
 
     function _cashETH(bytes32 ilk, uint wad) internal {
+        (address collateralJoinAddr,) = _getCollateralAddreses(ilk);
         proxy().execute(
             proxyLibEnd,
             abi.encodeWithSignature('cashETH(address,address,bytes32,uint)',
-            collateralTypes[ilk].mcdJoinAddr, mcdEndAddr, ilk, wad));
+            collateralJoinAddr, mcdEndAddr, ilk, wad));
     }
 
     /**
@@ -308,7 +311,8 @@ contract McdWrapper is McdConfig, RaySupport {
      * @return          ERC20Interface instance
      */
     function erc20TokenContract(bytes32 ilk) public view returns(ERC20Interface) {
-        return ERC20Interface(collateralTypes[ilk].baseAddr);
+        (,address payable collateralBaseAddress) = _getCollateralAddreses(ilk);
+        return ERC20Interface(collateralBaseAddress);
     }
 
     /**
@@ -414,5 +418,15 @@ contract McdWrapper is McdConfig, RaySupport {
         (, _chop,) = CatLike(mcdCatAddr).ilks(ilk); // penalty
         //_price = uint(pip.read());
         _price = getPrice(ilk);
+    }
+
+    function _getCollateralAddreses(bytes32 ilk) internal view returns(address, address payable)  {
+        if (ilk == "ETH-A") {
+            return (mcdJoinEthaAddr, wethAddr);
+        }
+        if (ilk == "ETH-B") {
+            return (mcdJoinEthbAddr, wethAddr);
+        }
+        // return (address(0), address(0));
     }
 }

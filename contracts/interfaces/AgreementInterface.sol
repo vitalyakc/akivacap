@@ -7,12 +7,15 @@ import './ERC20Interface.sol';
  */
 interface AgreementInterface {
     function initAgreement(address payable _borrower, uint256 _collateralAmount,
-        uint256 _debtValue, uint256 _durationMins, uint256 _interestRate, bytes32 _collateralType, bool _isETH) external payable;
+        uint256 _debtValue, uint256 _durationMins, uint256 _interestRate, bytes32 _collateralType, bool _isETH, address _configAddr) external payable;
     function approveAgreement() external returns(bool);
-    function matchAgreement() external returns(bool);
-    function checkAgreement() external returns(bool);
+    function updateAgreement() external returns(bool);
     function cancelAgreement() external returns(bool);
+    function rejectAgreement() external returns(bool);
+    function isActive() external view returns(bool);
+    function isPending() external view returns(bool);
     function isClosed() external view returns(bool);
+    function isBeforeMatched() external view returns(bool);
     function erc20TokenContract(bytes32 ilk) external view returns(ERC20Interface);
 
     event AgreementInitiated(address _borrower, uint _collateralValue, uint _debtValue, uint _expireDate, uint _interestRate);
