@@ -99,7 +99,7 @@ contract Agreement is AgreementInterface, Claimable, Config, McdWrapper {
         _;
     }
 
-    function initialize(address payable _borrower, uint256 _collateralAmount,
+    function initAgreement(address payable _borrower, uint256 _collateralAmount,
         uint256 _debtValue, uint256 _durationMins, uint256 _interestRatePercent, bytes32 _collateralType, bool _isETH)
     public payable initializer {
         Ownable.initialize();
@@ -260,9 +260,9 @@ contract Agreement is AgreementInterface, Claimable, Config, McdWrapper {
      */
     function _cancelAgreement() internal {
         if (isETH) {
-            _transferERC20(collateralType, borrower, collateralAmount);
-        } else {
             borrower.transfer(collateralAmount);
+        } else {
+            _transferERC20(collateralType, borrower, collateralAmount);
         }
         closeDate = getCurrentTime();
         emit AgreementCanceled(msg.sender);

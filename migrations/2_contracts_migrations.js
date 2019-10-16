@@ -1,5 +1,5 @@
-const McdWrapper = artifacts.require("McdWrapper");
+const Agreement = artifacts.require("Agreement");
 
 module.exports = function(deployer) {
-  deployer.deploy(McdWrapper);
+  deployer.deploy(Agreement);
 };
