@@ -427,6 +427,26 @@ contract McdWrapper is McdAddressesR14, RaySupport {
         if (ilk == "ETH-B") {
             return (mcdJoinEthbAddr, wethAddr);
         }
-        // return (address(0), address(0));
+        if (ilk == "ETH-C") {
+            return (mcdJoinEthcAddr, wethAddr);
+        }
+        if (ilk == "REP-A") {
+            return (mcdJoinRepaAddr, repAddr);
+        }
+        if (ilk == "ZRX-A") {
+            return (mcdJoinZrxaAddr, zrxAddr);
+        }
+        if (ilk == "OMG-A") {
+            return (mcdJoinOmgaAddr, omgAddr);
+        }
+        if (ilk == "BAT-A") {
+            return (mcdJoinBataAddr, batAddr);
+        }
+        if (ilk == "DGD-A") {
+            return (mcdJoinDgdaAddr, dgdAddr);
+        }
+        if (ilk == "GNT-A") {
+            return (mcdJoinGntaAddr, gntAddr);
+        }
     }
 }

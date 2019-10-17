@@ -15,8 +15,8 @@ contract FraFactory is Claimable {
     address payable agreementImpl;
     address configAddr;
 
-    function initialize(address payable _agreementImpl, address _configAddr) public initializer {
-        Ownable.initialize();
+    constructor(address payable _agreementImpl, address _configAddr) public {
+        super.initialize();
         configAddr  = _configAddr;
         setAgreementImpl(_agreementImpl);
     }

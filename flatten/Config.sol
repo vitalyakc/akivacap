@@ -155,7 +155,7 @@ contract Config is Claimable {
      */
     constructor() public {
         super.initialize();
-        setGeneral(1 days, 1 minutes, 2, 100, 100 ether, 1 days, 365 days);
+        setGeneral(1 days, 1 minutes, 2, 100, 100 ether, 1 minutes, 365 days);
         enableCollateral("ETH-A");
         enableCollateral("ETH-B");
     }
