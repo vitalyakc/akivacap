@@ -240,7 +240,7 @@ contract('Agreement', async (accounts) => {
     })
   })
 
-  describe('approve()', async () => {
+  describe('approveAgreement()', async () => {
     beforeEach('init config', async () => {
       configContract = await Config.new();
       await configContract.setGeneral(1440, 60, 2, 100, toBN(100).times(toBN(10).pow(toBN(18))), 86400, 31536000);
@@ -259,7 +259,7 @@ contract('Agreement', async (accounts) => {
 
       assert.equal(result.logs.length, 1);
       assert.equal(result.logs[0].event, 'AgreementApproved');
-      assert.equal((await agreement.approveDate()).toNumber(), 1000);
+      assert.equal((await agreement.approveDate.call()).toNumber(), 1000);
     })
 
     it('should not be possible to approve agreement by not owner after initialization', async () => {
@@ -272,7 +272,7 @@ contract('Agreement', async (accounts) => {
       await assertReverts(agreement.approveAgreement({from: NOBODY}));
 
       assert.equal((await agreement.status.call()).toNumber(), 0);
-      assert.equal((await agreement.approveDate()).toNumber(), 0);
+      assert.equal((await agreement.approveDate.call()).toNumber(), 0);
     })
 
     it('should not be possible to approve agreement by owner before initialization', async () => {
@@ -282,7 +282,7 @@ contract('Agreement', async (accounts) => {
       await agreement.setCurrentTime(1000);
 
       assert.equal((await agreement.status.call()).toNumber(), 0);
-      assert.equal((await agreement.approveDate()).toNumber(), 0);
+      assert.equal((await agreement.approveDate.call()).toNumber(), 0);
     })
 
     it('should not be possible to approve agreement by not owner before initialization', async () => {
@@ -292,7 +292,7 @@ contract('Agreement', async (accounts) => {
       await agreement.setCurrentTime(1000);
 
       assert.equal((await agreement.status.call()).toNumber(), 0);
-      assert.equal((await agreement.approveDate()).toNumber(), 0);
+      assert.equal((await agreement.approveDate.call()).toNumber(), 0);
     })
 
     it('should not be possible to approve agreement by owner after it is already approved', async () => {
@@ -313,7 +313,52 @@ contract('Agreement', async (accounts) => {
       await assertReverts(agreement.approveAgreement());
 
       assert.equal((await agreement.status.call()).toNumber(), 1);
-      assert.equal((await agreement.approveDate()).toNumber(), 1000);
+      assert.equal((await agreement.approveDate.call()).toNumber(), 1000);
+    })
+  })
+
+  describe('matchAgreement()', async () => {
+    beforeEach('init config and init agreement', async () => {
+      configContract = await Config.new();
+      await configContract.setGeneral(1440, 60, 2, 100, toBN(100).times(toBN(10).pow(toBN(18))), 86400, 31536000);
+
+      await agreement.initAgreement(BORROWER, 2000, 300000, 90000, 3, 
+        ETH_A, true, configContract.address, {from: OWNER, value: 2000});
+    });
+    
+    it('should be possible to match initialized and approved agreement by lender', async () => {
+      await agreement.approveAgreement();
+
+      assert.equal((await agreement.status.call()).toNumber(), 1);
+
+      await agreement.setCurrentTime(2000);
+      const result = await agreement.matchAgreement({from: LENDER});
+
+      assert.equal((await agreement.status.call()).toNumber(), 2);
+      assert.equal((await agreement.matchDate.call()).toNumber(), 2000);
+      assert.equal((await agreement.lastCheckTime.call()).toNumber(), 2000);
+      assert.equal((await agreement.expireDate.call()).toNumber(), 92000);
+      assert.equal(await agreement.lender.call(), LENDER);
+
+      assert.equal(result.logs.length, 1);
+      assert.equal(result.logs[0].event, 'AgreementMatched');
+      assert.equal(result.logs[0].args._lender, LENDER);
+    })
+
+    it('should not be possible to match initialized but not approved agreement by lender', async () => {
+      assert.equal((await agreement.status.call()).toNumber(), 0);
+
+      await assertReverts(agreement.matchAgreement({from: LENDER}));
+
+      assert.equal((await agreement.status.call()).toNumber(), 0);
+    })
+
+    it('should not be possible to match initialized and approved agreement by borrower', async () => {
+      assert.equal((await agreement.status.call()).toNumber(), 0);
+
+      await assertReverts(agreement.matchAgreement({from: BORROWER}));
+
+      assert.equal((await agreement.status.call()).toNumber(), 0);
     })
   })
 });
