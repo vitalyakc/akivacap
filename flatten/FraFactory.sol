@@ -1,52 +1,4 @@
 
-// File: contracts\interfaces\ERC20Interface.sol
-
-pragma solidity 0.5.11;
-
-contract ERC20Interface {
-    function totalSupply() public view returns (uint);
-    function balanceOf(address tokenOwner) public view returns (uint balance);
-    function allowance(address tokenOwner, address spender) public view returns (uint remaining);
-    function transfer(address to, uint tokens) public returns (bool success);
-    function approve(address spender, uint tokens) public returns (bool success);
-    function transferFrom(address from, address to, uint tokens) public returns (bool success);
-
-    event Transfer(address indexed from, address indexed to, uint tokens);
-    event Approval(address indexed tokenOwner, address indexed spender, uint tokens);
-}
-
-// File: contracts\interfaces\AgreementInterface.sol
-
-pragma solidity 0.5.11;
-
-/**
- * @title Interface for Agreement contract
- */
-interface AgreementInterface {
-    function initAgreement(address payable _borrower, uint256 _collateralAmount,
-        uint256 _debtValue, uint256 _durationMins, uint256 _interestRate, bytes32 _collateralType, bool _isETH, address _configAddr) external payable;
-    function approveAgreement() external returns(bool);
-    function updateAgreement() external returns(bool);
-    function cancelAgreement() external returns(bool);
-    function rejectAgreement() external returns(bool);
-    function isActive() external view returns(bool);
-    function isPending() external view returns(bool);
-    function isClosed() external view returns(bool);
-    function isBeforeMatched() external view returns(bool);
-    function erc20TokenContract(bytes32 ilk) external view returns(ERC20Interface);
-
-    event AgreementInitiated(address _borrower, uint _collateralValue, uint _debtValue, uint _expireDate, uint _interestRate);
-    event AgreementApproved();
-    event AgreementMatched(address _lender);
-    event AgreementUpdated(uint _injectionAmount, int _delta, int _deltaCommon, uint _lockedDai);
-
-    event AgreementCanceled(address _user);
-    event AgreementTerminated();
-    event AgreementLiquidated();
-    event RefundBase(address lender, uint lenderRefundDai, address borrower, uint cdpId);
-    event RefundLiquidated(uint borrowerFraDebtDai, uint lenderRefundCollateral, uint borrowerRefundCollateral);
-}
-
 // File: contracts\helpers\Context.sol
 
 pragma solidity ^0.5.0;
@@ -177,6 +129,129 @@ contract Claimable is Ownable {
         owner = msg.sender;
         pendingOwner = address(0);
     }
+}
+
+// File: contracts\config\Config.sol
+
+pragma solidity 0.5.11;
+
+/**
+ * @title Config for Agreement contract
+ */
+contract Config is Claimable {
+    mapping(bytes32 => bool) public collateralsEnabled;
+
+    uint public approveLimit; // max duration in secs available for approve after creation, if expires - agreement should be closed
+    uint public matchLimit; // max duration in secs available for match after approve, if expires - agreement should be closed
+    uint public injectionThreshold;
+    uint public minCollateralAmount;
+    uint public maxCollateralAmount;
+    uint public minDuration;
+    uint public maxDuration;
+    
+
+    /**
+     * @dev     Set default config
+     */
+    constructor() public {
+        super.initialize();
+        setGeneral(1 days, 1 minutes, 2, 100, 100 ether, 1 days, 365 days);
+        enableCollateral("ETH-A");
+        enableCollateral("ETH-B");
+    }
+
+    /**
+     * @dev     set sonfig according to parameters
+     * @param   _approveLimit      max duration available for approve after creation, if expires - agreement should be closed
+     * @param   _matchLimit        max duration available for match after approve, if expires - agreement should be closed
+     * @param   _injectionThreshold     minimal threshold permitted for injection
+     * @param   _minCollateralAmount    min amount
+     * @param   _maxCollateralAmount    max amount
+     * @param   _minDuration        min agreement length
+     * @param   _maxDuration        max agreement length
+     */
+    function setGeneral(
+        uint _approveLimit, 
+        uint _matchLimit,
+        uint _injectionThreshold, 
+        uint _minCollateralAmount, 
+        uint _maxCollateralAmount,
+        uint _minDuration,
+        uint _maxDuration
+    ) public onlyContractOwner {
+        approveLimit = _approveLimit;
+        matchLimit = _matchLimit;
+        
+        injectionThreshold = _injectionThreshold;
+        minCollateralAmount = _minCollateralAmount;
+        maxCollateralAmount = _maxCollateralAmount;
+
+        minDuration = _minDuration;
+        maxDuration = _maxDuration;
+    }
+
+
+    function enableCollateral(bytes32 _ilk) public onlyContractOwner {
+        collateralsEnabled[_ilk] = true;
+
+    }
+
+    function disableCollateral(bytes32 _ilk) public onlyContractOwner {
+        collateralsEnabled[_ilk] = false;
+
+    }
+
+    function isCollateralEnabled(bytes32 _ilk) public view returns(bool) {
+        return collateralsEnabled[_ilk];
+    }
+}
+
+// File: contracts\interfaces\ERC20Interface.sol
+
+pragma solidity 0.5.11;
+
+contract ERC20Interface {
+    function totalSupply() public view returns (uint);
+    function balanceOf(address tokenOwner) public view returns (uint balance);
+    function allowance(address tokenOwner, address spender) public view returns (uint remaining);
+    function transfer(address to, uint tokens) public returns (bool success);
+    function approve(address spender, uint tokens) public returns (bool success);
+    function transferFrom(address from, address to, uint tokens) public returns (bool success);
+
+    event Transfer(address indexed from, address indexed to, uint tokens);
+    event Approval(address indexed tokenOwner, address indexed spender, uint tokens);
+}
+
+// File: contracts\interfaces\AgreementInterface.sol
+
+pragma solidity 0.5.11;
+
+/**
+ * @title Interface for Agreement contract
+ */
+interface AgreementInterface {
+    function initAgreement(address payable _borrower, uint256 _collateralAmount,
+        uint256 _debtValue, uint256 _durationMins, uint256 _interestRate, bytes32 _collateralType, bool _isETH, address _configAddr) external payable;
+    function approveAgreement() external returns(bool);
+    function updateAgreement() external returns(bool);
+    function cancelAgreement() external returns(bool);
+    function rejectAgreement() external returns(bool);
+    function isActive() external view returns(bool);
+    function isPending() external view returns(bool);
+    function isClosed() external view returns(bool);
+    function isBeforeMatched() external view returns(bool);
+    function erc20TokenContract(bytes32 ilk) external view returns(ERC20Interface);
+
+    event AgreementInitiated(address _borrower, uint _collateralValue, uint _debtValue, uint _expireDate, uint _interestRate);
+    event AgreementApproved();
+    event AgreementMatched(address _lender);
+    event AgreementUpdated(uint _injectionAmount, int _delta, int _deltaCommon, uint _lockedDai);
+
+    event AgreementCanceled(address _user);
+    event AgreementTerminated();
+    event AgreementLiquidated();
+    event RefundBase(address lender, uint lenderRefundDai, address borrower, uint cdpId);
+    event RefundLiquidated(uint borrowerFraDebtDai, uint lenderRefundCollateral, uint borrowerRefundCollateral);
 }
 
 // File: node_modules\zos-lib\contracts\upgradeability\Proxy.sol
@@ -371,81 +446,6 @@ contract UpgradeabilityProxy is BaseUpgradeabilityProxy {
       require(success);
     }
   }  
-}
-
-// File: contracts\config\Config.sol
-
-pragma solidity 0.5.11;
-
-/**
- * @title Config for Agreement contract
- */
-contract Config is Claimable {
-    mapping(bytes32 => bool) public collateralsEnabled;
-
-    uint public approveLimit; // max duration in secs available for approve after creation, if expires - agreement should be closed
-    uint public matchLimit; // max duration in secs available for match after approve, if expires - agreement should be closed
-    uint public injectionThreshold;
-    uint public minCollateralAmount;
-    uint public maxCollateralAmount;
-    uint public minDuration;
-    uint public maxDuration;
-    
-
-    /**
-     * @dev     Set default config
-     */
-    constructor() public {
-        super.initialize();
-        setGeneral(1 days, 1 minutes, 2, 100, 100 ether, 1 days, 365 days);
-        enableCollateral("ETH-A");
-        enableCollateral("ETH-B");
-    }
-
-    /**
-     * @dev     set sonfig according to parameters
-     * @param   _approveLimit      max duration available for approve after creation, if expires - agreement should be closed
-     * @param   _matchLimit        max duration available for match after approve, if expires - agreement should be closed
-     * @param   _injectionThreshold     minimal threshold permitted for injection
-     * @param   _minCollateralAmount    min amount
-     * @param   _maxCollateralAmount    max amount
-     * @param   _minDuration        min agreement length
-     * @param   _maxDuration        max agreement length
-     */
-    function setGeneral(
-        uint _approveLimit, 
-        uint _matchLimit,
-        uint _injectionThreshold, 
-        uint _minCollateralAmount, 
-        uint _maxCollateralAmount,
-        uint _minDuration,
-        uint _maxDuration
-    ) public onlyContractOwner {
-        approveLimit = _approveLimit;
-        matchLimit = _matchLimit;
-        
-        injectionThreshold = _injectionThreshold;
-        minCollateralAmount = _minCollateralAmount;
-        maxCollateralAmount = _maxCollateralAmount;
-
-        minDuration = _minDuration;
-        maxDuration = _maxDuration;
-    }
-
-
-    function enableCollateral(bytes32 _ilk) public onlyContractOwner {
-        collateralsEnabled[_ilk] = true;
-
-    }
-
-    function disableCollateral(bytes32 _ilk) public onlyContractOwner {
-        collateralsEnabled[_ilk] = false;
-
-    }
-
-    function isCollateralEnabled(bytes32 _ilk) public view returns(bool) {
-        return collateralsEnabled[_ilk];
-    }
 }
 
 // File: contracts\FraFactory.sol

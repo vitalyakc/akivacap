@@ -17,7 +17,7 @@ contract Agreement is AgreementInterface, Claimable, McdWrapper {
     using SafeMath for int;
     uint constant YEAR_SECS = 365 days;
 
-    uint status;
+    uint public status;
 
     /**
      * @dev set of statuses
@@ -38,7 +38,7 @@ contract Agreement is AgreementInterface, Claimable, McdWrapper {
     uint constant STATUS_ENDED_LIQUIDATED = 11; // 1011
     uint constant STATUS_CANCELED = 12;         // 1100
 
-    bool isETH;
+    bool public isETH;
 
     uint256 public duration;
     uint256 public initialDate;
@@ -57,8 +57,8 @@ contract Agreement is AgreementInterface, Claimable, McdWrapper {
     uint256 public cdpId;
     uint256 public lastCheckTime;
 
-    int delta;
-    int deltaCommon;
+    int public delta;
+    int public deltaCommon;
 
     uint public injectionThreshold;
 
@@ -114,22 +114,19 @@ contract Agreement is AgreementInterface, Claimable, McdWrapper {
         address payable _borrower,
         uint256 _collateralAmount,
         uint256 _debtValue,
-        uint256 _durationMins,
+        uint256 _duration,
         uint256 _interestRatePercent,
         bytes32 _collateralType,
         bool _isETH,
         address configAddr
     ) public payable initializer {
         Ownable.initialize();
-        duration = _durationMins.mul(1 minutes);
         
         require((_collateralAmount > Config(configAddr).minCollateralAmount()) && (_collateralAmount < Config(configAddr).maxCollateralAmount()), 'FraFactory: collateral is zero');
         require(_debtValue > 0, 'Agreement: debt is zero');
         require((_interestRatePercent > 0) && (_interestRatePercent <= 100), 'Agreement: interestRate should be between 0 and 100');
-        require((duration > Config(configAddr).minDuration()) && (duration < Config(configAddr).maxDuration()), 'Agreement: duration is zero');
+        require((_duration > Config(configAddr).minDuration()) && (_duration < Config(configAddr).maxDuration()), 'Agreement: duration is zero');
         require(Config(configAddr).isCollateralEnabled(_collateralType), 'Agreement: collateral type is currencly disabled');
-
-        _initMcdWrapper();
 
         if (_isETH) {   
             require(msg.value == _collateralAmount, 'Actual ehter value is not correct');
@@ -138,11 +135,13 @@ contract Agreement is AgreementInterface, Claimable, McdWrapper {
         isETH = _isETH;
         borrower = _borrower;
         debtValue = _debtValue;
+        duration = _duration;
         initialDate = getCurrentTime();
         interestRate = fromPercentToRay(_interestRatePercent);
         collateralAmount = _collateralAmount;
         collateralType = _collateralType;
         
+        _initMcdWrapper();
         cdpId = _openCdp(collateralType);
 
         emit AgreementInitiated(borrower, collateralAmount, debtValue, duration, interestRate);

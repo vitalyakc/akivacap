@@ -27,14 +27,14 @@ contract FraFactory is Claimable {
     /**
      * @dev Requests egreement on ETH collateralType
      * @param _debtValue value of borrower's ETH put into the contract as collateral
-     * @param _durationMins number of minutes which agreement should be terminated after
+     * @param _duration number of minutes which agreement should be terminated after
      * @param _interestRate percent of interest rate, should be passed like (some % * 10^25)
      * @param _collateralType type of collateral, should be passed as bytes32
      * @return agreement address
      */
     function initAgreementETH (
         uint256 _debtValue, 
-        uint256 _durationMins,
+        uint256 _duration,
         uint256 _interestRate,
         bytes32 _collateralType)
     public payable returns(address _newAgreement) {
@@ -43,7 +43,7 @@ contract FraFactory is Claimable {
 
         address payable agreementProxyAddr = address(new UpgradeabilityProxy(agreementImpl, ""));
         AgreementInterface(agreementProxyAddr).
-            initAgreement.value(msg.value)(msg.sender, msg.value, _debtValue, _durationMins, _interestRate, _collateralType, true, configAddr);
+            initAgreement.value(msg.value)(msg.sender, msg.value, _debtValue, _duration, _interestRate, _collateralType, true, configAddr);
 
         
         agreements[msg.sender].push(agreementProxyAddr);
@@ -54,19 +54,21 @@ contract FraFactory is Claimable {
     /**
      * @dev Requests agreement on ETH collateralType
      * @param _debtValue value of borrower's collateral
-     * @param _durationMins number of minutes which agreement should be terminated after
+     * @param _duration number of minutes which agreement should be terminated after
      * @param _interestRate percent of interest rate, should be passed like (some % * 10^25)
      * @param _collateralType type of collateral, should be passed as bytes32
      * @return agreement address
      */
     function initAgreementERC20 (
-        uint256 _collateralValue,uint256 _debtValue,
-        uint256 _durationMins, uint256 _interestRate,
-        bytes32 _collateralType)
-    public payable returns(address _newAgreement) {
+        uint256 _collateralValue,
+        uint256 _debtValue,
+        uint256 _duration,
+        uint256 _interestRate,
+        bytes32 _collateralType
+    ) public payable returns(address _newAgreement) {
         address payable agreementProxyAddr = address(new UpgradeabilityProxy(agreementImpl, ""));
         AgreementInterface(agreementProxyAddr).
-            initAgreement(msg.sender, _collateralValue, _debtValue, _durationMins, _interestRate, _collateralType, false, configAddr);
+            initAgreement(msg.sender, _collateralValue, _debtValue, _duration, _interestRate, _collateralType, false, configAddr);
 
         AgreementInterface(agreementProxyAddr).erc20TokenContract(_collateralType).transferFrom(
             msg.sender, address(agreementProxyAddr), _collateralValue);

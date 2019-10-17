@@ -285,7 +285,7 @@ library SafeMath {
 
 }
 
-// File: contracts\config\McdAddresses.sol
+// File: contracts\mcd\McdAddresses.sol
 
 pragma solidity 0.5.11;
 
@@ -517,7 +517,7 @@ contract RaySupport {
     }
 }
 
-// File: contracts\helpers\McdWrapper.sol
+// File: contracts\mcd\McdWrapper.sol
 
 pragma solidity >=0.5.0;
 
