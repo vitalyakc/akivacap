@@ -12,6 +12,9 @@ interface AgreementInterface {
     function updateAgreement() external returns(bool);
     function cancelAgreement() external returns(bool);
     function rejectAgreement() external returns(bool);
+    function getInfo() external view returns(uint _status, uint _duration, address _borrower, address _lender, bytes32 _collateralType, uint _collateralAmount, uint _debtValue, uint _interestRate);
+    function status() external view returns(uint);
+    function collateralType() external view returns(bytes32);
     function isActive() external view returns(bool);
     function isPending() external view returns(bool);
     function isClosed() external view returns(bool);

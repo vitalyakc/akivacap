@@ -355,7 +355,14 @@ contract McdAddressesR14 {
     address constant getCdpsAddr = 0xB5907a51e3b747DbF9D5125aB77efF3a55e50b7d;
     address constant mcdJoinEthaAddr = 0xc3AbbA566bb62c09b7f94704d8dFd9800935D3F9;
     address constant mcdJoinEthbAddr = 0x960Fb16406B56FDd7e2800fCA5457F524a393877;
+    address constant mcdJoinEthcAddr = 0x17FB91117feeD678A9de18Fb1e1D0f1Fe8ec24e1;
     address constant mcdJoinZrxaAddr = 0x79f15B0DA982A99B7Bcf602c8F384C56f0B0E8CD;
+    address constant mcdJoinRepaAddr = 0xEbbd300bb527F1D50abd937F8ca11d7fd0E5b68B ;
+    address constant mcdJoinOmgaAddr = 0x7D9f9e9aC1C768be3f9c241ad9420E9ac37688e4;
+    address constant mcdJoinBataAddr = 0xf8e9B4c3e17C1A2D55767d44FB91Feed798Bb7E8;
+    address constant mcdJoinDgdaAddr = 0x92A3b1c0882E6e17aa41c5116e01B0b9cf117cF2;
+    address constant mcdJoinGntaAddr = 0xc28d56522280D20c1C33B239A8e8ffef1C2d5457;
+
     address constant mcdPotAddr = 0x24e89801DAD4603a3E2280eE30FB77f183Cb9eD9;
     address constant mcdSpotAddr = 0xF5cDfcE5A0b85fF06654EF35f4448E74C523c5Ac;
     address constant mcdCatAddr = 0xdD9eFf17f24F42adEf1B240fc5DAfba2aA6dCefD;
@@ -364,6 +371,11 @@ contract McdAddressesR14 {
     
     address payable constant wethAddr = 0xd0A1E359811322d97991E03f863a0C30C2cF029C;
     address payable constant zrxAddr = 0x18392097549390502069C17700d21403EA3C721A;
+    address payable constant repAddr = 0xC7aa227823789E363f29679F23f7e8F6d9904a9B;
+    address payable constant omgAddr = 0x441B1A74C69ee6e631834B626B29801D42076D38;
+    address payable constant batAddr = 0x9f8cFB61D3B2aF62864408DD703F9C3BEB55dff7;
+    address payable constant dgdAddr = 0x62aeEC5fb140bb233b1c5612a8747Ca1Dc56dc1B;
+    address payable constant gntAddr = 0xc81bA844f451d4452A01BBb2104C1c4F89252907;
 }
 
 // File: contracts\interfaces\McdInterfaces.sol
@@ -943,7 +955,27 @@ contract McdWrapper is McdAddressesR14, RaySupport {
         if (ilk == "ETH-B") {
             return (mcdJoinEthbAddr, wethAddr);
         }
-        // return (address(0), address(0));
+        if (ilk == "ETH-C") {
+            return (mcdJoinEthcAddr, wethAddr);
+        }
+        if (ilk == "REP-A") {
+            return (mcdJoinRepaAddr, repAddr);
+        }
+        if (ilk == "ZRX-A") {
+            return (mcdJoinZrxaAddr, zrxAddr);
+        }
+        if (ilk == "OMG-A") {
+            return (mcdJoinOmgaAddr, omgAddr);
+        }
+        if (ilk == "BAT-A") {
+            return (mcdJoinBataAddr, batAddr);
+        }
+        if (ilk == "DGD-A") {
+            return (mcdJoinDgdaAddr, dgdAddr);
+        }
+        if (ilk == "GNT-A") {
+            return (mcdJoinGntaAddr, gntAddr);
+        }
     }
 }
 
@@ -961,6 +993,9 @@ interface AgreementInterface {
     function updateAgreement() external returns(bool);
     function cancelAgreement() external returns(bool);
     function rejectAgreement() external returns(bool);
+    function getInfo() external view returns(uint _status, uint _duration, address _borrower, address _lender, bytes32 _collateralType, uint _collateralAmount, uint _debtValue, uint _interestRate);
+    function status() external view returns(uint);
+    function collateralType() external view returns(bytes32);
     function isActive() external view returns(bool);
     function isPending() external view returns(bool);
     function isClosed() external view returns(bool);
@@ -1253,6 +1288,17 @@ contract Agreement is AgreementInterface, Claimable, McdWrapper {
 
     function getCurrentTime() public view returns(uint) {
         return now;
+    }
+
+    function getInfo() public view returns(uint _status, uint _duration, address _borrower, address _lender, bytes32 _collateralType, uint _collateralAmount, uint _debtValue, uint _interestRate) {
+        _status = status;
+        _duration = duration;
+        _borrower = borrower;
+        _lender = _lender;
+        _collateralType = collateralType;
+        _collateralAmount = collateralAmount;
+        _debtValue = debtValue;
+        _interestRate = interestRate;
     }
 
     /**

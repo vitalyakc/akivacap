@@ -279,6 +279,17 @@ contract Agreement is AgreementInterface, Claimable, McdWrapper {
         return now;
     }
 
+    function getInfo() public view returns(uint _status, uint _duration, address _borrower, address _lender, bytes32 _collateralType, uint _collateralAmount, uint _debtValue, uint _interestRate) {
+        _status = status;
+        _duration = duration;
+        _borrower = borrower;
+        _lender = _lender;
+        _collateralType = collateralType;
+        _collateralAmount = collateralAmount;
+        _debtValue = debtValue;
+        _interestRate = interestRate;
+    }
+
     /**
      * @dev check whether pending agreement should be canceled automatically
      */
