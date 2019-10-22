@@ -236,7 +236,7 @@ interface AgreementInterface {
     function updateAgreement() external returns(bool);
     function cancelAgreement() external returns(bool);
     function rejectAgreement() external returns(bool);
-    function getInfo() external view returns(uint _status, uint _duration, address _borrower, address _lender, bytes32 _collateralType, uint _collateralAmount, uint _debtValue, uint _interestRate);
+    function getInfo() external view returns(address _addr, uint _status, uint _duration, address _borrower, address _lender, bytes32 _collateralType, uint _collateralAmount, uint _debtValue, uint _interestRate);
     function status() external view returns(uint);
     function collateralType() external view returns(bytes32);
     function isActive() external view returns(bool);
@@ -644,7 +644,7 @@ contract FraFactory is Claimable {
 
         for(uint256 i = 0; i < agreementList.length; i++) {
             addresses[i] = agreementList[i];
-            (statuses[i], durations[i], borrowers[i], lenders[i],
+            (,statuses[i], durations[i], borrowers[i], lenders[i],
                 collateralTypes[i], collateralAmounts[i],,) = AgreementInterface(agreementList[i]).getInfo();
                 //, collateralAmounts[i], debtValues[i], interestRates[i]
         }

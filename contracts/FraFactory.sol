@@ -194,7 +194,7 @@ contract FraFactory is Claimable {
 
         for(uint256 i = 0; i < agreementList.length; i++) {
             addresses[i] = agreementList[i];
-            (statuses[i], durations[i], borrowers[i], lenders[i],
+            (,statuses[i], durations[i], borrowers[i], lenders[i],
                 collateralTypes[i], collateralAmounts[i],,) = AgreementInterface(agreementList[i]).getInfo();
                 //, collateralAmounts[i], debtValues[i], interestRates[i]
         }
