@@ -174,29 +174,4 @@ contract FraFactory is Claimable {
     function getAgreementList() public view returns(address[] memory _agreementList) {
         return agreementList;
     }
-
-    function getAgreements() external view returns (
-        address[] memory addresses, uint[] memory statuses, uint[] memory durations, address[] memory borrowers, address[] memory lenders, 
-        bytes32[] memory collateralTypes, uint[] memory collateralAmounts
-    ) {
-        //, uint[] memory collateralAmounts, uint[] memory debtValues, uint[] memory interestRates
-            // function getInfo() public view returns(uint _status, uint _duration, address _borrower, address _lender, bytes32 _collateralType) {
-
-        statuses =          new uint[](agreementList.length);
-        addresses =         new address[](agreementList.length);
-        durations =         new uint[](agreementList.length);
-        borrowers =         new address[](agreementList.length);
-        lenders =           new address[](agreementList.length);
-        collateralTypes =   new bytes32[](agreementList.length);
-        collateralAmounts = new uint[](agreementList.length);
-        // debtValues =        new uint[](agreementList.length);
-        // interestRates =     new uint[](agreementList.length);
-
-        for(uint256 i = 0; i < agreementList.length; i++) {
-            addresses[i] = agreementList[i];
-            (,statuses[i], durations[i], borrowers[i], lenders[i],
-                collateralTypes[i], collateralAmounts[i],,) = AgreementInterface(agreementList[i]).getInfo();
-                //, collateralAmounts[i], debtValues[i], interestRates[i]
-        }
-    }
 }

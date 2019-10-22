@@ -18,7 +18,7 @@ library SafeMath {
             return 0;
         }
         uint256 c = a * b;
-        assert(c / a == b);
+        require(c / a == b, 'SafeMath: multiplication overflow');
         return c;
     }
 
@@ -26,9 +26,9 @@ library SafeMath {
     * @dev Integer division of two numbers, truncating the quotient.
     */
     function div(uint256 a, uint256 b) internal pure returns (uint256) {
-        // assert(b > 0); // Solidity automatically throws when dividing by 0
+        // require(b > 0); // Solidity automatically throws when dividing by 0
         uint256 c = a / b;
-        // assert(a == b * c + a % b); // There is no case in which this doesn't hold
+        // require(a == b * c + a % b); // There is no case in which this doesn't hold
         return c;
     }
 
@@ -36,7 +36,7 @@ library SafeMath {
     * @dev Substracts two numbers, throws on overflow (i.e. if subtrahend is greater than minuend).
     */
     function sub(uint256 a, uint256 b) internal pure returns (uint256) {
-        assert(b <= a);
+        require(b <= a, 'SafeMath: subtraction overflow');
         return a - b;
     }
 
@@ -45,20 +45,20 @@ library SafeMath {
     */
     function add(uint256 a, uint256 b) internal pure returns (uint256) {
         uint256 c = a + b;
-        assert(c >= a);
+        require(c >= a, 'SafeMath: addition overflow');
         return c;
     }
 
     function sub(int256 a, int256 b) internal pure returns (int256) {
-        assert(!(a > 0 && b > INT256_MIN - a));  // underflow
-        assert(!(a < 0 && b < INT256_MAX - a));  // overflow
+        require(!(a > 0 && b > INT256_MIN - a), 'SafeMath: subtraction underflow');  // underflow
+        require(!(a < 0 && b < INT256_MAX - a), 'SafeMath: subtraction overflow');  // overflow
 
         return a - b;
     }
 
     function add(int256 a, int256 b) internal pure returns (int256) {
-        assert(!(a > 0 && b > INT256_MAX - a));  // overflow
-        assert(!(a < 0 && b < INT256_MIN - a));  // underflow
+        require(!(a > 0 && b > INT256_MAX - a), 'SafeMath: addition underflow');  // overflow
+        require(!(a < 0 && b < INT256_MIN - a), 'SafeMath: addition overflow');  // underflow
 
         return a + b;
     }
@@ -68,7 +68,7 @@ library SafeMath {
             return 0;
         }
         int256 c = a * b;
-        assert(c / a == b);
+        require(c / a == b, 'SafeMath: multiplication overflow');
         return c;
     }
 
