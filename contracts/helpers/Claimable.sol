@@ -31,7 +31,7 @@ contract Ownable is Initializable, Context {
 }
 
 contract Claimable is Ownable {
-    address internal pendingOwner;
+    address public pendingOwner;
     
     function transferOwnership(address _newOwner) public onlyContractOwner() {
         pendingOwner = _newOwner;
@@ -39,7 +39,11 @@ contract Claimable is Ownable {
     
     function claimOwnership() public {
         require(msg.sender == pendingOwner, 'Not a pending owner');
+
+        address previousOwner = owner;
         owner = msg.sender;
         pendingOwner = address(0);
+
+        emit OwnershipTransferred(previousOwner, msg.sender);
     }
 }
