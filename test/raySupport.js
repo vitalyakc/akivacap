@@ -1,6 +1,6 @@
 const RaySupport = artifacts.require('RaySupport');
 const Reverter = require('./helpers/reverter');
-const {assertInvalidJump} = require('./helpers/assertThrows')
+const {assertReverts} = require('./helpers/assertThrows')
 const BigNumber = require('bignumber.js');
 
 contract('RaySupport', async (accounts) => {
@@ -38,7 +38,7 @@ contract('RaySupport', async (accounts) => {
     })
 
     it('should throw on overflow', async () => {
-      await assertInvalidJump(raySupport.toRay(toBN(2).pow(toBN(256))));
+      await assertReverts(raySupport.toRay(toBN(2).pow(toBN(127))));
     })
   })
 

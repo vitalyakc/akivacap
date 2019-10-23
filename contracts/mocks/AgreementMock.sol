@@ -10,6 +10,7 @@ contract AgreementMock is Agreement {
     uint public dsrTest = 105 * 10 ** 25;
     uint256 public currentTime;
     uint256 public unlockedDai;
+    address erc20Token;
 
     /**
      * @notice should be removed after testing!!!
@@ -67,4 +68,12 @@ contract AgreementMock is Agreement {
     }
 
     function _initMcdWrapper() internal {}
+
+    function setErc20Token(address _contract) public {
+      erc20Token = _contract;
+    }
+
+    function erc20TokenContract(bytes32 ilk) public view returns(ERC20Interface) {
+      return ERC20Interface(erc20Token);
+    }
 }
