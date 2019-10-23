@@ -284,7 +284,7 @@ contract Agreement is AgreementInterface, Claimable, McdWrapper {
         _status = status;
         _duration = duration;
         _borrower = borrower;
-        _lender = _lender;
+        _lender = lender;
         _collateralType = collateralType;
         _collateralAmount = collateralAmount;
         _debtValue = debtValue;
