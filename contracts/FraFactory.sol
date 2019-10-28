@@ -3,7 +3,8 @@ import './config/Config.sol';
 import './interfaces/ERC20Interface.sol';
 import './interfaces/AgreementInterface.sol';
 import './helpers/Claimable.sol';
-import 'zos-lib/contracts/upgradeability/UpgradeabilityProxy.sol';
+// import 'zos-lib/contracts/upgradeability/UpgradeabilityProxy.sol';
+import 'zos-lib/contracts/upgradeability/AdminUpgradeabilityProxy.sol';
 
 
 /**
@@ -53,7 +54,7 @@ contract FraFactory is Claimable {
         uint256 _interestRate,
         bytes32 _collateralType
     ) public payable returns(address _newAgreement) {
-        address payable agreementProxyAddr = address(new UpgradeabilityProxy(agreementImpl, ""));
+        address payable agreementProxyAddr = address(new AdminUpgradeabilityProxy(agreementImpl, owner, ""));
         AgreementInterface(agreementProxyAddr).
             initAgreement.value(msg.value)(msg.sender, msg.value, _debtValue, _duration, _interestRate, _collateralType, true, configAddr);
         
@@ -77,7 +78,7 @@ contract FraFactory is Claimable {
         uint256 _interestRate,
         bytes32 _collateralType
     ) public payable returns(address _newAgreement) {
-        address payable agreementProxyAddr = address(new UpgradeabilityProxy(agreementImpl, ""));
+        address payable agreementProxyAddr = address(new AdminUpgradeabilityProxy(agreementImpl, owner, ""));
         AgreementInterface(agreementProxyAddr).
             initAgreement(msg.sender, _collateralValue, _debtValue, _duration, _interestRate, _collateralType, false, configAddr);
 

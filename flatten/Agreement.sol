@@ -125,7 +125,7 @@ contract Ownable is Initializable, Context {
 }
 
 contract Claimable is Ownable {
-    address internal pendingOwner;
+    address public pendingOwner;
     
     function transferOwnership(address _newOwner) public onlyContractOwner() {
         pendingOwner = _newOwner;
@@ -133,8 +133,12 @@ contract Claimable is Ownable {
     
     function claimOwnership() public {
         require(msg.sender == pendingOwner, 'Not a pending owner');
+
+        address previousOwner = owner;
         owner = msg.sender;
         pendingOwner = address(0);
+
+        emit OwnershipTransferred(previousOwner, msg.sender);
     }
 }
 
@@ -1002,6 +1006,8 @@ interface AgreementInterface {
     function rejectAgreement() external returns(bool);
     function getInfo() external view returns(address _addr, uint _status, uint _duration, address _borrower, address _lender, bytes32 _collateralType, uint _collateralAmount, uint _debtValue, uint _interestRate);
     function status() external view returns(uint);
+    function lender() external view returns(address);
+    function borrower() external view returns(address);
     function collateralType() external view returns(bytes32);
     function isActive() external view returns(bool);
     function isPending() external view returns(bool);
@@ -1040,9 +1046,9 @@ contract Agreement is AgreementInterface, Claimable, McdWrapper {
     /**
      * @dev set of statuses
      */
-    uint constant STATUS_PENDING = 0;
-    uint constant STATUS_OPEN = 1;              // 0001
-    uint constant STATUS_ACTIVE = 2;            // 0010
+    uint constant STATUS_PENDING = 1;           // 0001
+    uint constant STATUS_OPEN = 2;              // 0010   
+    uint constant STATUS_ACTIVE = 3;            // 0011
 
     /**
      * in all closed statused the forth bit = 1, binary "AND" will equal:
@@ -1150,6 +1156,7 @@ contract Agreement is AgreementInterface, Claimable, McdWrapper {
             require(msg.value == _collateralAmount, 'Actual ehter value is not correct');
         }
         injectionThreshold = Config(configAddr).injectionThreshold();
+        status = STATUS_PENDING;
         isETH = _isETH;
         borrower = _borrower;
         debtValue = _debtValue;
@@ -1302,7 +1309,7 @@ contract Agreement is AgreementInterface, Claimable, McdWrapper {
         _status = status;
         _duration = duration;
         _borrower = borrower;
-        _lender = _lender;
+        _lender = lender;
         _collateralType = collateralType;
         _collateralAmount = collateralAmount;
         _debtValue = debtValue;

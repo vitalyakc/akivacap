@@ -147,8 +147,6 @@ contract McdWrapper is McdAddressesR14, RaySupport {
      * @param wad amount of dai tokens
      */
     function _lockDai(uint wad) internal {
-        // transfer dai from borrower to agreement
-        _transferFromDai(msg.sender, address(this), wad);
         _approveDai(address(proxy()), wad);
         proxy().execute(
             proxyLibDsr,

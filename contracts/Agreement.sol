@@ -22,9 +22,9 @@ contract Agreement is AgreementInterface, Claimable, McdWrapper {
     /**
      * @dev set of statuses
      */
-    uint constant STATUS_PENDING = 0;
-    uint constant STATUS_OPEN = 1;              // 0001
-    uint constant STATUS_ACTIVE = 2;            // 0010
+    uint constant STATUS_PENDING = 1;           // 0001
+    uint constant STATUS_OPEN = 2;              // 0010   
+    uint constant STATUS_ACTIVE = 3;            // 0011
 
     /**
      * in all closed statused the forth bit = 1, binary "AND" will equal:
@@ -132,6 +132,7 @@ contract Agreement is AgreementInterface, Claimable, McdWrapper {
             require(msg.value == _collateralAmount, 'Actual ehter value is not correct');
         }
         injectionThreshold = Config(configAddr).injectionThreshold();
+        status = STATUS_PENDING;
         isETH = _isETH;
         borrower = _borrower;
         debtValue = _debtValue;
@@ -164,6 +165,8 @@ contract Agreement is AgreementInterface, Claimable, McdWrapper {
      * @return Operation success
      */
     function matchAgreement() public onlyOpen() returns(bool _success) {
+        // transfer dai from borrower to agreement
+        _transferFromDai(msg.sender, address(this), debtValue);
         _lockDai(debtValue);
         if (isETH) {
             _lockETHAndDraw(collateralType, cdpId, collateralAmount, debtValue);
@@ -269,7 +272,7 @@ contract Agreement is AgreementInterface, Claimable, McdWrapper {
      */
     function borrowerFraDebt() public view returns(uint) {
         if (delta < 0) {
-            fromRay(-delta);
+            return uint(fromRay(-delta));
         } else {
             return 0;
         }
