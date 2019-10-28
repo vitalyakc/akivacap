@@ -252,10 +252,10 @@ contract('Agreement', async (accounts) => {
 
       await agreement.setCurrentTime(1000);
 
-      assert.equal((await agreement.status.call()).toNumber(), 0);
+      assert.equal((await agreement.status.call()).toNumber(), 1);
       const result = await agreement.approveAgreement();
 
-      assert.equal((await agreement.status.call()).toNumber(), 1);
+      assert.equal((await agreement.status.call()).toNumber(), 2);
 
       assert.equal(result.logs.length, 1);
       assert.equal(result.logs[0].event, 'AgreementApproved');
@@ -268,10 +268,10 @@ contract('Agreement', async (accounts) => {
 
       await agreement.setCurrentTime(1000);
 
-      assert.equal((await agreement.status.call()).toNumber(), 0);
+      assert.equal((await agreement.status.call()).toNumber(), 1);
       await assertReverts(agreement.approveAgreement({from: NOBODY}));
 
-      assert.equal((await agreement.status.call()).toNumber(), 0);
+      assert.equal((await agreement.status.call()).toNumber(), 1);
       assert.equal((await agreement.approveDate.call()).toNumber(), 0);
     })
 
@@ -301,18 +301,18 @@ contract('Agreement', async (accounts) => {
 
       await agreement.setCurrentTime(1000);
 
-      assert.equal((await agreement.status.call()).toNumber(), 0);
+      assert.equal((await agreement.status.call()).toNumber(), 1);
 
       const result = await agreement.approveAgreement();
 
-      assert.equal((await agreement.status.call()).toNumber(), 1);
+      assert.equal((await agreement.status.call()).toNumber(), 2);
 
       assert.equal(result.logs.length, 1);
       assert.equal(result.logs[0].event, 'AgreementApproved');
 
       await assertReverts(agreement.approveAgreement());
 
-      assert.equal((await agreement.status.call()).toNumber(), 1);
+      assert.equal((await agreement.status.call()).toNumber(), 2);
       assert.equal((await agreement.approveDate.call()).toNumber(), 1000);
     })
   })
@@ -329,12 +329,12 @@ contract('Agreement', async (accounts) => {
     it('should be possible to match initialized and approved agreement by lender', async () => {
       await agreement.approveAgreement();
 
-      assert.equal((await agreement.status.call()).toNumber(), 1);
+      assert.equal((await agreement.status.call()).toNumber(), 2);
 
       await agreement.setCurrentTime(2000);
       const result = await agreement.matchAgreement({from: LENDER});
 
-      assert.equal((await agreement.status.call()).toNumber(), 2);
+      assert.equal((await agreement.status.call()).toNumber(), 3);
       assert.equal((await agreement.matchDate.call()).toNumber(), 2000);
       assert.equal((await agreement.lastCheckTime.call()).toNumber(), 2000);
       assert.equal((await agreement.expireDate.call()).toNumber(), 92000);
@@ -346,19 +346,332 @@ contract('Agreement', async (accounts) => {
     })
 
     it('should not be possible to match initialized but not approved agreement by lender', async () => {
-      assert.equal((await agreement.status.call()).toNumber(), 0);
+      assert.equal((await agreement.status.call()).toNumber(), 1);
 
       await assertReverts(agreement.matchAgreement({from: LENDER}));
 
-      assert.equal((await agreement.status.call()).toNumber(), 0);
+      assert.equal((await agreement.status.call()).toNumber(), 1);
     })
 
     it('should not be possible to match initialized and approved agreement by borrower', async () => {
-      assert.equal((await agreement.status.call()).toNumber(), 0);
+      assert.equal((await agreement.status.call()).toNumber(), 1);
 
       await assertReverts(agreement.matchAgreement({from: BORROWER}));
 
-      assert.equal((await agreement.status.call()).toNumber(), 0);
+      assert.equal((await agreement.status.call()).toNumber(), 1);
+    })
+  })
+
+  describe('cancelAgreement(), rejectAgreement(), _cancelAgreement()', async () => {
+    beforeEach('init agreemnet', async () => {
+      configContract = await Config.new();
+      await configContract.setGeneral(1440, 60, 2, 100, toBN(100).times(toBN(10).pow(toBN(18))), 86400, 31536000);
+
+      await agreement.initAgreement(BORROWER, 2000, 300000, 90000, 3, 
+        ETH_A, true, configContract.address, {from: OWNER, value: 2000});
+    })
+
+    it('should be possible to cancel agreement by borrower when it is not matched', async () => {
+      assert.equal(await agreement.status.call(), 1);
+
+      await agreement.cancelAgreement({from: BORROWER});
+
+      assert.equal(await agreement.status.call(), 12);
+    })
+
+    it('should be possible to cancel agreement by borrower when it is not matched and approved', async () => {
+      await agreement.approveAgreement();
+      await agreement.cancelAgreement({from: BORROWER});
+
+      assert.equal(await agreement.status.call(), 12);
+    })
+
+    it('should not be possible to cancel agreement by owner when it is not matched and not approved', async () => {
+      await assertReverts(agreement.cancelAgreement({from: OWNER}));
+    })
+
+    it('should not be possible to cancel agreement by owner when it is matched', async () => {
+      await agreement.approveAgreement();
+      await agreement.matchAgreement({from:LENDER});
+      await assertReverts(agreement.cancelAgreement());
+    })
+
+    it('should not be possible to cancel agreement by borrower when it is matched', async () => {
+      await agreement.approveAgreement();
+      await agreement.matchAgreement({from:LENDER});
+      await assertReverts(agreement.cancelAgreement({from: BORROWER}));
+    })
+
+    it('should not be possible to cancel agreement by nobody when it is matched', async () => {
+      await agreement.approveAgreement();
+      await agreement.matchAgreement({from:LENDER});
+      await assertReverts(agreement.cancelAgreement({from: NOBODY}));
+    })
+
+    it('should not be possible to cancel agreement by nobody when it is not matched', async () => {
+      await assertReverts(agreement.cancelAgreement({from:NOBODY}));
+    })
+
+    it('should not be possible to cancel agreement by nobody when it is approved and not matched', async () => {
+      await agreement.approveAgreement();
+      await assertReverts(agreement.cancelAgreement({from:NOBODY}));
+    })
+
+    it('should not be possible to cancel agreement by borrower when it is already canceled', async () => {
+      await agreement.cancelAgreement({from: BORROWER});
+      await assertReverts(agreement.cancelAgreement({from: BORROWER}));
+    })
+
+    it('should not be possible to cancel agreement by borrower when it is rejected', async () => {
+      await agreement.rejectAgreement();
+      await assertReverts(agreement.cancelAgreement({from: BORROWER}));
+    })
+
+    it('should be possible to reject agreement by owner when it is not matched', async () => {
+      await agreement.rejectAgreement();
+
+      assert.equal(await agreement.status.call(), 12);
+    })
+
+    it('should be possible to reject agreement by owner when it is not matched and approved', async () => {
+      await agreement.approveAgreement();
+      await agreement.rejectAgreement();
+
+      assert.equal(await agreement.status.call(), 12);
+    })
+
+    it('should not be possible to reject agreement by borrower when it is not matched and not approved', async () => {
+      await assertReverts(agreement.rejectAgreement({from: BORROWER}));
+    })
+
+    it('should not be possible to reject agreement by owner when it is matched', async () => {
+      await agreement.approveAgreement();
+      await agreement.matchAgreement({from:LENDER});
+      await assertReverts(agreement.rejectAgreement());
+    })
+
+    it('should not be possible to reject agreement by borrower when it is matched', async () => {
+      await agreement.approveAgreement();
+      await agreement.matchAgreement({from:LENDER});
+      await assertReverts(agreement.rejectAgreement({from: BORROWER}));
+    })
+
+    it('should not be possible to reject agreement by nobody when it is matched', async () => {
+      await agreement.approveAgreement();
+      await agreement.matchAgreement({from:LENDER});
+      await assertReverts(agreement.rejectAgreement({from: NOBODY}));
+    })
+
+    it('should not be possible to reject agreement by nobody when it is not matched', async () => {
+      await assertReverts(agreement.rejectAgreement({from:NOBODY}));
+    })
+
+    it('should not be possible to reject agreement by nobody when it is not matched', async () => {
+      await agreement.approveAgreement();
+      await assertReverts(agreement.rejectAgreement({from:NOBODY}));
+    })
+
+    it('should not be possible to reject agreement by owner when it is canceled', async () => {
+      await agreement.cancelAgreement({from: BORROWER});
+      await assertReverts(agreement.rejectAgreement());
+    })
+
+    it('should not be possible to reject agreement by owner when it is already rejected', async () => {
+      await agreement.rejectAgreement();
+      await assertReverts(agreement.rejectAgreement());
+    })
+
+    it('should transfer eth fuds correctly while canceling', async () => {
+      assert.equal(await web3.eth.getBalance(BORROWER), '100000000000000000000');
+      assert.equal(await web3.eth.getBalance(agreement.address), '2000');
+
+      const result = await agreement.rejectAgreement();
+
+      assert.equal(await web3.eth.getBalance(BORROWER), '100000000000000002000');
+      assert.equal(await web3.eth.getBalance(agreement.address), '0');
+    })
+  })
+
+  describe('cheker and getter functions', async () => {
+    beforeEach('init config', async () => {
+      configContract = await Config.new();
+      await configContract.setGeneral(1440, 60, 2, 100, toBN(100).times(toBN(10).pow(toBN(18))), 86400, 31536000);
+    })
+
+    it('isBeforeMatched() should return true if status is 0', async () => {
+      assert.isTrue(await agreement.isBeforeMatched.call());
+    })
+
+    it('isBeforeMatched() should return true if status is pending', async () => {
+      await agreement.initAgreement(BORROWER, 2000, 300000, 90000, 3, 
+        ETH_A, true, configContract.address, {from: OWNER, value: 2000});
+      
+      assert.isTrue(await agreement.isBeforeMatched.call());
+    })
+
+    it('isBeforeMatched() should return true if status is open', async () => {
+      await agreement.initAgreement(BORROWER, 2000, 300000, 90000, 3, 
+        ETH_A, true, configContract.address, {from: OWNER, value: 2000});
+      
+      await agreement.approveAgreement();
+
+      assert.isTrue(await agreement.isBeforeMatched.call());
+    })
+
+    it('isBeforeMatched() should return false if status is active', async () => {
+      await agreement.initAgreement(BORROWER, 2000, 300000, 90000, 3, 
+        ETH_A, true, configContract.address, {from: OWNER, value: 2000});
+      
+      await agreement.approveAgreement();
+
+      await agreement.matchAgreement({from: LENDER});
+
+      assert.isFalse(await agreement.isBeforeMatched.call());
+    })
+
+    it('isPending() should return true if status is pending', async () => {
+      await agreement.initAgreement(BORROWER, 2000, 300000, 90000, 3, 
+        ETH_A, true, configContract.address, {from: OWNER, value: 2000});
+      
+      assert.isTrue(await agreement.isPending.call());
+    })
+
+    it('isPending() should return false if status is 0', async () => {
+      assert.isFalse(await agreement.isPending.call());
+    })
+
+    it('isPending() should return false if status is active', async () => {
+      await agreement.initAgreement(BORROWER, 2000, 300000, 90000, 3, 
+        ETH_A, true, configContract.address, {from: OWNER, value: 2000});
+      
+      await agreement.approveAgreement();
+
+      await agreement.matchAgreement({from: LENDER});
+
+      assert.isFalse(await agreement.isPending.call());
+    })
+
+    it('isOpen() should return true if status is open', async () => {
+      await agreement.initAgreement(BORROWER, 2000, 300000, 90000, 3, 
+        ETH_A, true, configContract.address, {from: OWNER, value: 2000});
+
+        await agreement.approveAgreement();
+
+      assert.isTrue(await agreement.isOpen.call());
+    })
+
+    it('isOpen() should return false if status is 0', async () => {
+      assert.isFalse(await agreement.isOpen.call());
+    })
+
+    it('isOpen() should return false if status is active', async () => {
+      await agreement.initAgreement(BORROWER, 2000, 300000, 90000, 3, 
+        ETH_A, true, configContract.address, {from: OWNER, value: 2000});
+      
+      await agreement.approveAgreement();
+
+      await agreement.matchAgreement({from: LENDER});
+
+      assert.isFalse(await agreement.isOpen.call());
+    })
+
+    it('isActive() should return true if status is active', async () => {
+      await agreement.initAgreement(BORROWER, 2000, 300000, 90000, 3, 
+        ETH_A, true, configContract.address, {from: OWNER, value: 2000});
+      
+      await agreement.approveAgreement();
+
+      await agreement.matchAgreement({from: LENDER});
+      
+      assert.isTrue(await agreement.isActive.call());
+    })
+
+    it('isActive() should return false if status is 0', async () => {
+      assert.isFalse(await agreement.isActive.call());
+    })
+
+    it('isActive() should return false if status is open', async () => {
+      await agreement.initAgreement(BORROWER, 2000, 300000, 90000, 3, 
+        ETH_A, true, configContract.address, {from: OWNER, value: 2000});
+      
+      await agreement.approveAgreement();
+
+      assert.isFalse(await agreement.isActive.call());
+    })
+
+    it('isEnded() should return true if status is ended', async () => {
+      await agreement.setStatus(9);
+      
+      assert.isTrue(await agreement.isEnded.call());
+    })
+
+    it('isEnded() should return false if status is 0', async () => {
+      assert.isFalse(await agreement.isEnded.call());
+    })
+
+    it('isEnded() should return false if status is open', async () => {
+      await agreement.initAgreement(BORROWER, 2000, 300000, 90000, 3, 
+        ETH_A, true, configContract.address, {from: OWNER, value: 2000});
+      
+      await agreement.approveAgreement();
+
+      assert.isFalse(await agreement.isEnded.call());
+    })
+
+    it('isLiquidated() should return true if status is liquidated', async () => {
+      await agreement.setStatus(10);
+      
+      assert.isTrue(await agreement.isLiquidated.call());
+    })
+
+    it('isLiquidated() should return false if status is 0', async () => {
+      assert.isFalse(await agreement.isLiquidated.call());
+    })
+
+    it('isLiquidated() should return false if status is open', async () => {
+      await agreement.initAgreement(BORROWER, 2000, 300000, 90000, 3, 
+        ETH_A, true, configContract.address, {from: OWNER, value: 2000});
+      
+      await agreement.approveAgreement();
+
+      assert.isFalse(await agreement.isLiquidated.call());
+    })
+
+    it('isClosed() should return true if status is closed', async () => {
+      await agreement.setStatus(8);
+      
+      assert.isTrue(await agreement.isClosed.call());
+    })
+
+    it('isClosed() should return false if status is 0', async () => {
+      assert.isFalse(await agreement.isClosed.call());
+    })
+
+    it('isClosed() should return false if status is open', async () => {
+      await agreement.initAgreement(BORROWER, 2000, 300000, 90000, 3, 
+        ETH_A, true, configContract.address, {from: OWNER, value: 2000});
+      
+      await agreement.approveAgreement();
+
+      assert.isFalse(await agreement.isClosed.call());
+    })
+
+    it('borrowerFraDebt() should return correct fraDebt if delta is 0' , async () => {
+      await agreement.setDelta(0);
+
+      assert.equal(await agreement.borrowerFraDebt.call(), 0);
+    })
+
+    it('borrowerFraDebt() should return correct fraDebt if delta is > 0' , async () => {
+      await agreement.setDelta(10);
+
+      assert.equal(await agreement.borrowerFraDebt.call(), 0);
+    })
+
+    it('borrowerFraDebt() should return correct fraDebt if delta is < 0' , async () => {
+      await agreement.setDelta(toBN(-10).pow(toBN(31)));
+ 
+      assert.equal((await agreement.borrowerFraDebt.call()).toString(), 10000);
     })
   })
 });
