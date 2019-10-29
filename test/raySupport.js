@@ -38,7 +38,7 @@ contract('RaySupport', async (accounts) => {
     })
 
     it('should throw on overflow', async () => {
-      await assertReverts(raySupport.toRay(toBN(2).pow(toBN(127))));
+      await assertReverts(raySupport.toRay((toBN(2).pow(toBN(256))).minus(toBN(1))));
     })
   })
 

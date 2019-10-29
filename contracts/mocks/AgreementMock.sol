@@ -1,6 +1,7 @@
 pragma solidity 0.5.11;
 
 import '../Agreement.sol';
+import './ConfigMock.sol';
 
 /*
  * @title Base Agreement Mock contract
@@ -49,6 +50,10 @@ contract AgreementMock is Agreement {
       return true;
     }
 
+    function _transferFromDai(address from, address to, uint amount) internal returns(bool) {
+      return true;
+    }
+
     function setUnlockedDai(uint256 _amount) public {
       unlockedDai = _amount;
     }
@@ -75,5 +80,25 @@ contract AgreementMock is Agreement {
 
     function erc20TokenContract(bytes32 ilk) public view returns(ERC20Interface) {
       return ERC20Interface(erc20Token);
+    }
+
+    function setStatus(uint256 _status) public {
+      status = _status;
+    }
+
+    function initAgreement(
+      address payable _borrower,
+      uint256 _collateralAmount,
+      uint256 _debtValue,
+      uint256 _duration,
+      uint256 _interestRatePercent,
+      bytes32 _collateralType,
+      bool _isETH,
+      address configAddr
+    ) public payable {
+      super.initAgreement(_borrower, _collateralAmount, _debtValue, 
+        _duration, _interestRatePercent, _collateralType, _isETH, configAddr);
+      
+      setErc20Token(ConfigMock(configAddr).getErc20collToken());
     }
 }
