@@ -686,8 +686,6 @@ contract McdWrapper is McdAddressesR14, RaySupport {
      * @param wad amount of dai tokens
      */
     function _lockDai(uint wad) internal {
-        // transfer dai from borrower to agreement
-        _transferFromDai(msg.sender, address(this), wad);
         _approveDai(address(proxy()), wad);
         proxy().execute(
             proxyLibDsr,
@@ -711,10 +709,14 @@ contract McdWrapper is McdAddressesR14, RaySupport {
      * @return  pie amount of all dai tokens was unlocked in fact
      */
     function _unlockAllDai() internal returns(uint pie) {
-        pie = getLockedDai();
-        _unlockDai(pie);
+        // pie = getLockedDai();
+        // _unlockDai(pie);
         // function will be available in further releases (11)
-        //proxy().execute(proxyLib, abi.encodeWithSignature("exitAll(address,address)", mcdJoinDaiAddr, mcdPotAddr));
+        proxy().execute(
+            proxyLibDsr, 
+            abi.encodeWithSignature("exitAll(address,address)", 
+            mcdJoinDaiAddr, mcdPotAddr));
+        pie = ERC20Interface(mcdDaiAddr).balanceOf(address(this));
     }
 
     function _cashETH(bytes32 ilk, uint wad) internal {
@@ -1139,7 +1141,7 @@ contract Agreement is AgreementInterface, Claimable, McdWrapper {
         uint256 _collateralAmount,
         uint256 _debtValue,
         uint256 _duration,
-        uint256 _interestRatePercent,
+        uint256 _interestRate,
         bytes32 _collateralType,
         bool _isETH,
         address configAddr
@@ -1148,7 +1150,7 @@ contract Agreement is AgreementInterface, Claimable, McdWrapper {
         
         require((_collateralAmount > Config(configAddr).minCollateralAmount()) && (_collateralAmount < Config(configAddr).maxCollateralAmount()), 'FraFactory: collateral is zero');
         require(_debtValue > 0, 'Agreement: debt is zero');
-        require((_interestRatePercent > 0) && (_interestRatePercent <= 100), 'Agreement: interestRate should be between 0 and 100');
+        require((_interestRate > ONE) && (_interestRate <= ONE * 2), 'Agreement: interestRate should be between 0 and 100 %');
         require((_duration > Config(configAddr).minDuration()) && (_duration < Config(configAddr).maxDuration()), 'Agreement: duration is zero');
         require(Config(configAddr).isCollateralEnabled(_collateralType), 'Agreement: collateral type is currencly disabled');
 
@@ -1162,7 +1164,7 @@ contract Agreement is AgreementInterface, Claimable, McdWrapper {
         debtValue = _debtValue;
         duration = _duration;
         initialDate = getCurrentTime();
-        interestRate = fromPercentToRay(_interestRatePercent);
+        interestRate = _interestRate; //fromPercentToRay(_interestRatePercent);
         collateralAmount = _collateralAmount;
         collateralType = _collateralType;
         
@@ -1189,6 +1191,8 @@ contract Agreement is AgreementInterface, Claimable, McdWrapper {
      * @return Operation success
      */
     function matchAgreement() public onlyOpen() returns(bool _success) {
+        // transfer dai from borrower to agreement
+        _transferFromDai(msg.sender, address(this), debtValue);
         _lockDai(debtValue);
         if (isETH) {
             _lockETHAndDraw(collateralType, cdpId, collateralAmount, debtValue);
@@ -1294,7 +1298,7 @@ contract Agreement is AgreementInterface, Claimable, McdWrapper {
      */
     function borrowerFraDebt() public view returns(uint) {
         if (delta < 0) {
-            fromRay(-delta);
+            return uint(fromRay(-delta));
         } else {
             return 0;
         }

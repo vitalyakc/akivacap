@@ -3,8 +3,8 @@ import './config/Config.sol';
 import './interfaces/ERC20Interface.sol';
 import './interfaces/AgreementInterface.sol';
 import './helpers/Claimable.sol';
-// import 'zos-lib/contracts/upgradeability/UpgradeabilityProxy.sol';
-import 'zos-lib/contracts/upgradeability/AdminUpgradeabilityProxy.sol';
+import 'zos-lib/contracts/upgradeability/UpgradeabilityProxy.sol';
+// import 'zos-lib/contracts/upgradeability/AdminUpgradeabilityProxy.sol';
 
 
 /**
@@ -44,7 +44,7 @@ contract FraFactory is Claimable {
      * @dev Requests egreement on ETH collateralType
      * @param _debtValue value of borrower's ETH put into the contract as collateral
      * @param _duration number of minutes which agreement should be terminated after
-     * @param _interestRate percent of interest rate, should be passed like
+     * @param _interestRate percent of interest rate, should be passed like RAY
      * @param _collateralType type of collateral, should be passed as bytes32
      * @return agreement address
      */
@@ -54,7 +54,8 @@ contract FraFactory is Claimable {
         uint256 _interestRate,
         bytes32 _collateralType
     ) public payable returns(address _newAgreement) {
-        address payable agreementProxyAddr = address(new AdminUpgradeabilityProxy(agreementImpl, owner, ""));
+        // address payable agreementProxyAddr = address(new AdminUpgradeabilityProxy(agreementImpl, owner, ""));
+        address payable agreementProxyAddr = address(new UpgradeabilityProxy(agreementImpl, ""));
         AgreementInterface(agreementProxyAddr).
             initAgreement.value(msg.value)(msg.sender, msg.value, _debtValue, _duration, _interestRate, _collateralType, true, configAddr);
         
@@ -78,7 +79,7 @@ contract FraFactory is Claimable {
         uint256 _interestRate,
         bytes32 _collateralType
     ) public payable returns(address _newAgreement) {
-        address payable agreementProxyAddr = address(new AdminUpgradeabilityProxy(agreementImpl, owner, ""));
+        address payable agreementProxyAddr = address(new UpgradeabilityProxy(agreementImpl, ""));
         AgreementInterface(agreementProxyAddr).
             initAgreement(msg.sender, _collateralValue, _debtValue, _duration, _interestRate, _collateralType, false, configAddr);
 

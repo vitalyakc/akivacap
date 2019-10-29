@@ -170,10 +170,14 @@ contract McdWrapper is McdAddressesR14, RaySupport {
      * @return  pie amount of all dai tokens was unlocked in fact
      */
     function _unlockAllDai() internal returns(uint pie) {
-        pie = getLockedDai();
-        _unlockDai(pie);
+        // pie = getLockedDai();
+        // _unlockDai(pie);
         // function will be available in further releases (11)
-        //proxy().execute(proxyLib, abi.encodeWithSignature("exitAll(address,address)", mcdJoinDaiAddr, mcdPotAddr));
+        proxy().execute(
+            proxyLibDsr, 
+            abi.encodeWithSignature("exitAll(address,address)", 
+            mcdJoinDaiAddr, mcdPotAddr));
+        pie = ERC20Interface(mcdDaiAddr).balanceOf(address(this));
     }
 
     function _cashETH(bytes32 ilk, uint wad) internal {

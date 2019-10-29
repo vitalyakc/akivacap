@@ -115,7 +115,7 @@ contract Agreement is AgreementInterface, Claimable, McdWrapper {
         uint256 _collateralAmount,
         uint256 _debtValue,
         uint256 _duration,
-        uint256 _interestRatePercent,
+        uint256 _interestRate,
         bytes32 _collateralType,
         bool _isETH,
         address configAddr
@@ -124,7 +124,7 @@ contract Agreement is AgreementInterface, Claimable, McdWrapper {
         
         require((_collateralAmount > Config(configAddr).minCollateralAmount()) && (_collateralAmount < Config(configAddr).maxCollateralAmount()), 'FraFactory: collateral is zero');
         require(_debtValue > 0, 'Agreement: debt is zero');
-        require((_interestRatePercent > 0) && (_interestRatePercent <= 100), 'Agreement: interestRate should be between 0 and 100');
+        require((_interestRate > ONE) && (_interestRate <= ONE * 2), 'Agreement: interestRate should be between 0 and 100 %');
         require((_duration > Config(configAddr).minDuration()) && (_duration < Config(configAddr).maxDuration()), 'Agreement: duration is zero');
         require(Config(configAddr).isCollateralEnabled(_collateralType), 'Agreement: collateral type is currencly disabled');
 
@@ -138,7 +138,7 @@ contract Agreement is AgreementInterface, Claimable, McdWrapper {
         debtValue = _debtValue;
         duration = _duration;
         initialDate = getCurrentTime();
-        interestRate = fromPercentToRay(_interestRatePercent);
+        interestRate = _interestRate; //fromPercentToRay(_interestRatePercent);
         collateralAmount = _collateralAmount;
         collateralType = _collateralType;
         
