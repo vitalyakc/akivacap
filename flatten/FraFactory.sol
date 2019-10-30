@@ -253,9 +253,13 @@ interface AgreementInterface {
     function borrower() external view returns(address);
     function collateralType() external view returns(bytes32);
     function isActive() external view returns(bool);
+    function isOpen() external view returns(bool);
+    function isEnded() external view returns(bool);
     function isPending() external view returns(bool);
     function isClosed() external view returns(bool);
     function isBeforeMatched() external view returns(bool);
+    function checkTimeToCancel(uint _approveLimit, uint _matchLimit) external view returns(bool);
+    function cdpId() external view returns(uint);
     function erc20TokenContract(bytes32 ilk) external view returns(ERC20Interface);
 
     event AgreementInitiated(address _borrower, uint _collateralValue, uint _debtValue, uint _expireDate, uint _interestRate);
@@ -507,7 +511,7 @@ contract FraFactory is Claimable {
      * @dev Requests egreement on ETH collateralType
      * @param _debtValue value of borrower's ETH put into the contract as collateral
      * @param _duration number of minutes which agreement should be terminated after
-     * @param _interestRate percent of interest rate, should be passed like
+     * @param _interestRate percent of interest rate, should be passed like RAY
      * @param _collateralType type of collateral, should be passed as bytes32
      * @return agreement address
      */
@@ -600,6 +604,16 @@ contract FraFactory is Claimable {
         }
     }
 
+    function autoRejectAgreements() public onlyContractOwner() {
+        uint _approveLimit = Config(configAddr).approveLimit();
+        uint _matchLimit = Config(configAddr).matchLimit();
+        for(uint256 i = 0; i < agreementList.length; i++) {
+            if (AgreementInterface(agreementList[i]).isBeforeMatched() && AgreementInterface(agreementList[i]).checkTimeToCancel(_approveLimit, _matchLimit)) {
+                rejectAgreement(agreementList[i]);
+            }
+        }
+    }
+
     /**
      * @dev Updates the state of specific agreement
      * @param _address agreement address
@@ -621,6 +635,8 @@ contract FraFactory is Claimable {
             updateAgreement(agreementList[i]);
         }
     }
+
+    
 
     /**
     * @dev close pending and open agreements with limit expired

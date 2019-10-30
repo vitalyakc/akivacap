@@ -137,6 +137,16 @@ contract FraFactory is Claimable {
         }
     }
 
+    function autoRejectAgreements() public onlyContractOwner() {
+        uint _approveLimit = Config(configAddr).approveLimit();
+        uint _matchLimit = Config(configAddr).matchLimit();
+        for(uint256 i = 0; i < agreementList.length; i++) {
+            if (AgreementInterface(agreementList[i]).isBeforeMatched() && AgreementInterface(agreementList[i]).checkTimeToCancel(_approveLimit, _matchLimit)) {
+                rejectAgreement(agreementList[i]);
+            }
+        }
+    }
+
     /**
      * @dev Updates the state of specific agreement
      * @param _address agreement address
@@ -158,6 +168,8 @@ contract FraFactory is Claimable {
             updateAgreement(agreementList[i]);
         }
     }
+
+    
 
     /**
     * @dev close pending and open agreements with limit expired

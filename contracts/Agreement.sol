@@ -250,7 +250,8 @@ contract Agreement is AgreementInterface, Claimable, McdWrapper {
      * @dev check if status is pending
      */
     function isEnded() public view returns(bool) {
-        return (status == STATUS_ENDED);
+        // return (status == STATUS_ENDED);
+        return ((status & STATUS_ENDED) == STATUS_ENDED);
     }
 
     /**
@@ -298,7 +299,8 @@ contract Agreement is AgreementInterface, Claimable, McdWrapper {
      * @dev check whether pending agreement should be canceled automatically
      */
     function checkTimeToCancel(uint _approveLimit, uint _matchLimit) public view returns(bool){
-        if ((isPending() && (getCurrentTime() > initialDate.add(_approveLimit))) ||
+        if (
+            //(isPending() && (getCurrentTime() > initialDate.add(_approveLimit))) ||
             (isOpen() && (getCurrentTime() > approveDate.add(_matchLimit)))) {
             return true;
         }

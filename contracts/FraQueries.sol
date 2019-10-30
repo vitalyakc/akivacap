@@ -12,19 +12,11 @@ contract FraFactoryI {
  * @title Queries for agreements
  */
 contract FraQueries {
-    address fraFactoryAddr;
-    FraFactoryI fraFactory;
-    constructor(address _fraFactoryAddr) public {
-        setFraFactory(_fraFactoryAddr);
+    constructor() public {
     }
 
-    function setFraFactory(address _fraFactoryAddr) public {
-        fraFactoryAddr = _fraFactoryAddr;
-        fraFactory = FraFactoryI(_fraFactoryAddr);
-    }
-
-    function getAgreements(uint _status, address _user) public view returns(address[] memory agreementsSorted) {
-        address[] memory agreementList = fraFactory.getAgreementList();
+    function getAgreements(address _fraFactoryAddr, uint _status, address _user) public view returns(address[] memory agreementsSorted) {
+        address[] memory agreementList = FraFactoryI(_fraFactoryAddr).getAgreementList();
         agreementsSorted = new address[](agreementList.length);
         uint cntSorted = 0;
         
@@ -38,14 +30,54 @@ contract FraQueries {
                 agreementsSorted[cntSorted] = agreementList[i];
                 cntSorted++;
             }
-            
         }
         uint cntDelete = agreementList.length - cntSorted;
         assembly { mstore(agreementsSorted, sub(mload(agreementsSorted), cntDelete)) }
     }
+
+    function getAgreementsCount(address _fraFactoryAddr) public view returns(uint cntOpen, uint cntActive, uint cntEnded) {
+        address[] memory agreementList = FraFactoryI(_fraFactoryAddr).getAgreementList();
+
+        for(uint256 i = 0; i < agreementList.length; i++) {
+            if (AgreementInterface(agreementList[i]).isOpen()) {
+                cntOpen++;
+            }
+            if (AgreementInterface(agreementList[i]).isActive()) {
+                cntActive++;
+            }
+            if (AgreementInterface(agreementList[i]).isEnded()) {
+                cntEnded++;
+            }
+        }
+    }
+
+    function getActiveCdps(address _fraFactoryAddr) public view returns(uint[] memory cdpIds) {
+        address[] memory agreementList = FraFactoryI(_fraFactoryAddr).getAgreementList();
+        cdpIds = new uint[](agreementList.length);
+        uint cntSorted = 0;
         
-    function getL() public view returns(uint) {
-        address[] memory agreementList = fraFactory.getAgreementList();
-        return agreementList.length;
+        for(uint256 i = 0; i < agreementList.length; i++) {
+            if (AgreementInterface(agreementList[i]).isActive()) {
+                cdpIds[cntSorted] = AgreementInterface(agreementList[i]).cdpId();
+                cntSorted++;
+            }
+        }
+        uint cntDelete = agreementList.length - cntSorted;
+        assembly { mstore(cdpIds, sub(mload(cdpIds), cntDelete)) }
+    }
+
+    function getTotalCdps(address _fraFactoryAddr) public view returns(uint[] memory cdpIds) {
+        address[] memory agreementList = FraFactoryI(_fraFactoryAddr).getAgreementList();
+        cdpIds = new uint[](agreementList.length);
+        uint cntSorted = 0;
+        
+        for(uint256 i = 0; i < agreementList.length; i++) {
+            if (AgreementInterface(agreementList[i]).isActive() || AgreementInterface(agreementList[i]).isOpen() || AgreementInterface(agreementList[i]).isEnded()) {
+                cdpIds[cntSorted] = AgreementInterface(agreementList[i]).cdpId();
+                cntSorted++;
+            }
+        }
+        uint cntDelete = agreementList.length - cntSorted;
+        assembly { mstore(cdpIds, sub(mload(cdpIds), cntDelete)) }
     }
 }

@@ -18,9 +18,13 @@ interface AgreementInterface {
     function borrower() external view returns(address);
     function collateralType() external view returns(bytes32);
     function isActive() external view returns(bool);
+    function isOpen() external view returns(bool);
+    function isEnded() external view returns(bool);
     function isPending() external view returns(bool);
     function isClosed() external view returns(bool);
     function isBeforeMatched() external view returns(bool);
+    function checkTimeToCancel(uint _approveLimit, uint _matchLimit) external view returns(bool);
+    function cdpId() external view returns(uint);
     function erc20TokenContract(bytes32 ilk) external view returns(ERC20Interface);
 
     event AgreementInitiated(address _borrower, uint _collateralValue, uint _debtValue, uint _expireDate, uint _interestRate);
