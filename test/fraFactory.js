@@ -1,9 +1,17 @@
-const Agreement = artifacts.require('AgreementMock');
+const Agreement = artifacts.require('AgreementDeepMock');
 const FraFactory = artifacts.require('FraFactory');
-const Config = artifacts.require('Config');
+const Config = artifacts.require('ConfigMock');
 const Reverter = require('./helpers/reverter');
 const {assertReverts} = require('./helpers/assertThrows')
 const BigNumber = require('bignumber.js');
+
+const toBN = (num) => {
+  return new BigNumber(num);
+}
+
+const fromPercentToRey = (num) => {
+  return (toBN(num).times((toBN(10).pow(toBN(25))))).plus((toBN(10).pow(toBN(27))));
+}
 
 contract('FraFactory', async (accounts) => {
   const reverter = new Reverter(web3);
@@ -52,7 +60,7 @@ contract('FraFactory', async (accounts) => {
 
   describe('initAgreementETH()', async () => {
     it('should be possible to init agreement on ETH with valid values from borrower', async () => {
-      await fraFactory.initAgreementETH(300000, 90000, 3, 
+      await fraFactory.initAgreementETH(300000, 90000, fromPercentToRey(3), 
         ETH_A, {from: BORROWER, value: 2000});
 
       assert.equal(await fraFactory.agreements.call(BORROWER, 0), 
@@ -61,19 +69,19 @@ contract('FraFactory', async (accounts) => {
 
       const localAgreement = await Agreement.at(await fraFactory.agreements.call(BORROWER, 0));
 
-      assert.equal(await localAgreement.borrower.call({from: NOBODY}), BORROWER);
-      assert.equal(await localAgreement.collateralAmount.call({from: NOBODY}), 2000);
+      assert.equal(await localAgreement.borrower.call(), BORROWER);
+      assert.equal(await localAgreement.collateralAmount.call(), 2000);
     })
 
     it('should not be possible to init agreement on ETH with 0 transaction value from borrower', async () => {
-      await assertReverts(fraFactory.initAgreementETH(300000, 90000, 3, 
+      await assertReverts(fraFactory.initAgreementETH(300000, 90000, fromPercentToRey(3), 
         ETH_A, {from: BORROWER, value: 0}));
      })
   })
 
   describe('approveAgreement()', async () => {
     it('should be possible to approve agreement by owner', async () => {
-      await fraFactory.initAgreementETH(300000, 90000, 3, 
+      await fraFactory.initAgreementETH(300000, 90000, fromPercentToRey(3), 
         ETH_A, {from: BORROWER, value: 2000});
 
       const localAgreement = await Agreement.at(await fraFactory.agreements.call(BORROWER, 0));
@@ -86,7 +94,7 @@ contract('FraFactory', async (accounts) => {
     })
 
     it('should not be possible to approve agreement by owner if status is not pending', async () => {
-      await fraFactory.initAgreementETH(300000, 90000, 3, 
+      await fraFactory.initAgreementETH(300000, 90000, fromPercentToRey(3), 
         ETH_A, {from: BORROWER, value: 2000});
 
       const localAgreement = await Agreement.at(await fraFactory.agreements.call(BORROWER, 0));
@@ -101,7 +109,7 @@ contract('FraFactory', async (accounts) => {
     })
 
     it('should not be possible to approve agreement by not owner', async () => {
-      await fraFactory.initAgreementETH(300000, 90000, 3, 
+      await fraFactory.initAgreementETH(300000, 90000, fromPercentToRey(3), 
         ETH_A, {from: BORROWER, value: 2000});
 
       const localAgreement = await Agreement.at(await fraFactory.agreements.call(BORROWER, 0));
@@ -115,7 +123,7 @@ contract('FraFactory', async (accounts) => {
     })
 
     it('should not be possible to approve agreement by not owner if status is not pending', async () => {
-      await fraFactory.initAgreementETH(300000, 90000, 3, 
+      await fraFactory.initAgreementETH(300000, 90000, fromPercentToRey(3), 
         ETH_A, {from: BORROWER, value: 2000});
 
       const localAgreement = await Agreement.at(await fraFactory.agreements.call(BORROWER, 0));
@@ -131,17 +139,17 @@ contract('FraFactory', async (accounts) => {
   })
   describe('batchApproveAgreements()', async () => {
     it('should be possible to batch approve agreement by owner', async () => {
-      await fraFactory.initAgreementETH(300000, 90000, 3, 
+      await fraFactory.initAgreementETH(300000, 90000, fromPercentToRey(3), 
         ETH_A, {from: BORROWER, value: 2000});
 
       const localAgreement1 = await Agreement.at(await fraFactory.agreements.call(BORROWER, 0));
 
-      await fraFactory.initAgreementETH(300000, 90000, 3, 
+      await fraFactory.initAgreementETH(300000, 90000, fromPercentToRey(3), 
         ETH_A, {from: BORROWER, value: 2000});
 
       const localAgreement2 = await Agreement.at(await fraFactory.agreements.call(BORROWER, 1));
 
-      await fraFactory.initAgreementETH(300000, 90000, 3, 
+      await fraFactory.initAgreementETH(300000, 90000, fromPercentToRey(3), 
         ETH_A, {from: BORROWER, value: 2000});
 
       const localAgreement3 = await Agreement.at(await fraFactory.agreements.call(BORROWER, 2));
@@ -159,17 +167,17 @@ contract('FraFactory', async (accounts) => {
     })
 
     it('should not be possible to batch approve agreement not by owner', async () => {
-      await fraFactory.initAgreementETH(300000, 90000, 3, 
+      await fraFactory.initAgreementETH(300000, 90000, fromPercentToRey(3), 
         ETH_A, {from: BORROWER, value: 2000});
 
       const localAgreement1 = await Agreement.at(await fraFactory.agreements.call(BORROWER, 0));
 
-      await fraFactory.initAgreementETH(300000, 90000, 3, 
+      await fraFactory.initAgreementETH(300000, 90000, fromPercentToRey(3), 
         ETH_A, {from: BORROWER, value: 2000});
 
       const localAgreement2 = await Agreement.at(await fraFactory.agreements.call(BORROWER, 1));
 
-      await fraFactory.initAgreementETH(300000, 90000, 3, 
+      await fraFactory.initAgreementETH(300000, 90000, fromPercentToRey(3), 
         ETH_A, {from: BORROWER, value: 2000});
 
       const localAgreement3 = await Agreement.at(await fraFactory.agreements.call(BORROWER, 2));
@@ -186,29 +194,30 @@ contract('FraFactory', async (accounts) => {
       assert.equal((await localAgreement3.status.call({from: NOBODY})).toNumber(), 1);
     })
 
-    it('should not be possible to batch approve agreement by owner with array lenth > 256 addresses', async () => {
-      let addressArray = [];
-      for(let i = 0; i < 257; i++) {
-        await fraFactory.initAgreementETH(300000, 90000, 3, 
-          ETH_A, {from: BORROWER, value: 2000});
+    // uncomment when all done
+    // it('should not be possible to batch approve agreement by owner with array lenth > 256 addresses', async () => {
+    //   let addressArray = [];
+    //   for(let i = 0; i < 257; i++) {
+    //     await fraFactory.initAgreementETH(300000, 90000, fromPercentToRey(3), 
+    //       ETH_A, {from: BORROWER, value: 2000});
 
-        const localAgreement = await Agreement.at(await fraFactory.agreements.call(BORROWER, i));
-        addressArray.push(localAgreement.address);
-      }
+    //     const localAgreement = await Agreement.at(await fraFactory.agreements.call(BORROWER, i));
+    //     addressArray.push(localAgreement.address);
+    //   }
 
-      const localAgreement = await Agreement.at(addressArray[0]);
+    //   const localAgreement = await Agreement.at(addressArray[0]);
 
-      assert.equal((await localAgreement.status.call({from: NOBODY})).toNumber(), 1);
+    //   assert.equal((await localAgreement.status.call({from: NOBODY})).toNumber(), 1);
 
-      await assertReverts(fraFactory.batchApproveAgreements(addressArray));
+    //   await assertReverts(fraFactory.batchApproveAgreements(addressArray));
 
-      assert.equal((await localAgreement.status.call({from: NOBODY})).toNumber(), 1);
-    })
+    //   assert.equal((await localAgreement.status.call({from: NOBODY})).toNumber(), 1);
+    // })
   })
 
   describe('rejectAgreement()', async() => {
     it('should be possible to reject agreement by owner', async () => {
-      await fraFactory.initAgreementETH(300000, 90000, 3, 
+      await fraFactory.initAgreementETH(300000, 90000, fromPercentToRey(3), 
         ETH_A, {from: BORROWER, value: 2000});
 
       const localAgreement = await Agreement.at(await fraFactory.agreements.call(BORROWER, 0));
@@ -221,7 +230,7 @@ contract('FraFactory', async (accounts) => {
     })
 
     it('should be possible to reject approved agreement by owner', async () => {
-      await fraFactory.initAgreementETH(300000, 90000, 3, 
+      await fraFactory.initAgreementETH(300000, 90000, fromPercentToRey(3), 
         ETH_A, {from: BORROWER, value: 2000});
 
       const localAgreement = await Agreement.at(await fraFactory.agreements.call(BORROWER, 0));
@@ -238,7 +247,7 @@ contract('FraFactory', async (accounts) => {
     })
 
     it('should not be possible to reject already rejected agreement by owner', async () => {
-      await fraFactory.initAgreementETH(300000, 90000, 3, 
+      await fraFactory.initAgreementETH(300000, 90000, fromPercentToRey(3), 
         ETH_A, {from: BORROWER, value: 2000});
 
       const localAgreement = await Agreement.at(await fraFactory.agreements.call(BORROWER, 0));
@@ -255,7 +264,7 @@ contract('FraFactory', async (accounts) => {
     })
 
     it('should not be possible to reject agreement by not owner', async () => {
-      await fraFactory.initAgreementETH(300000, 90000, 3, 
+      await fraFactory.initAgreementETH(300000, 90000, fromPercentToRey(3), 
         ETH_A, {from: BORROWER, value: 2000});
 
       const localAgreement = await Agreement.at(await fraFactory.agreements.call(BORROWER, 0));
@@ -268,7 +277,7 @@ contract('FraFactory', async (accounts) => {
     })
 
     it('should not be possible to reject approved agreement by not owner', async () => {
-      await fraFactory.initAgreementETH(300000, 90000, 3, 
+      await fraFactory.initAgreementETH(300000, 90000, fromPercentToRey(3), 
         ETH_A, {from: BORROWER, value: 2000});
 
       const localAgreement = await Agreement.at(await fraFactory.agreements.call(BORROWER, 0));
@@ -286,17 +295,17 @@ contract('FraFactory', async (accounts) => {
   })
   describe('batchRejectAgreements()', async () => {
     it('should be possible to batch reject agreement by owner', async () => {
-      await fraFactory.initAgreementETH(300000, 90000, 3, 
+      await fraFactory.initAgreementETH(300000, 90000, fromPercentToRey(3), 
         ETH_A, {from: BORROWER, value: 2000});
 
       const localAgreement1 = await Agreement.at(await fraFactory.agreements.call(BORROWER, 0));
 
-      await fraFactory.initAgreementETH(300000, 90000, 3, 
+      await fraFactory.initAgreementETH(300000, 90000, fromPercentToRey(3), 
         ETH_A, {from: BORROWER, value: 2000});
 
       const localAgreement2 = await Agreement.at(await fraFactory.agreements.call(BORROWER, 1));
 
-      await fraFactory.initAgreementETH(300000, 90000, 3, 
+      await fraFactory.initAgreementETH(300000, 90000, fromPercentToRey(3), 
         ETH_A, {from: BORROWER, value: 2000});
 
       const localAgreement3 = await Agreement.at(await fraFactory.agreements.call(BORROWER, 2));
@@ -314,17 +323,17 @@ contract('FraFactory', async (accounts) => {
     })
 
     it('should not be possible to batch reject agreement not by owner', async () => {
-      await fraFactory.initAgreementETH(300000, 90000, 3, 
+      await fraFactory.initAgreementETH(300000, 90000, fromPercentToRey(3), 
         ETH_A, {from: BORROWER, value: 2000});
 
       const localAgreement1 = await Agreement.at(await fraFactory.agreements.call(BORROWER, 0));
 
-      await fraFactory.initAgreementETH(300000, 90000, 3, 
+      await fraFactory.initAgreementETH(300000, 90000, fromPercentToRey(3), 
         ETH_A, {from: BORROWER, value: 2000});
 
       const localAgreement2 = await Agreement.at(await fraFactory.agreements.call(BORROWER, 1));
 
-      await fraFactory.initAgreementETH(300000, 90000, 3, 
+      await fraFactory.initAgreementETH(300000, 90000, fromPercentToRey(3), 
         ETH_A, {from: BORROWER, value: 2000});
 
       const localAgreement3 = await Agreement.at(await fraFactory.agreements.call(BORROWER, 2));
@@ -341,39 +350,40 @@ contract('FraFactory', async (accounts) => {
       assert.equal((await localAgreement3.status.call({from: NOBODY})).toNumber(), 1);
     })
 
-    it('should not be possible to batch reject agreement by owner with array lenth > 256 addresses', async () => {
-      let addressArray = [];
-      for(let i = 0; i < 257; i++) {
-        await fraFactory.initAgreementETH(300000, 90000, 3, 
-          ETH_A, {from: BORROWER, value: 2000});
+    // uncomment when all done
+    // it('should not be possible to batch reject agreement by owner with array lenth > 256 addresses', async () => {
+    //   let addressArray = [];
+    //   for(let i = 0; i < 257; i++) {
+    //     await fraFactory.initAgreementETH(300000, 90000, fromPercentToRey(3), 
+    //       ETH_A, {from: BORROWER, value: 2000});
 
-        const localAgreement = await Agreement.at(await fraFactory.agreements.call(BORROWER, i));
-        addressArray.push(localAgreement.address);
-      }
+    //     const localAgreement = await Agreement.at(await fraFactory.agreements.call(BORROWER, i));
+    //     addressArray.push(localAgreement.address);
+    //   }
 
-      const localAgreement = await Agreement.at(addressArray[0]);
+    //   const localAgreement = await Agreement.at(addressArray[0]);
 
-      assert.equal((await localAgreement.status.call({from: NOBODY})).toNumber(), 1);
+    //   assert.equal((await localAgreement.status.call({from: NOBODY})).toNumber(), 1);
 
-      await assertReverts(fraFactory.batchRejectAgreements(addressArray));
+    //   await assertReverts(fraFactory.batchRejectAgreements(addressArray));
 
-      assert.equal((await localAgreement.status.call({from: NOBODY})).toNumber(), 1);
-    })
+    //   assert.equal((await localAgreement.status.call({from: NOBODY})).toNumber(), 1);
+    // })
   })
 
   describe('getAgreementList()', async () => {
     it('should be possible to get agremeent list', async () => {
-      await fraFactory.initAgreementETH(300000, 90000, 3, 
+      await fraFactory.initAgreementETH(300000, 90000, fromPercentToRey(3), 
         ETH_A, {from: BORROWER, value: 2000});
 
       const localAgreement1 = await fraFactory.agreements.call(BORROWER, 0);
 
-      await fraFactory.initAgreementETH(300000, 90000, 3, 
+      await fraFactory.initAgreementETH(300000, 90000, fromPercentToRey(3), 
         ETH_A, {from: BORROWER, value: 2000});
 
       const localAgreement2 = await fraFactory.agreements.call(BORROWER, 1);
 
-      await fraFactory.initAgreementETH(300000, 90000, 3, 
+      await fraFactory.initAgreementETH(300000, 90000, fromPercentToRey(3), 
         ETH_A, {from: BORROWER, value: 2000});
 
       const localAgreement3 = await fraFactory.agreements.call(BORROWER, 2);

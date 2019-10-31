@@ -12,6 +12,7 @@ contract AgreementMock is Agreement {
     uint256 public currentTime;
     uint256 public unlockedDai;
     address erc20Token;
+    address public mcdDaiAddrMock;
 
     /**
      * @notice should be removed after testing!!!
@@ -50,10 +51,15 @@ contract AgreementMock is Agreement {
       return true;
     }
 
-    function _transferFromDai(address from, address to, uint amount) internal returns(bool) {
-      return true;
+    function setMcdDaiAddrMock(address _addr) public {
+      mcdDaiAddrMock = _addr;
     }
 
+    function _transferFromDai(address from, address to, uint amount) internal returns(bool) {
+      ERC20Interface(mcdDaiAddrMock).transferFrom(from, to, amount);
+      return true;
+    }
+    
     function setUnlockedDai(uint256 _amount) public {
       unlockedDai = _amount;
     }
@@ -100,5 +106,20 @@ contract AgreementMock is Agreement {
         _duration, _interestRatePercent, _collateralType, _isETH, configAddr);
       
       setErc20Token(ConfigMock(configAddr).getErc20collToken());
+    }
+
+    function updateAgreementState() public returns(bool success) {
+      return _updateAgreementState();
+    }
+
+    function setLastCheckTime(uint256 _value) public {
+      lastCheckTime = _value;
+    }
+}
+
+
+contract AgreementDeepMock is AgreementMock {
+  function _transferFromDai(address from, address to, uint amount) internal returns(bool) {
+      return true;
     }
 }
