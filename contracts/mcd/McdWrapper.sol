@@ -12,6 +12,9 @@ import '../helpers/RaySupport.sol';
 contract McdWrapper is McdAddressesR14, RaySupport {
     address payable public proxyAddress;
 
+    /**
+     * @dev init mcd Wrapper, build proxy
+     */
     function _initMcdWrapper() internal {
         _buildProxy();
     }
@@ -31,6 +34,10 @@ contract McdWrapper is McdAddressesR14, RaySupport {
         proxy().setOwner(newOwner);
     }
 
+    /**
+     * @dev     Create new cdp 
+     * @param   ilk     collateral type in bytes32 format
+     */
     function _openCdp(bytes32 ilk) internal returns (uint cdp) {
         bytes memory response = proxy().execute(proxyLib, abi.encodeWithSignature(
             'open(address,bytes32)',
@@ -40,6 +47,13 @@ contract McdWrapper is McdAddressesR14, RaySupport {
         }
     }
 
+    /**
+     * @dev     Lock ether collateral and draw dai
+     * @param   ilk     collateral type in bytes32 format
+     * @param   cdp     cdp id
+     * @param   wadC    collateral amount to be locked in cdp contract
+     * @param   wadD    dai amount to be drawn
+     */
     function _lockETHAndDraw(bytes32 ilk, uint cdp, uint wadC, uint wadD) internal {
         bytes memory data;
         (address collateralJoinAddr,) = _getCollateralAddreses(ilk);
@@ -53,11 +67,12 @@ contract McdWrapper is McdAddressesR14, RaySupport {
      * @dev     Create new cdp with ERC-20 tokens as collateral, lock collateral and draw dai
      * @notice  build new Proxy for a caller before cdp creation and approve transferFrom collateral token from Agrrement by Proxy
      * @param   ilk     collateral type in bytes32 format
-     * @param   wadD    dai amount to be drawn
+     * @param   cdp     cdp id
      * @param   wadC    collateral amount to be locked in cdp contract
-     * @return  cdp     cdp ID
+     * @param   wadD    dai amount to be drawn
+     * @param   transferFrom   collateral tokens should be transfered from caller
      */
-    function _lockERC20AndDraw(bytes32 ilk, uint cdp, uint wadD, uint wadC, bool transferFrom) internal {
+    function _lockERC20AndDraw(bytes32 ilk, uint cdp, uint wadC, uint wadD, bool transferFrom) internal {
         _approveERC20(ilk, proxyAddress, wadC);
         (address collateralJoinAddr,) = _getCollateralAddreses(ilk);
         proxy().execute(proxyLib, abi.encodeWithSignature(
@@ -69,11 +84,10 @@ contract McdWrapper is McdAddressesR14, RaySupport {
      * @dev     Create new cdp with Ether as collateral, lock collateral and draw dai
      * @notice  build new Proxy for a caller before cdp creation
      * @param   ilk     collateral type in bytes32 format
-     * @param   wadD    dai amount to be drawn
      * @param   wadC    collateral amount to be locked in cdp contract
-     * @return  cdp     cdp ID
+     * @param   wadD    dai amount to be drawn
      */
-    function _openLockETHAndDraw(bytes32 ilk, uint wadD, uint wadC) internal returns (uint cdp) {
+    function _openLockETHAndDraw(bytes32 ilk, uint wadC, uint wadD) internal returns (uint cdp) {
         address payable target = proxyAddress;
         (address collateralJoinAddr,) = _getCollateralAddreses(ilk);
         bytes memory data = abi.encodeWithSignature(
@@ -103,11 +117,11 @@ contract McdWrapper is McdAddressesR14, RaySupport {
      * @dev     Create new cdp with ERC-20 tokens as collateral, lock collateral and draw dai
      * @notice  build new Proxy for a caller before cdp creation and approve transferFrom collateral token from Agrrement by Proxy
      * @param   ilk     collateral type in bytes32 format
-     * @param   wadD    dai amount to be drawn
      * @param   wadC    collateral amount to be locked in cdp contract
-     * @return  cdp     cdp ID
+     * @param   wadD    dai amount to be drawn
+     * @param   transferFrom   collateral tokens should be transfered from caller
      */
-    function _openLockERC20AndDraw(bytes32 ilk, uint wadD, uint wadC, bool transferFrom) internal returns (uint cdp) {
+    function _openLockERC20AndDraw(bytes32 ilk, uint wadC, uint wadD, bool transferFrom) internal returns (uint cdp) {
         _approveERC20(ilk, proxyAddress, wadC);
         (address collateralJoinAddr,) = _getCollateralAddreses(ilk);
         bytes memory response = proxy().execute(proxyLib, abi.encodeWithSignature(
@@ -121,8 +135,8 @@ contract McdWrapper is McdAddressesR14, RaySupport {
     /**
      * @dev inject(wipe) some amount of dai to cdp from agreement
      * @notice approves this amount of dai tokens to proxy before injection
-     * @param cdp cdp ID
-     * @param wad amount of dai tokens
+     * @param cdp   cdp ID
+     * @param wad   amount of dai tokens
      */
     function _injectToCdp(uint cdp, uint wad) internal {
         _approveDai(address(proxy()), wad);
@@ -180,35 +194,17 @@ contract McdWrapper is McdAddressesR14, RaySupport {
         pie = ERC20Interface(mcdDaiAddr).balanceOf(address(this));
     }
 
-    function _cashETH(bytes32 ilk, uint wad) internal {
+    /**
+     * @dev recovers remaining ETH from cdp (pays remaining debt if exists)
+     * @param ilk     collateral type in bytes32 format
+     * @param cdp cdp ID
+     */
+    function _freeETH(bytes32 ilk, uint cdp) internal {
         (address collateralJoinAddr,) = _getCollateralAddreses(ilk);
         proxy().execute(
             proxyLibEnd,
-            abi.encodeWithSignature('cashETH(address,address,bytes32,uint)',
-            collateralJoinAddr, mcdEndAddr, ilk, wad));
-    }
-
-    /**
-     * @dev     should invoke liquidation process on cdp contract to return back (collateral - equivalent debt)
-     *          To determine how much collateral you would possess after a Liquidation you can use the following simplified formula:
-     *          (Collateral * Oracle Price * PETH/ETH Ratio) - (Liquidation Penalty * Stability Debt) - Stability Debt = (Remaining Collateral * Oracle Price) DAI
-     * @notice  !!! SHOULD BE REWRITTEN AFTER MCD CDP FINAL RELEASE !!!
-     * @param   ilk     collateral type in bytes32 format
-     * @param   cdpId   cdp ID
-     * @return  amount of collateral tokens returned after liquidation
-     */
-    function _forceLiquidateCdp(bytes32 ilk, uint cdpId) internal view returns(uint) {
-        address urn = ManagerLike(cdpManagerAddr).urns(cdpId);
-        (uint ink, uint art) = VatLike(mcdVatAddr).urns(ilk, urn);
-
-        // need to be clarified what it is in mcd.
-        // In single collateral it is: The ratio of PETH/ETH is 1.012
-        // solium-disable-next-line no-unused-vars
-        (,uint rate,,,) = VatLike(mcdVatAddr).ilks(ilk);
-
-        (,uint chop,) = CatLike(mcdCatAddr).ilks(ilk); // penalty
-        uint price = getPrice(ilk);
-        return (ink * price - (chop - ONE) * art) / price;
+            abi.encodeWithSignature('freeETH(address,address,address,uint)',
+            cdpManagerAddr, collateralJoinAddr, mcdEndAddr, cdp));
     }
 
     /**
@@ -321,8 +317,9 @@ contract McdWrapper is McdAddressesR14, RaySupport {
      * @dev     get amount of dai tokens currently locked in dsr(pot) contract.
      * @return  pie amount of all dai tokens locked in dsr
      */
-    function getLockedDai() public view returns(uint256) {
-        return PotLike(mcdPotAddr).pie(address(proxy()));
+    function getLockedDai() public view returns(uint256 pie, uint256 pieS) {
+        pie = PotLike(mcdPotAddr).pie(address(proxy()));
+        pieS = pie.mul(PotLike(mcdPotAddr).chi());
     }
 
     /**

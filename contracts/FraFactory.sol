@@ -97,20 +97,19 @@ contract FraFactory is Claimable {
      * @return operation success
      */
     function approveAgreement(address _address) public onlyContractOwner() returns(bool _success) {
-        if (AgreementInterface(_address).isPending()) {
-            return AgreementInterface(_address).approveAgreement();
-        }
-        return false;
+        return AgreementInterface(_address).approveAgreement();
     }
 
     /**
     * @dev Multi approve
     * @param _addresses agreements addresses array
     */
-    function batchApproveAgreements(address[] memory _addresses) public {
+    function batchApproveAgreements(address[] memory _addresses) public onlyContractOwner() {
         require(_addresses.length <= 256, "FraMain: batch count is greater than 256");
         for (uint256 i = 0; i < _addresses.length; i++) {
-            approveAgreement(_addresses[i]);
+            if (AgreementInterface(_addresses[i]).isPending()) {
+                AgreementInterface(_addresses[i]).approveAgreement();
+            }
         }
     }
 
@@ -120,20 +119,19 @@ contract FraFactory is Claimable {
      * @return operation success
      */
     function rejectAgreement(address _address) public onlyContractOwner() returns(bool _success) {
-        if (AgreementInterface(_address).isBeforeMatched()) {
-            return AgreementInterface(_address).rejectAgreement();
-        }
-        return false;
+        return AgreementInterface(_address).rejectAgreement();
     }
     
     /**
     * @dev Multi reject
     * @param _addresses agreements addresses array
     */
-    function batchRejectAgreements(address[] memory _addresses) public {
+    function batchRejectAgreements(address[] memory _addresses) public onlyContractOwner() {
         require(_addresses.length <= 256, "FraMain: batch count is greater than 256");
         for (uint256 i = 0; i < _addresses.length; i++) {
-            rejectAgreement(_addresses[i]);
+            if (AgreementInterface(_addresses[i]).isBeforeMatched()) {
+                AgreementInterface(_addresses[i]).rejectAgreement();
+            }
         }
     }
 
@@ -142,7 +140,7 @@ contract FraFactory is Claimable {
         uint _matchLimit = Config(configAddr).matchLimit();
         for(uint256 i = 0; i < agreementList.length; i++) {
             if (AgreementInterface(agreementList[i]).isBeforeMatched() && AgreementInterface(agreementList[i]).checkTimeToCancel(_approveLimit, _matchLimit)) {
-                rejectAgreement(agreementList[i]);
+                AgreementInterface(agreementList[i]).rejectAgreement();
             }
         }
     }

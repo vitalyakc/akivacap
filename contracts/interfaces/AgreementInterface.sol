@@ -30,7 +30,7 @@ interface AgreementInterface {
     event AgreementInitiated(address _borrower, uint _collateralValue, uint _debtValue, uint _expireDate, uint _interestRate);
     event AgreementApproved();
     event AgreementMatched(address _lender);
-    event AgreementUpdated(uint _injectionAmount, int _delta, int _deltaCommon, uint _lockedDai);
+    event AgreementUpdated(uint _injectionAmount, int _delta, int _deltaCommon, int _savingsDifference);
 
     event AgreementCanceled(address _user);
     event AgreementTerminated();

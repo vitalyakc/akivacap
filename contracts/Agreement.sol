@@ -192,18 +192,14 @@ contract Agreement is AgreementInterface, Claimable, McdWrapper {
      * @return Operation success
      */
      function updateAgreement() public onlyContractOwner() onlyActive() returns(bool _success) {
-        // if (_checkTimeToCancel()) {
-        //     _cancelAgreement();
-        // } else if (isActive()) {
-            _updateAgreementState();
+        _updateAgreementState();
 
-            // if(isCDPLiquidated(collateralType, cdpId)) {
-            //     _liquidateAgreement();
-            // }
-            if(_checkExpiringDate()) {
-                _terminateAgreement();
-            }
+        // if(isCDPLiquidated(collateralType, cdpId)) {
+        //     _liquidateAgreement();
         // }
+        if(_checkExpiringDate()) {
+            _terminateAgreement();
+        }
         lastCheckTime = getCurrentTime();
         return true;
     }
@@ -328,7 +324,7 @@ contract Agreement is AgreementInterface, Claimable, McdWrapper {
     function _updateAgreementState() internal returns(bool _success) {
         uint timeInterval = getCurrentTime().sub(lastCheckTime);
         uint injectionAmount;
-        uint lockedDai = _unlockAllDai();
+        // uint lockedDai = _unlockAllDai();
         uint currentDsrAnnual = rpow(getDsr(), YEAR_SECS, ONE);
 
         int savingsDifference = (currentDsrAnnual > interestRate) ?
@@ -344,14 +340,15 @@ contract Agreement is AgreementInterface, Claimable, McdWrapper {
         if (fromRay(delta) >= int(injectionThreshold)) {
             injectionAmount = uint(fromRay(delta));
 
+            _unlockDai(injectionAmount);
             _injectToCdp(cdpId, injectionAmount);
 
             delta = delta.sub(int(toRay(injectionAmount)));
-            lockedDai = lockedDai.sub(injectionAmount);
+            // lockedDai = lockedDai.sub(injectionAmount);
         }
-        _lockDai(lockedDai);
+        // _lockDai(lockedDai);
 
-        emit AgreementUpdated(injectionAmount, delta, deltaCommon, lockedDai);
+        emit AgreementUpdated(injectionAmount, delta, deltaCommon, savingsDifference);
         return true;
     }
 
@@ -361,8 +358,6 @@ contract Agreement is AgreementInterface, Claimable, McdWrapper {
     function _checkExpiringDate() internal view returns(bool) {
         return getCurrentTime() > expireDate;
     }
-
-    
 
     /**
      * @dev Terminates agreement
@@ -402,7 +397,7 @@ contract Agreement is AgreementInterface, Claimable, McdWrapper {
                 if (_callTransferFromDai(borrower, address(this), borrowerFraDebtDai)) {
                     lenderRefundDai = lenderRefundDai.add(borrowerFraDebtDai);
                 } else {
-                    //_forceLiquidateCdp(collateralType, cdpId);
+                    _freeETH(collateralType, cdpId);
                     _refundAfterCdpLiquidation(borrowerFraDebtDai);
                 }
             }
@@ -428,10 +423,31 @@ contract Agreement is AgreementInterface, Claimable, McdWrapper {
             borrowerRefundCollateral = erc20TokenContract(collateralType).balanceOf(address(this));
             _transferERC20(collateralType, borrower, borrowerRefundCollateral);
         }
-
         emit RefundLiquidated(_borrowerFraDebtDai, lenderRefundCollateral, borrowerRefundCollateral);
         return true;
     }
 
     function() external payable {}
+}
+
+/**
+ * @title Base Agreement contract
+ * @notice Contract will be deployed only once as logic(implementation), proxy will be deployed for each agreement as storage
+ * @dev Should not be deployed. It is being used as an abstract class
+ */
+contract AgreementLiquidationMock is Agreement {
+    /**
+     * @dev Executes all required transfers after liquidation
+     * @return Operation success
+     */
+    function _refundAfterCdpLiquidation(uint _borrowerFraDebtDai) internal returns(bool _success) {
+    }
+
+    /**
+     * @dev recovers remaining ETH from cdp (pays remaining debt if exists)
+     * @param ilk     collateral type in bytes32 format
+     * @param cdp cdp ID
+     */
+    function _freeETH(bytes32 ilk, uint cdp) internal {
+    }
 }
