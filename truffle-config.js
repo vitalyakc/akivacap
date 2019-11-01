@@ -87,7 +87,7 @@ module.exports = {
       // gas: 8000000,
       // gasLimit: 8000000, // <-- Use this high gas value
 
-      gasPrice: 10000000000
+      gasPrice: 1000000000
     },
 
     main: {
