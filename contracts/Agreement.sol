@@ -342,7 +342,7 @@ contract Agreement is AgreementInterface, Claimable, McdWrapper {
             injectionAmount = uint(fromRay(delta));
 
             _unlockDai(injectionAmount);
-            unlockedDai = ERC20Interface(mcdDaiAddr).balanceOf(address(this));
+            unlockedDai = _balanceDai(address(this));
             if (unlockedDai < injectionAmount) {
                 injectionAmount = unlockedDai;
             }

@@ -218,6 +218,15 @@ contract McdWrapper is McdAddressesR14, RaySupport {
     }
 
     /**
+     * @dev     get balance of dai tokens
+     * @param   addr      address 
+     */
+    function _balanceDai(address addr) internal returns(uint) {
+        return ERC20Interface(mcdDaiAddr).balanceOf(addr);
+    }
+
+
+    /**
      * @dev     Approve exact amount of erc20 tokens for transferFrom
      * @param   ilk     collateral type
      * @param   to      address allowed to call transferFrom
