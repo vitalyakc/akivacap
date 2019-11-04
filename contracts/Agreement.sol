@@ -324,7 +324,7 @@ contract Agreement is AgreementInterface, Claimable, McdWrapper {
     function _updateAgreementState() internal returns(bool _success) {
         uint timeInterval = getCurrentTime().sub(lastCheckTime);
         uint injectionAmount;
-        // uint lockedDai = _unlockAllDai();
+        uint unlockedDai;
         uint currentDsrAnnual = rpow(getDsr(), YEAR_SECS, ONE);
 
         int savingsDifference = (currentDsrAnnual > interestRate) ?
@@ -333,6 +333,7 @@ contract Agreement is AgreementInterface, Claimable, McdWrapper {
         // OR (the same result, but different formula and interest rate should be in the same format as dsr, e.g. multiplier per second)
         //savingsDifference = debtValue.mul(rpow(currentDSR, timeInterval, ONE) - rpow(interestRate, timeInterval, ONE));
         // require(savingsDifferenceU <= 2**255);
+        
 
         delta = delta.add(savingsDifference);
         deltaCommon = deltaCommon.add(savingsDifference);
@@ -341,13 +342,14 @@ contract Agreement is AgreementInterface, Claimable, McdWrapper {
             injectionAmount = uint(fromRay(delta));
 
             _unlockDai(injectionAmount);
+            unlockedDai = ERC20Interface(mcdDaiAddr).balanceOf(address(this));
+            if (unlockedDai < injectionAmount) {
+                injectionAmount = unlockedDai;
+            }
             _injectToCdp(cdpId, injectionAmount);
 
             delta = delta.sub(int(toRay(injectionAmount)));
-            // lockedDai = lockedDai.sub(injectionAmount);
         }
-        // _lockDai(lockedDai);
-
         emit AgreementUpdated(injectionAmount, delta, deltaCommon, savingsDifference);
         return true;
     }

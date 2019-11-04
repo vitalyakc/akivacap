@@ -1021,7 +1021,7 @@ interface AgreementInterface {
     event AgreementInitiated(address _borrower, uint _collateralValue, uint _debtValue, uint _expireDate, uint _interestRate);
     event AgreementApproved();
     event AgreementMatched(address _lender);
-    event AgreementUpdated(uint _injectionAmount, int _delta, int _deltaCommon, int _savingsDifference);
+    event AgreementUpdated(uint _injectionAmount, int _delta, int _deltaCommon, int _savingsDifference, uint _aggrDaiBalance);
 
     event AgreementCanceled(address _user);
     event AgreementTerminated();
@@ -1360,6 +1360,7 @@ contract Agreement is AgreementInterface, Claimable, McdWrapper {
         // OR (the same result, but different formula and interest rate should be in the same format as dsr, e.g. multiplier per second)
         //savingsDifference = debtValue.mul(rpow(currentDSR, timeInterval, ONE) - rpow(interestRate, timeInterval, ONE));
         // require(savingsDifferenceU <= 2**255);
+        uint aggrDaiBalance;
 
         delta = delta.add(savingsDifference);
         deltaCommon = deltaCommon.add(savingsDifference);
@@ -1368,14 +1369,15 @@ contract Agreement is AgreementInterface, Claimable, McdWrapper {
             injectionAmount = uint(fromRay(delta));
 
             _unlockDai(injectionAmount);
-            _injectToCdp(cdpId, injectionAmount);
+            aggrDaiBalance = ERC20Interface(mcdDaiAddr).balanceOf(address(this));
+            _injectToCdp(cdpId, aggrDaiBalance);
 
             delta = delta.sub(int(toRay(injectionAmount)));
             // lockedDai = lockedDai.sub(injectionAmount);
         }
         // _lockDai(lockedDai);
 
-        emit AgreementUpdated(injectionAmount, delta, deltaCommon, savingsDifference);
+        emit AgreementUpdated(injectionAmount, delta, deltaCommon, savingsDifference, aggrDaiBalance);
         return true;
     }
 
