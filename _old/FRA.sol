@@ -8,9 +8,25 @@ import './Agreement.sol';
 /**
  * @title Handler of all agreements
  */ 
-contract FraMain is Claimable {
-    mapping(address => address[]) public agreements;
-    address[] public agreementList;
+contract FRA is Claimable {
+
+    struct Agreement {
+        address borrower;
+        address lender;
+        uint256 cdpId;
+        int cdpAddress;
+        uint256 daiDebt;
+        uint256 collateralAmount;
+        bytes32 collateralType;
+        uint256 interestRate;
+        int256 currentDelta;
+        int256 totalDelta;
+    }
+
+    mapping(address => Agreement) public agreements;
+    mapping(address => address[]) public borrowerAgreements;
+    mapping(address => address[]) public lenderAgreements;
+    address[] public agreementsArr;
 
     /**
      * @notice Requests egreement on ETH collateralType
@@ -20,7 +36,7 @@ contract FraMain is Claimable {
      * @param _collateralType type of collateral, should be passed as bytes32
      * @return agreement address
      */
-    function requestAgreementOnETH (
+    function requestAgreementOnETH(
         uint256 _debtValue, uint256 _expairyDate, 
         uint256 _interestRate, bytes32 _collateralType) 
     public payable returns(address _newAgreement) {
@@ -103,5 +119,16 @@ contract FraMain is Claimable {
     function approveAgreement(address _agreement) 
     public onlyContractOwner() returns(bool _success) {
         return AgreementInterface(_agreement).approve();
+    }
+
+        /**
+     * @dev add addresses to the frozenlist
+     * @param _addresses addresses array
+     */
+    function batchApproveAgreement(address[] memory _addresses) public {
+        require(_addresses.length <= 256);
+        for (uint256 i = 0; i < _addresses.length; i++) {
+            approveAgreement(_addresses[i]);
+        }
     }
 }
