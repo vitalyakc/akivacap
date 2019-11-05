@@ -172,7 +172,7 @@ contract FraFactory is Claimable {
     * @dev Update state of exact agreements
     * @param _addresses agreements addresses array
     */
-    function batchUpdateAgreements(address[] memory _addresses) public {
+    function batchUpdateAgreements(address[] memory _addresses) public onlyContractOwner {
         require(_addresses.length <= 256, "FraMain: batch count is greater than 256");
         for (uint256 i = 0; i < _addresses.length; i++) {
             if (AgreementInterface(_addresses[i]).isActive()) {
