@@ -47,12 +47,12 @@ contract AgreementMock is Agreement {
 
     function _lockERC20AndDraw(bytes32 ilk, uint cdp, uint wadD, uint wadC, bool transferFrom) internal {}
 
-    function _transferDai(address to, uint amount) internal returns(bool) {
-      return true;
-    }
-
     function setMcdDaiAddrMock(address _addr) public {
       mcdDaiAddrMock = _addr;
+    }
+
+    function _transferDai(address to, uint amount) internal returns(bool) {
+          return true;
     }
 
     function _transferFromDai(address from, address to, uint amount) internal returns(bool) {
@@ -64,8 +64,14 @@ contract AgreementMock is Agreement {
       unlockedDai = _amount;
     }
 
-    function _unlockAllDai() internal returns(uint pie) {
-      return unlockedDai;
+    function _unlockDai(uint256 _amount) internal {}
+
+    function _unlockAllDai() internal returns(uint) {
+        return unlockedDai;
+    }
+
+    function _balanceDai(address addr) internal returns(uint) {
+        return unlockedDai;
     }
 
     function _injectToCdp(uint cdp, uint wad) internal {}
@@ -115,11 +121,28 @@ contract AgreementMock is Agreement {
     function setLastCheckTime(uint256 _value) public {
       lastCheckTime = _value;
     }
-}
 
+    function refund(bool _isLiquidated) public {
+      _refund(_isLiquidated);
+    }
+
+    function terminateAgreement() public returns(bool _success) {
+      return _terminateAgreement();
+    }
+
+    function _transferCdpOwnership(uint256, address) internal {}
+
+    function _callTransferFromDai(address from, address to, uint amount) internal returns(bool) {
+      ERC20Interface(mcdDaiAddrMock).transferFrom(from, to, amount);
+    }
+}
 
 contract AgreementDeepMock is AgreementMock {
   function _transferFromDai(address from, address to, uint amount) internal returns(bool) {
       return true;
-    }
+  }
+  
+  function _callTransferFromDai(address from, address to, uint amount) internal returns(bool) {
+    return true;
+  }
 }
