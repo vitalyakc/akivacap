@@ -473,7 +473,6 @@ contract UpgradeabilityProxy is BaseUpgradeabilityProxy {
 pragma solidity 0.5.11;
 // import 'zos-lib/contracts/upgradeability/AdminUpgradeabilityProxy.sol';
 
-
 /**
  * @title Handler of all agreements
  */
@@ -602,6 +601,9 @@ contract FraFactory is Claimable {
         }
     }
 
+    /**
+     * @dev Function for cron autoreject (close agreements if matchLimit expired)
+     */
     function autoRejectAgreements() public onlyContractOwner() {
         uint _approveLimit = Config(configAddr).approveLimit();
         uint _matchLimit = Config(configAddr).matchLimit();
@@ -613,37 +615,36 @@ contract FraFactory is Claimable {
     }
 
     /**
-     * @dev Updates the state of specific agreement
+     * @dev Update the state of specific agreement
      * @param _address agreement address
      * @return operation success
      */
     function updateAgreement(address _address) public onlyContractOwner() returns(bool _success) {
-        if (AgreementInterface(_address).isActive()) {
-            return AgreementInterface(_address).updateAgreement();
-        }
-        return false;
+        return AgreementInterface(_address).updateAgreement();
     }
 
     /**
-     * @dev Updates the states of all agreemnets
+     * @dev Update the states of all agreemnets
      * @return operation success
      */
     function updateAgreements() public onlyContractOwner() {
         for(uint256 i = 0; i < agreementList.length; i++) {
-            updateAgreement(agreementList[i]);
+            if (AgreementInterface(agreementList[i]).isActive()) {
+                AgreementInterface(agreementList[i]).updateAgreement();
+            }
         }
     }
 
-    
-
     /**
-    * @dev close pending and open agreements with limit expired
-    * @param _addresses addresses array
+    * @dev Update state of exact agreements
+    * @param _addresses agreements addresses array
     */
     function batchUpdateAgreements(address[] memory _addresses) public {
         require(_addresses.length <= 256, "FraMain: batch count is greater than 256");
         for (uint256 i = 0; i < _addresses.length; i++) {
-            updateAgreement(agreementList[i]);
+            if (AgreementInterface(_addresses[i]).isActive()) {
+                AgreementInterface(_addresses[i]).updateAgreement();
+            }
         }
     }
 

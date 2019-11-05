@@ -80,4 +80,15 @@ contract FraQueries {
         uint cntDelete = agreementList.length - cntSorted;
         assembly { mstore(cdpIds, sub(mload(cdpIds), cntDelete)) }
     }
+
+    function getUsers(address _fraFactoryAddr) public view returns(address[] memory lenders, address[] memory borrowers) {
+        address[] memory agreementList = FraFactoryI(_fraFactoryAddr).getAgreementList();
+        lenders = new address[](agreementList.length);
+        borrowers = new address[](agreementList.length);
+        
+        for(uint256 i = 0; i < agreementList.length; i++) {
+            lenders[i] = AgreementInterface(agreementList[i]).lender();
+            borrowers[i] = AgreementInterface(agreementList[i]).borrower();
+        }
+    }
 }

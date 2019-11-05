@@ -88,4 +88,3 @@ contract McdAddressesR14 {
     address payable constant dgdAddr = 0x62aeEC5fb140bb233b1c5612a8747Ca1Dc56dc1B;
     address payable constant gntAddr = 0xc81bA844f451d4452A01BBb2104C1c4F89252907;
 }
-
