@@ -100,6 +100,7 @@ pragma solidity 0.5.11;
 contract Ownable is Initializable, Context {
     address public owner;
     address constant AKIVA = 0xa2064B04126a6658546744B5D78959c7433A27da;
+    address constant VITALIY = 0xD8CCd965274499eB658C2BF32d2bd2068D57968b;
     address constant COOPER = 0x5B93FF82faaF241c15997ea3975419DDDd8362c5;
     address constant ALEX = 0x82Fd11085ae6d16B85924ECE4849F94ea88737a2;
     
@@ -115,7 +116,7 @@ contract Ownable is Initializable, Context {
     }
 
     function isOwner() public view returns(bool) {
-        return (owner == msg.sender) || (AKIVA == msg.sender) || (COOPER == msg.sender) || (ALEX == msg.sender);
+        return (owner == msg.sender) || (AKIVA == msg.sender) || (VITALIY == msg.sender) || (COOPER == msg.sender) || (ALEX == msg.sender);
     }
     
     modifier onlyContractOwner() {
@@ -253,15 +254,19 @@ interface AgreementInterface {
     function borrower() external view returns(address);
     function collateralType() external view returns(bytes32);
     function isActive() external view returns(bool);
+    function isOpen() external view returns(bool);
+    function isEnded() external view returns(bool);
     function isPending() external view returns(bool);
     function isClosed() external view returns(bool);
     function isBeforeMatched() external view returns(bool);
+    function checkTimeToCancel(uint _approveLimit, uint _matchLimit) external view returns(bool);
+    function cdpId() external view returns(uint);
     function erc20TokenContract(bytes32 ilk) external view returns(ERC20Interface);
 
     event AgreementInitiated(address _borrower, uint _collateralValue, uint _debtValue, uint _expireDate, uint _interestRate);
     event AgreementApproved();
     event AgreementMatched(address _lender);
-    event AgreementUpdated(uint _injectionAmount, int _delta, int _deltaCommon, uint _lockedDai);
+    event AgreementUpdated(uint _injectionAmount, int _delta, int _deltaCommon, int _savingsDifference);
 
     event AgreementCanceled(address _user);
     event AgreementTerminated();
@@ -469,7 +474,6 @@ contract UpgradeabilityProxy is BaseUpgradeabilityProxy {
 pragma solidity 0.5.11;
 // import 'zos-lib/contracts/upgradeability/AdminUpgradeabilityProxy.sol';
 
-
 /**
  * @title Handler of all agreements
  */
@@ -507,7 +511,7 @@ contract FraFactory is Claimable {
      * @dev Requests egreement on ETH collateralType
      * @param _debtValue value of borrower's ETH put into the contract as collateral
      * @param _duration number of minutes which agreement should be terminated after
-     * @param _interestRate percent of interest rate, should be passed like
+     * @param _interestRate percent of interest rate, should be passed like RAY
      * @param _collateralType type of collateral, should be passed as bytes32
      * @return agreement address
      */
@@ -560,20 +564,19 @@ contract FraFactory is Claimable {
      * @return operation success
      */
     function approveAgreement(address _address) public onlyContractOwner() returns(bool _success) {
-        if (AgreementInterface(_address).isPending()) {
-            return AgreementInterface(_address).approveAgreement();
-        }
-        return false;
+        return AgreementInterface(_address).approveAgreement();
     }
 
     /**
     * @dev Multi approve
     * @param _addresses agreements addresses array
     */
-    function batchApproveAgreements(address[] memory _addresses) public {
+    function batchApproveAgreements(address[] memory _addresses) public onlyContractOwner() {
         require(_addresses.length <= 256, "FraMain: batch count is greater than 256");
         for (uint256 i = 0; i < _addresses.length; i++) {
-            approveAgreement(_addresses[i]);
+            if (AgreementInterface(_addresses[i]).isPending()) {
+                AgreementInterface(_addresses[i]).approveAgreement();
+            }
         }
     }
 
@@ -583,53 +586,66 @@ contract FraFactory is Claimable {
      * @return operation success
      */
     function rejectAgreement(address _address) public onlyContractOwner() returns(bool _success) {
-        if (AgreementInterface(_address).isBeforeMatched()) {
-            return AgreementInterface(_address).rejectAgreement();
-        }
-        return false;
+        return AgreementInterface(_address).rejectAgreement();
     }
     
     /**
     * @dev Multi reject
     * @param _addresses agreements addresses array
     */
-    function batchRejectAgreements(address[] memory _addresses) public {
+    function batchRejectAgreements(address[] memory _addresses) public onlyContractOwner() {
         require(_addresses.length <= 256, "FraMain: batch count is greater than 256");
         for (uint256 i = 0; i < _addresses.length; i++) {
-            rejectAgreement(_addresses[i]);
+            if (AgreementInterface(_addresses[i]).isBeforeMatched()) {
+                AgreementInterface(_addresses[i]).rejectAgreement();
+            }
         }
     }
 
     /**
-     * @dev Updates the state of specific agreement
+     * @dev Function for cron autoreject (close agreements if matchLimit expired)
+     */
+    function autoRejectAgreements() public onlyContractOwner() {
+        uint _approveLimit = Config(configAddr).approveLimit();
+        uint _matchLimit = Config(configAddr).matchLimit();
+        for(uint256 i = 0; i < agreementList.length; i++) {
+            if (AgreementInterface(agreementList[i]).isBeforeMatched() && AgreementInterface(agreementList[i]).checkTimeToCancel(_approveLimit, _matchLimit)) {
+                AgreementInterface(agreementList[i]).rejectAgreement();
+            }
+        }
+    }
+
+    /**
+     * @dev Update the state of specific agreement
      * @param _address agreement address
      * @return operation success
      */
     function updateAgreement(address _address) public onlyContractOwner() returns(bool _success) {
-        if (AgreementInterface(_address).isActive()) {
-            return AgreementInterface(_address).updateAgreement();
-        }
-        return false;
+        return AgreementInterface(_address).updateAgreement();
     }
 
     /**
-     * @dev Updates the states of all agreemnets
+     * @dev Update the states of all agreemnets
      * @return operation success
      */
     function updateAgreements() public onlyContractOwner() {
         for(uint256 i = 0; i < agreementList.length; i++) {
-            updateAgreement(agreementList[i]);
+            if (AgreementInterface(agreementList[i]).isActive()) {
+                AgreementInterface(agreementList[i]).updateAgreement();
+            }
         }
     }
 
     /**
-    * @dev close pending and open agreements with limit expired
-    * @param _addresses addresses array
+    * @dev Update state of exact agreements
+    * @param _addresses agreements addresses array
     */
-    function batchUpdateAgreements(address[] memory _addresses) public {
+    function batchUpdateAgreements(address[] memory _addresses) public onlyContractOwner {
         require(_addresses.length <= 256, "FraMain: batch count is greater than 256");
         for (uint256 i = 0; i < _addresses.length; i++) {
-            updateAgreement(agreementList[i]);
+            if (AgreementInterface(_addresses[i]).isActive()) {
+                AgreementInterface(_addresses[i]).updateAgreement();
+            }
         }
     }
 
