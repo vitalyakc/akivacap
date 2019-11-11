@@ -432,29 +432,29 @@ contract McdWrapper is McdAddressesR15, RaySupport {
         if (ilk == "ETH-A") {
             return (mcdJoinEthaAddr, wethAddr);
         }
-        if (ilk == "ETH-B") {
-            return (mcdJoinEthbAddr, wethAddr);
-        }
-        if (ilk == "ETH-C") {
-            return (mcdJoinEthcAddr, wethAddr);
-        }
-        if (ilk == "REP-A") {
-            return (mcdJoinRepaAddr, repAddr);
-        }
-        if (ilk == "ZRX-A") {
-            return (mcdJoinZrxaAddr, zrxAddr);
-        }
-        if (ilk == "OMG-A") {
-            return (mcdJoinOmgaAddr, omgAddr);
-        }
+        // if (ilk == "ETH-B") {
+        //     return (mcdJoinEthbAddr, wethAddr);
+        // }
+        // if (ilk == "ETH-C") {
+        //     return (mcdJoinEthcAddr, wethAddr);
+        // }
+        // if (ilk == "REP-A") {
+        //     return (mcdJoinRepaAddr, repAddr);
+        // }
+        // if (ilk == "ZRX-A") {
+        //     return (mcdJoinZrxaAddr, zrxAddr);
+        // }
+        // if (ilk == "OMG-A") {
+        //     return (mcdJoinOmgaAddr, omgAddr);
+        // }
         if (ilk == "BAT-A") {
             return (mcdJoinBataAddr, batAddr);
         }
-        if (ilk == "DGD-A") {
-            return (mcdJoinDgdaAddr, dgdAddr);
-        }
-        if (ilk == "GNT-A") {
-            return (mcdJoinGntaAddr, gntAddr);
-        }
+        // if (ilk == "DGD-A") {
+        //     return (mcdJoinDgdaAddr, dgdAddr);
+        // }
+        // if (ilk == "GNT-A") {
+        //     return (mcdJoinGntaAddr, gntAddr);
+        // }
     }
 }
