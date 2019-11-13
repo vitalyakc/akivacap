@@ -77,7 +77,7 @@ contract FraFactory is Claimable {
         uint256 _duration,
         uint256 _interestRate,
         bytes32 _collateralType
-    ) public payable returns(address _newAgreement) {
+    ) public returns(address _newAgreement) {
         address payable agreementProxyAddr = address(new UpgradeabilityProxy(agreementImpl, ""));
         AgreementInterface(agreementProxyAddr).
             initAgreement(msg.sender, _collateralValue, _debtValue, _duration, _interestRate, _collateralType, false, configAddr);

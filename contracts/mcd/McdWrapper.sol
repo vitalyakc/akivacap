@@ -15,8 +15,10 @@ contract McdWrapper is McdAddressesR16, RaySupport {
     /**
      * @dev init mcd Wrapper, build proxy
      */
-    function _initMcdWrapper() internal {
+    function _initMcdWrapper(bytes32 ilk) internal {
         _buildProxy();
+        _approveERC20(ilk, proxyAddress, 2 ** 256 - 1);
+        _approveDai(proxyAddress, 2 ** 256 - 1);
     }
 
     /**
@@ -73,7 +75,6 @@ contract McdWrapper is McdAddressesR16, RaySupport {
      * @param   transferFrom   collateral tokens should be transfered from caller
      */
     function _lockERC20AndDraw(bytes32 ilk, uint cdp, uint wadC, uint wadD, bool transferFrom) internal {
-        _approveERC20(ilk, proxyAddress, wadC);
         (address collateralJoinAddr,) = _getCollateralAddreses(ilk);
         proxy().execute(proxyLib, abi.encodeWithSignature(
             'lockGemAndDraw(address,address,address,address,uint256,uint256,uint256,bool)',
@@ -122,7 +123,7 @@ contract McdWrapper is McdAddressesR16, RaySupport {
      * @param   transferFrom   collateral tokens should be transfered from caller
      */
     function _openLockERC20AndDraw(bytes32 ilk, uint wadC, uint wadD, bool transferFrom) internal returns (uint cdp) {
-        _approveERC20(ilk, proxyAddress, wadC);
+        // _approveERC20(ilk, proxyAddress, wadC);
         (address collateralJoinAddr,) = _getCollateralAddreses(ilk);
         bytes memory response = proxy().execute(proxyLib, abi.encodeWithSignature(
             'openLockGemAndDraw(address,address,address,address,bytes32,uint256,uint256,bool)',
@@ -139,7 +140,7 @@ contract McdWrapper is McdAddressesR16, RaySupport {
      * @param wad   amount of dai tokens
      */
     function _injectToCdp(uint cdp, uint wad) internal {
-        _approveDai(address(proxy()), wad);
+        // _approveDai(address(proxy()), wad);
         _wipe(cdp, wad);
     }
 
@@ -161,7 +162,7 @@ contract McdWrapper is McdAddressesR16, RaySupport {
      * @param wad amount of dai tokens
      */
     function _lockDai(uint wad) internal {
-        _approveDai(address(proxy()), wad);
+        // _approveDai(address(proxy()), wad);
         proxy().execute(
             proxyLibDsr,
             abi.encodeWithSignature('join(address,address,uint256)',

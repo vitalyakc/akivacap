@@ -37,7 +37,7 @@ contract Agreement is AgreementInterface, Claimable, McdWrapper {
     uint constant STATUS_LIQUIDATED = 10;       // 1010
     uint constant STATUS_ENDED_LIQUIDATED = 11; // 1011
     uint constant STATUS_CANCELED = 12;         // 1100
-
+    
     bool public isETH;
 
     uint256 public duration;
@@ -61,6 +61,7 @@ contract Agreement is AgreementInterface, Claimable, McdWrapper {
     int public deltaCommon;
 
     uint public injectionThreshold;
+    bool public isExpired;
 
     /**
      * @dev Grants access only to agreement borrower
@@ -142,8 +143,8 @@ contract Agreement is AgreementInterface, Claimable, McdWrapper {
         collateralAmount = _collateralAmount;
         collateralType = _collateralType;
         
-        _initMcdWrapper();
-        cdpId = _openCdp(collateralType);
+        _initMcdWrapper(collateralType);
+        // cdpId = _openCdp(collateralType);
 
         emit AgreementInitiated(borrower, collateralAmount, debtValue, duration, interestRate);
     }
@@ -169,9 +170,9 @@ contract Agreement is AgreementInterface, Claimable, McdWrapper {
         _transferFromDai(msg.sender, address(this), debtValue);
         _lockDai(debtValue);
         if (isETH) {
-            _lockETHAndDraw(collateralType, cdpId, collateralAmount, debtValue);
+            cdpId = _openLockETHAndDraw(collateralType, collateralAmount, debtValue);
         } else {
-            _lockERC20AndDraw(collateralType, cdpId, collateralAmount, debtValue, true);
+            cdpId = _openLockERC20AndDraw(collateralType, collateralAmount, debtValue, true);
         }
         _transferDai(borrower, debtValue);
         
@@ -192,14 +193,20 @@ contract Agreement is AgreementInterface, Claimable, McdWrapper {
      * @return Operation success
      */
      function updateAgreement() public onlyContractOwner() onlyActive() returns(bool _success) {
-        _updateAgreementState();
+        if (!isExpired) {
+            if(_checkExpiringDate()) {
+                isExpired = true;
+            }
+            _updateAgreementState(isExpired);
+        }
+        if (isExpired) {
+            _terminateAgreement();
+        }
 
         // if(isCDPLiquidated(collateralType, cdpId)) {
         //     _liquidateAgreement();
         // }
-        if(_checkExpiringDate()) {
-            _terminateAgreement();
-        }
+        
         lastCheckTime = getCurrentTime();
         return true;
     }
@@ -321,7 +328,7 @@ contract Agreement is AgreementInterface, Claimable, McdWrapper {
      * @dev Updates the state of Agreement
      * @return Operation success
      */
-    function _updateAgreementState() internal returns(bool _success) {
+    function _updateAgreementState(bool _isLastUpdate) internal returns(bool _success) {
         uint timeInterval = getCurrentTime().sub(lastCheckTime);
         uint injectionAmount;
         uint unlockedDai;
@@ -334,9 +341,12 @@ contract Agreement is AgreementInterface, Claimable, McdWrapper {
         //savingsDifference = debtValue.mul(rpow(currentDSR, timeInterval, ONE) - rpow(interestRate, timeInterval, ONE));
         // require(savingsDifferenceU <= 2**255);
         
-
         delta = delta.add(savingsDifference);
         deltaCommon = deltaCommon.add(savingsDifference);
+        
+        if (_isLastUpdate) {
+            injectionThreshold = 1;
+        }
 
         if (fromRay(delta) >= int(injectionThreshold)) {
             injectionAmount = uint(fromRay(delta));
@@ -350,7 +360,7 @@ contract Agreement is AgreementInterface, Claimable, McdWrapper {
 
             delta = delta.sub(int(toRay(injectionAmount)));
         }
-        emit AgreementUpdated(injectionAmount, delta, deltaCommon, savingsDifference);
+        emit AgreementUpdated(injectionAmount, delta, deltaCommon, savingsDifference, currentDsrAnnual, timeInterval);
         return true;
     }
 
