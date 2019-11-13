@@ -122,7 +122,7 @@ contract Agreement is AgreementInterface, Claimable, McdWrapper {
     ) public payable initializer {
         Ownable.initialize();
         
-        require((_collateralAmount > Config(configAddr).minCollateralAmount()) && (_collateralAmount < Config(configAddr).maxCollateralAmount()), 'FraFactory: collateral is zero');
+        require((_collateralAmount > Config(configAddr).minCollateralAmount()) && (_collateralAmount < Config(configAddr).maxCollateralAmount()), 'Agreement: collateral value does not match min and max');
         require(_debtValue > 0, 'Agreement: debt is zero');
         require((_interestRate > ONE) && (_interestRate <= ONE * 2), 'Agreement: interestRate should be between 0 and 100 %');
         require((_duration > Config(configAddr).minDuration()) && (_duration < Config(configAddr).maxDuration()), 'Agreement: duration is zero');

@@ -19,7 +19,7 @@ contract McdAddressesR16 {
     // address constant mcdJoinZrxaAddr = 0x1F4150647b4AA5Eb36287d06d757A5247700c521;
     // address constant mcdJoinRepaAddr = 0xd40163eA845aBBe53A12564395e33Fe108F90cd3;
     // address constant mcdJoinOmgaAddr = 0x2EBb31F1160c7027987A03482aB0fEC130e98251;
-    address constant mcdJoinBataAddr = 0xe56B354524115F101798d243e05Fd891F7D92E99;
+    address constant mcdJoinBataAddr = 0x19a681C4F316731f75d37EA6bE79a3A76B75a809;
     // address constant mcdJoinDgdaAddr = 0xD5f63712aF0D62597Ad6bf8D357F163bc699E18c;
     // address constant mcdJoinGntaAddr = 0xC667AC878FD8Eb4412DCAd07988Fea80008B65Ee;
 

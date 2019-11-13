@@ -1,6 +1,6 @@
 pragma solidity >=0.5.0;
 
-import './McdAddressesR15.sol';
+import './McdAddressesR16.sol';
 import '../interfaces/McdInterfaces.sol';
 import '../interfaces/ERC20Interface.sol';
 import '../helpers/RaySupport.sol';
@@ -9,7 +9,7 @@ import '../helpers/RaySupport.sol';
  * @title Agreement multicollateral dai wrapper for maker dao system interaction.
  * @dev delegates calls to proxy. Oriented to exact MCD release. Current version oriented to 6th release mcd cdp.
  */
-contract McdWrapper is McdAddressesR15, RaySupport {
+contract McdWrapper is McdAddressesR16, RaySupport {
     address payable public proxyAddress;
 
     /**
@@ -40,8 +40,8 @@ contract McdWrapper is McdAddressesR15, RaySupport {
      */
     function _openCdp(bytes32 ilk) internal returns (uint cdp) {
         bytes memory response = proxy().execute(proxyLib, abi.encodeWithSignature(
-            'open(address,bytes32)',
-            cdpManagerAddr, ilk));
+            'open(address,bytes32,address)',
+            cdpManagerAddr, ilk, proxyAddress));
         assembly {
             cdp := mload(add(response, 0x20))
         }

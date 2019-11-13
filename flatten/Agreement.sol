@@ -1,5 +1,5 @@
 
-// File: contracts\helpers\Context.sol
+// File: contracts/helpers/Context.sol
 
 pragma solidity ^0.5.0;
 
@@ -29,7 +29,7 @@ contract Context {
     }
 }
 
-// File: contracts\helpers\Initializable.sol
+// File: contracts/helpers/Initializable.sol
 
 pragma solidity >=0.4.24 <0.6.0;
 
@@ -93,9 +93,11 @@ contract Initializable {
   uint256[50] private ______gap;
 }
 
-// File: contracts\helpers\Claimable.sol
+// File: contracts/helpers/Claimable.sol
 
-pragma solidity 0.5.11;
+pragma solidity 0.5.11;
+
+
 
 contract Ownable is Initializable, Context {
     address public owner;
@@ -142,9 +144,10 @@ contract Claimable is Ownable {
     }
 }
 
-// File: contracts\config\Config.sol
+// File: contracts/config/Config.sol
 
-pragma solidity 0.5.11;
+pragma solidity 0.5.11;
+
 
 /**
  * @title Config for Agreement contract
@@ -166,9 +169,9 @@ contract Config is Claimable {
      */
     constructor() public {
         super.initialize();
-        setGeneral(1 days, 1 minutes, 2, 100, 100 ether, 1 minutes, 365 days);
+        setGeneral(7 days, 1 days, 5, 100, 1000 ether, 1 minutes, 365 days);
         enableCollateral("ETH-A");
-        enableCollateral("ETH-B");
+        enableCollateral("BAT-A");
     }
 
     /**
@@ -182,10 +185,10 @@ contract Config is Claimable {
      * @param   _maxDuration        max agreement length
      */
     function setGeneral(
-        uint _approveLimit, 
+        uint _approveLimit,
         uint _matchLimit,
-        uint _injectionThreshold, 
-        uint _minCollateralAmount, 
+        uint _injectionThreshold,
+        uint _minCollateralAmount,
         uint _maxCollateralAmount,
         uint _minDuration,
         uint _maxDuration
@@ -217,7 +220,7 @@ contract Config is Claimable {
     }
 }
 
-// File: contracts\helpers\SafeMath.sol
+// File: contracts/helpers/SafeMath.sol
 
 pragma solidity >=0.5.0 <0.6.0;
 
@@ -296,49 +299,49 @@ library SafeMath {
 
 }
 
-// File: contracts\mcd\McdAddressesR15.sol
+// File: contracts/mcd/McdAddressesR16.sol
 
 pragma solidity 0.5.11;
 /**
  * @title Mcd cdp maker dao system contracts deployed for 14th release
  */
-contract McdAddressesR15 {
-    uint public constant RELEASE = 15;
-    // address public constant proxyRegistryAddr = 0x64A436ae831C1672AE81F674CAb8B6775df3475C;
-    address constant proxyRegistryAddr = 0xda657E86db3e76BDa6d88e6a09798F0BBF5bDf75;
-    address constant proxyLib = 0x19Ee8a65a26f5E4e70b59FdCd8e1047920B57c13;
-    address constant proxyLibDsr = 0x9F514de1FE291A657B08cc93d72c1B50D2cD704f;
-    address constant proxyLibEnd = 0x1478de8E2FeEA7CC0cd6D5fAEfF45616be9C13fA;
-    address constant cdpManagerAddr = 0xb1fd1f2c83A6cb5155866169D81a9b7cF9e2019D;
-    address constant mcdDaiAddr = 0x1D7e3a1A65a367db1D1D3F51A54aC01a2c4C92ff;
-    address constant mcdJoinDaiAddr = 0x9E0d5a6a836a6C323Cf45Eb07Cb40CFc81664eec;
-    address constant mcdVatAddr = 0xb597803e4B5b2A43A92F3e1DCaFEA5425c873116;
-    address constant mcdJoinEthaAddr = 0x55cD2f4cF74eDc7c869BcF5e16086781eE97EE40;
-    address constant mcdJoinEthbAddr = 0x795BF49EB037F9Fd19Bd0Ff582da42D75323A53B;
-    address constant mcdJoinEthcAddr = 0x3aaE95264b28F6460A79Be1494AeBb6d6167D836;
-    address constant mcdJoinZrxaAddr = 0x1F4150647b4AA5Eb36287d06d757A5247700c521;
-    address constant mcdJoinRepaAddr = 0xd40163eA845aBBe53A12564395e33Fe108F90cd3;
-    address constant mcdJoinOmgaAddr = 0x2EBb31F1160c7027987A03482aB0fEC130e98251;
-    address constant mcdJoinBataAddr = 0xe56B354524115F101798d243e05Fd891F7D92E99;
-    address constant mcdJoinDgdaAddr = 0xD5f63712aF0D62597Ad6bf8D357F163bc699E18c;
-    address constant mcdJoinGntaAddr = 0xC667AC878FD8Eb4412DCAd07988Fea80008B65Ee;
+contract McdAddressesR16 {
+    uint public constant RELEASE = 16;
+    // address public constant proxyRegistryAddr = 0x64A436ae831C1672AE81F674CAb8B6775df3475C; //15 rel
+    address constant proxyRegistryAddr = 0xda657E86db3e76BDa6d88e6a09798F0BBF5bDf75; //6 rel
+    address constant proxyLib = 0xCA8Fadc01Fef6bFC4110dC00858af6977FEA65B1;
+    address constant proxyLibDsr = 0x89aAeAaD2A5fd3AAC5306B8dAac0647f3b0018D9;
+    address constant proxyLibEnd = 0xdD61c16af37A92A2305849729c5F308D2775877F;
+    address constant cdpManagerAddr = 0x9Aa3779a1fFe9A2Ef6C9aeeb18d2731937CEfE05;
+    address constant mcdDaiAddr = 0xC27A24e60a89A03Bd2f1FfB4Ea59076fD8385fE6;
+    address constant mcdJoinDaiAddr = 0x3A3cC501d46b84F310067eF7C5DF4ae1F05810EA;
+    address constant mcdVatAddr = 0x2d9Fad7795F0658F5931b75845D14250AECC81ee;
+    address constant mcdJoinEthaAddr = 0xe5D124ec935b1B460372a28Ce8Ae7FB200fCA9c0;
+    // address constant mcdJoinEthbAddr = 0x795BF49EB037F9Fd19Bd0Ff582da42D75323A53B;
+    // address constant mcdJoinEthcAddr = 0x3aaE95264b28F6460A79Be1494AeBb6d6167D836;
+    // address constant mcdJoinZrxaAddr = 0x1F4150647b4AA5Eb36287d06d757A5247700c521;
+    // address constant mcdJoinRepaAddr = 0xd40163eA845aBBe53A12564395e33Fe108F90cd3;
+    // address constant mcdJoinOmgaAddr = 0x2EBb31F1160c7027987A03482aB0fEC130e98251;
+    address constant mcdJoinBataAddr = 0x19a681C4F316731f75d37EA6bE79a3A76B75a809;
+    // address constant mcdJoinDgdaAddr = 0xD5f63712aF0D62597Ad6bf8D357F163bc699E18c;
+    // address constant mcdJoinGntaAddr = 0xC667AC878FD8Eb4412DCAd07988Fea80008B65Ee;
 
-    address constant mcdPotAddr = 0x286D3429226F04DE6a9Cf5A1CB3608DeDF84810B;
-    address constant mcdSpotAddr = 0x932E82e999Fad1f7Ea9566f42cd3E94a4F46897E;
-    address constant mcdCatAddr = 0x212F54B04D50594317317c94dB73c15cE1A33B73;
-    address constant mcdJugAddr = 0x9404A7Fd173f1AA716416f391ACCD28Bd0d84406;
-    address constant mcdEndAddr = 0xAF2bD74A519f824483E3a2cea9058fbe6bDAC036;
+    address constant mcdPotAddr = 0x1C11810B1F8551D543F33A48BA88dcB0E8002b0f;
+    address constant mcdSpotAddr = 0x0648831224D954a4adD8686B70Ef2F59A8CA9c7e;
+    address constant mcdCatAddr = 0xAB10DFC4578EE6f9389c3c3F5F010CF9df30ea2B;
+    address constant mcdJugAddr = 0x3FC6481A07d64D1D4EE157f6c207ca3f16e0C5Da;
+    address constant mcdEndAddr = 0x8E288A37b5d2F37d127A0BEAEf06FAe05197866A;
     
     address payable constant wethAddr = 0xd0A1E359811322d97991E03f863a0C30C2cF029C;
-    address payable constant zrxAddr = 0x18392097549390502069C17700d21403EA3C721A;
-    address payable constant repAddr = 0xC7aa227823789E363f29679F23f7e8F6d9904a9B;
-    address payable constant omgAddr = 0x441B1A74C69ee6e631834B626B29801D42076D38;
+    // address payable constant zrxAddr = 0x18392097549390502069C17700d21403EA3C721A;
+    // address payable constant repAddr = 0xC7aa227823789E363f29679F23f7e8F6d9904a9B;
+    // address payable constant omgAddr = 0x441B1A74C69ee6e631834B626B29801D42076D38;
     address payable constant batAddr = 0x9f8cFB61D3B2aF62864408DD703F9C3BEB55dff7;
-    address payable constant dgdAddr = 0x62aeEC5fb140bb233b1c5612a8747Ca1Dc56dc1B;
-    address payable constant gntAddr = 0xc81bA844f451d4452A01BBb2104C1c4F89252907;
+    // address payable constant dgdAddr = 0x62aeEC5fb140bb233b1c5612a8747Ca1Dc56dc1B;
+    // address payable constant gntAddr = 0xc81bA844f451d4452A01BBb2104C1c4F89252907;
 }
 
-// File: contracts\interfaces\McdInterfaces.sol
+// File: contracts/interfaces/McdInterfaces.sol
 
 pragma solidity 0.5.11;
 
@@ -399,7 +402,7 @@ contract DSProxyLike {
     function setOwner(address owner_) public;
 }
 
-// File: contracts\interfaces\ERC20Interface.sol
+// File: contracts/interfaces/ERC20Interface.sol
 
 pragma solidity 0.5.11;
 
@@ -415,9 +418,10 @@ contract ERC20Interface {
     event Approval(address indexed tokenOwner, address indexed spender, uint tokens);
 }
 
-// File: contracts\helpers\RaySupport.sol
+// File: contracts/helpers/RaySupport.sol
 
-pragma solidity 0.5.11;
+pragma solidity 0.5.11;
+
 
 contract RaySupport {
     using SafeMath for uint256;
@@ -490,15 +494,19 @@ contract RaySupport {
     }
 }
 
-// File: contracts\mcd\McdWrapper.sol
+// File: contracts/mcd/McdWrapper.sol
 
-pragma solidity >=0.5.0;
+pragma solidity >=0.5.0;
+
+
+
+
 
 /**
  * @title Agreement multicollateral dai wrapper for maker dao system interaction.
  * @dev delegates calls to proxy. Oriented to exact MCD release. Current version oriented to 6th release mcd cdp.
  */
-contract McdWrapper is McdAddressesR15, RaySupport {
+contract McdWrapper is McdAddressesR16, RaySupport {
     address payable public proxyAddress;
 
     /**
@@ -529,8 +537,8 @@ contract McdWrapper is McdAddressesR15, RaySupport {
      */
     function _openCdp(bytes32 ilk) internal returns (uint cdp) {
         bytes memory response = proxy().execute(proxyLib, abi.encodeWithSignature(
-            'open(address,bytes32)',
-            cdpManagerAddr, ilk));
+            'open(address,bytes32,address)',
+            cdpManagerAddr, ilk, proxyAddress));
         assembly {
             cdp := mload(add(response, 0x20))
         }
@@ -921,36 +929,37 @@ contract McdWrapper is McdAddressesR15, RaySupport {
         if (ilk == "ETH-A") {
             return (mcdJoinEthaAddr, wethAddr);
         }
-        if (ilk == "ETH-B") {
-            return (mcdJoinEthbAddr, wethAddr);
-        }
-        if (ilk == "ETH-C") {
-            return (mcdJoinEthcAddr, wethAddr);
-        }
-        if (ilk == "REP-A") {
-            return (mcdJoinRepaAddr, repAddr);
-        }
-        if (ilk == "ZRX-A") {
-            return (mcdJoinZrxaAddr, zrxAddr);
-        }
-        if (ilk == "OMG-A") {
-            return (mcdJoinOmgaAddr, omgAddr);
-        }
+        // if (ilk == "ETH-B") {
+        //     return (mcdJoinEthbAddr, wethAddr);
+        // }
+        // if (ilk == "ETH-C") {
+        //     return (mcdJoinEthcAddr, wethAddr);
+        // }
+        // if (ilk == "REP-A") {
+        //     return (mcdJoinRepaAddr, repAddr);
+        // }
+        // if (ilk == "ZRX-A") {
+        //     return (mcdJoinZrxaAddr, zrxAddr);
+        // }
+        // if (ilk == "OMG-A") {
+        //     return (mcdJoinOmgaAddr, omgAddr);
+        // }
         if (ilk == "BAT-A") {
             return (mcdJoinBataAddr, batAddr);
         }
-        if (ilk == "DGD-A") {
-            return (mcdJoinDgdaAddr, dgdAddr);
-        }
-        if (ilk == "GNT-A") {
-            return (mcdJoinGntaAddr, gntAddr);
-        }
+        // if (ilk == "DGD-A") {
+        //     return (mcdJoinDgdaAddr, dgdAddr);
+        // }
+        // if (ilk == "GNT-A") {
+        //     return (mcdJoinGntaAddr, gntAddr);
+        // }
     }
 }
 
-// File: contracts\interfaces\AgreementInterface.sol
+// File: contracts/interfaces/AgreementInterface.sol
 
-pragma solidity 0.5.11;
+pragma solidity 0.5.11;
+
 
 /**
  * @title Interface for Agreement contract
@@ -989,9 +998,15 @@ interface AgreementInterface {
     event RefundLiquidated(uint borrowerFraDebtDai, uint lenderRefundCollateral, uint borrowerRefundCollateral);
 }
 
-// File: contracts\Agreement.sol
+// File: contracts/Agreement.sol
 
-pragma solidity 0.5.11;
+pragma solidity 0.5.11;
+
+
+
+
+
+
 
 /**
  * @title Base Agreement contract
@@ -1108,7 +1123,7 @@ contract Agreement is AgreementInterface, Claimable, McdWrapper {
     ) public payable initializer {
         Ownable.initialize();
         
-        require((_collateralAmount > Config(configAddr).minCollateralAmount()) && (_collateralAmount < Config(configAddr).maxCollateralAmount()), 'FraFactory: collateral is zero');
+        require((_collateralAmount > Config(configAddr).minCollateralAmount()) && (_collateralAmount < Config(configAddr).maxCollateralAmount()), 'Agreement: collateral value does not match min and max');
         require(_debtValue > 0, 'Agreement: debt is zero');
         require((_interestRate > ONE) && (_interestRate <= ONE * 2), 'Agreement: interestRate should be between 0 and 100 %');
         require((_duration > Config(configAddr).minDuration()) && (_duration < Config(configAddr).maxDuration()), 'Agreement: duration is zero');

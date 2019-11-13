@@ -1,5 +1,5 @@
 
-// File: contracts\helpers\Context.sol
+// File: contracts/helpers/Context.sol
 
 pragma solidity ^0.5.0;
 
@@ -29,7 +29,7 @@ contract Context {
     }
 }
 
-// File: contracts\helpers\Initializable.sol
+// File: contracts/helpers/Initializable.sol
 
 pragma solidity >=0.4.24 <0.6.0;
 
@@ -93,9 +93,11 @@ contract Initializable {
   uint256[50] private ______gap;
 }
 
-// File: contracts\helpers\Claimable.sol
+// File: contracts/helpers/Claimable.sol
 
-pragma solidity 0.5.11;
+pragma solidity 0.5.11;
+
+
 
 contract Ownable is Initializable, Context {
     address public owner;
@@ -142,9 +144,10 @@ contract Claimable is Ownable {
     }
 }
 
-// File: contracts\config\Config.sol
+// File: contracts/config/Config.sol
 
-pragma solidity 0.5.11;
+pragma solidity 0.5.11;
+
 
 /**
  * @title Config for Agreement contract
@@ -166,9 +169,9 @@ contract Config is Claimable {
      */
     constructor() public {
         super.initialize();
-        setGeneral(1 days, 1 minutes, 2, 100, 100 ether, 1 minutes, 365 days);
+        setGeneral(7 days, 1 days, 5, 100, 1000 ether, 1 minutes, 365 days);
         enableCollateral("ETH-A");
-        enableCollateral("ETH-B");
+        enableCollateral("BAT-A");
     }
 
     /**
@@ -182,10 +185,10 @@ contract Config is Claimable {
      * @param   _maxDuration        max agreement length
      */
     function setGeneral(
-        uint _approveLimit, 
+        uint _approveLimit,
         uint _matchLimit,
-        uint _injectionThreshold, 
-        uint _minCollateralAmount, 
+        uint _injectionThreshold,
+        uint _minCollateralAmount,
         uint _maxCollateralAmount,
         uint _minDuration,
         uint _maxDuration
@@ -217,7 +220,7 @@ contract Config is Claimable {
     }
 }
 
-// File: contracts\interfaces\ERC20Interface.sol
+// File: contracts/interfaces/ERC20Interface.sol
 
 pragma solidity 0.5.11;
 
@@ -233,9 +236,10 @@ contract ERC20Interface {
     event Approval(address indexed tokenOwner, address indexed spender, uint tokens);
 }
 
-// File: contracts\interfaces\AgreementInterface.sol
+// File: contracts/interfaces/AgreementInterface.sol
 
-pragma solidity 0.5.11;
+pragma solidity 0.5.11;
+
 
 /**
  * @title Interface for Agreement contract
@@ -274,7 +278,7 @@ interface AgreementInterface {
     event RefundLiquidated(uint borrowerFraDebtDai, uint lenderRefundCollateral, uint borrowerRefundCollateral);
 }
 
-// File: node_modules\zos-lib\contracts\upgradeability\Proxy.sol
+// File: zos-lib/contracts/upgradeability/Proxy.sol
 
 pragma solidity ^0.5.0;
 
@@ -344,7 +348,7 @@ contract Proxy {
   }
 }
 
-// File: node_modules\zos-lib\contracts\utils\Address.sol
+// File: zos-lib/contracts/utils/Address.sol
 
 pragma solidity ^0.5.0;
 
@@ -378,7 +382,7 @@ library ZOSLibAddress {
     }
 }
 
-// File: node_modules\zos-lib\contracts\upgradeability\BaseUpgradeabilityProxy.sol
+// File: zos-lib/contracts/upgradeability/BaseUpgradeabilityProxy.sol
 
 pragma solidity ^0.5.0;
 
@@ -439,7 +443,7 @@ contract BaseUpgradeabilityProxy is Proxy {
   }
 }
 
-// File: zos-lib\contracts\upgradeability\UpgradeabilityProxy.sol
+// File: zos-lib/contracts/upgradeability/UpgradeabilityProxy.sol
 
 pragma solidity ^0.5.0;
 
@@ -468,9 +472,14 @@ contract UpgradeabilityProxy is BaseUpgradeabilityProxy {
   }  
 }
 
-// File: contracts\FraFactory.sol
+// File: contracts/FraFactory.sol
 
-pragma solidity 0.5.11;
+pragma solidity 0.5.11;
+
+
+
+
+
 // import 'zos-lib/contracts/upgradeability/AdminUpgradeabilityProxy.sol';
 
 /**
