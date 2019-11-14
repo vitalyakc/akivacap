@@ -5,8 +5,8 @@ import '../mcd/McdWrapper.sol';
 contract McdWrapperMock is McdWrapper {
   uint256 public cdpId;
 
-  function initMcdWrapper() public {
-    _initMcdWrapper();
+  function initMcdWrapper(bytes32 ilk, bool isEther) public {
+    _initMcdWrapper(ilk, isEther);
   }
 
   function setOwnerProxy(address newOwner) public {

@@ -114,8 +114,8 @@ contract AgreementMock is Agreement {
       setErc20Token(ConfigMock(configAddr).getErc20collToken());
     }
 
-    function updateAgreementState() public returns(bool success) {
-      return _updateAgreementState();
+    function updateAgreementState(bool _lastUpdate) public returns(bool success) {
+      return _updateAgreementState(_lastUpdate);
     }
 
     function setLastCheckTime(uint256 _value) public {
