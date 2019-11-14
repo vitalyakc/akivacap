@@ -15,9 +15,21 @@ contract McdWrapper is McdAddressesR16, RaySupport {
     /**
      * @dev init mcd Wrapper, build proxy
      */
-    function _initMcdWrapper(bytes32 ilk) internal {
+    function _initMcdWrapper() internal {
         _buildProxy();
+    }
+
+    /**
+    * @dev init mcd Wrapper, build proxy
+    */
+    function _approveERC20ToProxy(bytes32 ilk) internal {
         _approveERC20(ilk, proxyAddress, 2 ** 256 - 1);
+    }
+
+    /**
+    * @dev approve max dai amount to proxy
+    */
+    function _approveDaiToProxy() internal {
         _approveDai(proxyAddress, 2 ** 256 - 1);
     }
 

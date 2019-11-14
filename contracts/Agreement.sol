@@ -143,7 +143,7 @@ contract Agreement is AgreementInterface, Claimable, McdWrapper {
         collateralAmount = _collateralAmount;
         collateralType = _collateralType;
         
-        _initMcdWrapper(collateralType);
+        _initMcdWrapper();
         // cdpId = _openCdp(collateralType);
 
         emit AgreementInitiated(borrower, collateralAmount, debtValue, duration, interestRate);
@@ -168,10 +168,12 @@ contract Agreement is AgreementInterface, Claimable, McdWrapper {
     function matchAgreement() public onlyOpen() returns(bool _success) {
         // transfer dai from borrower to agreement
         _transferFromDai(msg.sender, address(this), debtValue);
+        _approveDaiToProxy();
         _lockDai(debtValue);
         if (isETH) {
             cdpId = _openLockETHAndDraw(collateralType, collateralAmount, debtValue);
         } else {
+            _approveERC20ToProxy(collateralType);
             cdpId = _openLockERC20AndDraw(collateralType, collateralAmount, debtValue, true);
         }
         _transferDai(borrower, debtValue);
