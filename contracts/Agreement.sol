@@ -61,7 +61,6 @@ contract Agreement is AgreementInterface, Claimable, McdWrapper {
     int public deltaCommon;
 
     uint public injectionThreshold;
-    bool public isExpired;
 
     /**
      * @dev Grants access only to agreement borrower
@@ -192,14 +191,10 @@ contract Agreement is AgreementInterface, Claimable, McdWrapper {
      * @return Operation success
      */
      function updateAgreement() public onlyContractOwner() onlyActive() returns(bool _success) {
-        if (!isExpired) {
-            if(_checkExpiringDate()) {
-                isExpired = true;
-            }
-            _updateAgreementState(isExpired);
-        }
-        if (isExpired) {
+        if(_checkExpiringDate()) {
             _terminateAgreement();
+        } else {
+            _updateAgreementState(false);
         }
 
         // if(isCDPLiquidated(collateralType, cdpId)) {
@@ -375,6 +370,7 @@ contract Agreement is AgreementInterface, Claimable, McdWrapper {
      * @return Operation success
      */
     function _terminateAgreement() internal returns(bool _success) {
+        _updateAgreementState(true);
         _refund(false);
         closeDate = getCurrentTime();
         status = STATUS_ENDED;

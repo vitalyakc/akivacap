@@ -512,8 +512,12 @@ contract McdWrapper is McdAddressesR16, RaySupport {
     /**
      * @dev init mcd Wrapper, build proxy
      */
-    function _initMcdWrapper() internal {
+    function _initMcdWrapper(bytes32 ilk, bool isEther) internal {
         _buildProxy();
+        if (!isEther) {
+            _approveERC20(ilk, proxyAddress, 2 ** 256 - 1);
+        }
+        _approveDai(proxyAddress, 2 ** 256 - 1);
     }
 
     /**
@@ -570,7 +574,6 @@ contract McdWrapper is McdAddressesR16, RaySupport {
      * @param   transferFrom   collateral tokens should be transfered from caller
      */
     function _lockERC20AndDraw(bytes32 ilk, uint cdp, uint wadC, uint wadD, bool transferFrom) internal {
-        _approveERC20(ilk, proxyAddress, wadC);
         (address collateralJoinAddr,) = _getCollateralAddreses(ilk);
         proxy().execute(proxyLib, abi.encodeWithSignature(
             'lockGemAndDraw(address,address,address,address,uint256,uint256,uint256,bool)',
@@ -619,7 +622,7 @@ contract McdWrapper is McdAddressesR16, RaySupport {
      * @param   transferFrom   collateral tokens should be transfered from caller
      */
     function _openLockERC20AndDraw(bytes32 ilk, uint wadC, uint wadD, bool transferFrom) internal returns (uint cdp) {
-        _approveERC20(ilk, proxyAddress, wadC);
+        // _approveERC20(ilk, proxyAddress, wadC);
         (address collateralJoinAddr,) = _getCollateralAddreses(ilk);
         bytes memory response = proxy().execute(proxyLib, abi.encodeWithSignature(
             'openLockGemAndDraw(address,address,address,address,bytes32,uint256,uint256,bool)',
@@ -636,7 +639,7 @@ contract McdWrapper is McdAddressesR16, RaySupport {
      * @param wad   amount of dai tokens
      */
     function _injectToCdp(uint cdp, uint wad) internal {
-        _approveDai(address(proxy()), wad);
+        // _approveDai(address(proxy()), wad);
         _wipe(cdp, wad);
     }
 
@@ -658,7 +661,7 @@ contract McdWrapper is McdAddressesR16, RaySupport {
      * @param wad amount of dai tokens
      */
     function _lockDai(uint wad) internal {
-        _approveDai(address(proxy()), wad);
+        // _approveDai(address(proxy()), wad);
         proxy().execute(
             proxyLibDsr,
             abi.encodeWithSignature('join(address,address,uint256)',
@@ -989,7 +992,7 @@ interface AgreementInterface {
     event AgreementInitiated(address _borrower, uint _collateralValue, uint _debtValue, uint _expireDate, uint _interestRate);
     event AgreementApproved();
     event AgreementMatched(address _lender);
-    event AgreementUpdated(uint _injectionAmount, int _delta, int _deltaCommon, int _savingsDifference);
+    event AgreementUpdated(uint _injectionAmount, int _delta, int _deltaCommon, int _savingsDifference, uint currentDsrAnnual, uint timeInterval);
 
     event AgreementCanceled(address _user);
     event AgreementTerminated();
@@ -1038,7 +1041,7 @@ contract Agreement is AgreementInterface, Claimable, McdWrapper {
     uint constant STATUS_LIQUIDATED = 10;       // 1010
     uint constant STATUS_ENDED_LIQUIDATED = 11; // 1011
     uint constant STATUS_CANCELED = 12;         // 1100
-
+    
     bool public isETH;
 
     uint256 public duration;
@@ -1143,8 +1146,7 @@ contract Agreement is AgreementInterface, Claimable, McdWrapper {
         collateralAmount = _collateralAmount;
         collateralType = _collateralType;
         
-        _initMcdWrapper();
-        cdpId = _openCdp(collateralType);
+        _initMcdWrapper(collateralType, isETH);
 
         emit AgreementInitiated(borrower, collateralAmount, debtValue, duration, interestRate);
     }
@@ -1170,9 +1172,9 @@ contract Agreement is AgreementInterface, Claimable, McdWrapper {
         _transferFromDai(msg.sender, address(this), debtValue);
         _lockDai(debtValue);
         if (isETH) {
-            _lockETHAndDraw(collateralType, cdpId, collateralAmount, debtValue);
+            cdpId = _openLockETHAndDraw(collateralType, collateralAmount, debtValue);
         } else {
-            _lockERC20AndDraw(collateralType, cdpId, collateralAmount, debtValue, true);
+            cdpId = _openLockERC20AndDraw(collateralType, collateralAmount, debtValue, true);
         }
         _transferDai(borrower, debtValue);
         
@@ -1193,14 +1195,16 @@ contract Agreement is AgreementInterface, Claimable, McdWrapper {
      * @return Operation success
      */
      function updateAgreement() public onlyContractOwner() onlyActive() returns(bool _success) {
-        _updateAgreementState();
+        if(_checkExpiringDate()) {
+            _terminateAgreement();
+        } else {
+            _updateAgreementState(false);
+        }
 
         // if(isCDPLiquidated(collateralType, cdpId)) {
         //     _liquidateAgreement();
         // }
-        if(_checkExpiringDate()) {
-            _terminateAgreement();
-        }
+        
         lastCheckTime = getCurrentTime();
         return true;
     }
@@ -1322,7 +1326,7 @@ contract Agreement is AgreementInterface, Claimable, McdWrapper {
      * @dev Updates the state of Agreement
      * @return Operation success
      */
-    function _updateAgreementState() internal returns(bool _success) {
+    function _updateAgreementState(bool _isLastUpdate) internal returns(bool _success) {
         uint timeInterval = getCurrentTime().sub(lastCheckTime);
         uint injectionAmount;
         uint unlockedDai;
@@ -1335,9 +1339,12 @@ contract Agreement is AgreementInterface, Claimable, McdWrapper {
         //savingsDifference = debtValue.mul(rpow(currentDSR, timeInterval, ONE) - rpow(interestRate, timeInterval, ONE));
         // require(savingsDifferenceU <= 2**255);
         
-
         delta = delta.add(savingsDifference);
         deltaCommon = deltaCommon.add(savingsDifference);
+        
+        if (_isLastUpdate) {
+            injectionThreshold = 1;
+        }
 
         if (fromRay(delta) >= int(injectionThreshold)) {
             injectionAmount = uint(fromRay(delta));
@@ -1351,7 +1358,7 @@ contract Agreement is AgreementInterface, Claimable, McdWrapper {
 
             delta = delta.sub(int(toRay(injectionAmount)));
         }
-        emit AgreementUpdated(injectionAmount, delta, deltaCommon, savingsDifference);
+        emit AgreementUpdated(injectionAmount, delta, deltaCommon, savingsDifference, currentDsrAnnual, timeInterval);
         return true;
     }
 
@@ -1367,6 +1374,7 @@ contract Agreement is AgreementInterface, Claimable, McdWrapper {
      * @return Operation success
      */
     function _terminateAgreement() internal returns(bool _success) {
+        _updateAgreementState(true);
         _refund(false);
         closeDate = getCurrentTime();
         status = STATUS_ENDED;

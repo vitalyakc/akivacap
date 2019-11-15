@@ -269,7 +269,7 @@ interface AgreementInterface {
     event AgreementInitiated(address _borrower, uint _collateralValue, uint _debtValue, uint _expireDate, uint _interestRate);
     event AgreementApproved();
     event AgreementMatched(address _lender);
-    event AgreementUpdated(uint _injectionAmount, int _delta, int _deltaCommon, int _savingsDifference);
+    event AgreementUpdated(uint _injectionAmount, int _delta, int _deltaCommon, int _savingsDifference, uint currentDsrAnnual, uint timeInterval);
 
     event AgreementCanceled(address _user);
     event AgreementTerminated();
@@ -553,7 +553,7 @@ contract FraFactory is Claimable {
         uint256 _duration,
         uint256 _interestRate,
         bytes32 _collateralType
-    ) public payable returns(address _newAgreement) {
+    ) public returns(address _newAgreement) {
         address payable agreementProxyAddr = address(new UpgradeabilityProxy(agreementImpl, ""));
         AgreementInterface(agreementProxyAddr).
             initAgreement(msg.sender, _collateralValue, _debtValue, _duration, _interestRate, _collateralType, false, configAddr);
