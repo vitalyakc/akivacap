@@ -172,7 +172,13 @@ contract Agreement is AgreementInterface, Claimable, McdWrapper {
         } else {
             cdpId = _openLockERC20AndDraw(collateralType, collateralAmount, debtValue, true);
         }
-        _transferDai(borrower, debtValue);
+        uint drawnDai = _balanceDai(address(this));
+        // due to the lack of preceision in mcd cdp contracts drawn dai can be less by 1 dai wei
+        if (drawnDai < debtValue) {
+            _transferDai(borrower, drawnDai);
+        } else {
+            _transferDai(borrower, debtValue);
+        }
         
         matchDate = getCurrentTime();
         status = STATUS_ACTIVE;
@@ -334,7 +340,7 @@ contract Agreement is AgreementInterface, Claimable, McdWrapper {
         // OR (the same result, but different formula and interest rate should be in the same format as dsr, e.g. multiplier per second)
         //savingsDifference = debtValue.mul(rpow(currentDSR, timeInterval, ONE) - rpow(interestRate, timeInterval, ONE));
         // require(savingsDifferenceU <= 2**255);
-        
+
         delta = delta.add(savingsDifference);
         deltaCommon = deltaCommon.add(savingsDifference);
         
