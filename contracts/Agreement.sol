@@ -329,7 +329,8 @@ contract Agreement is AgreementInterface, Claimable, McdWrapper {
      * @return Operation success
      */
     function _updateAgreementState(bool _isLastUpdate) internal returns(bool _success) {
-        uint timeInterval = getCurrentTime().sub(lastCheckTime);
+        // if it is last update take the time interval up to expireDate, otherwise up to current time
+        uint timeInterval = (_isLastUpdate ? expireDate : getCurrentTime()).sub(lastCheckTime);
         uint injectionAmount;
         uint unlockedDai;
         uint currentDsrAnnual = rpow(getDsr(), YEAR_SECS, ONE);
