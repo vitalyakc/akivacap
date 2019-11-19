@@ -22,9 +22,9 @@ contract Config is Claimable {
      */
     constructor() public {
         super.initialize();
-        setGeneral(1 days, 1 minutes, 2, 100, 100 ether, 1 minutes, 365 days);
+        setGeneral(7 days, 1 days, 1000, 100, 1000 ether, 1 minutes, 365 days);
         enableCollateral("ETH-A");
-        enableCollateral("ETH-B");
+        enableCollateral("BAT-A");
     }
 
     /**
@@ -38,10 +38,10 @@ contract Config is Claimable {
      * @param   _maxDuration        max agreement length
      */
     function setGeneral(
-        uint _approveLimit, 
+        uint _approveLimit,
         uint _matchLimit,
-        uint _injectionThreshold, 
-        uint _minCollateralAmount, 
+        uint _injectionThreshold,
+        uint _minCollateralAmount,
         uint _maxCollateralAmount,
         uint _minDuration,
         uint _maxDuration

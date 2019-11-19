@@ -37,7 +37,7 @@ contract Agreement is AgreementInterface, Claimable, McdWrapper {
     uint constant STATUS_LIQUIDATED = 10;       // 1010
     uint constant STATUS_ENDED_LIQUIDATED = 11; // 1011
     uint constant STATUS_CANCELED = 12;         // 1100
-
+    
     bool public isETH;
 
     uint256 public duration;
@@ -122,7 +122,7 @@ contract Agreement is AgreementInterface, Claimable, McdWrapper {
     ) public payable initializer {
         Ownable.initialize();
         
-        require((_collateralAmount > Config(configAddr).minCollateralAmount()) && (_collateralAmount < Config(configAddr).maxCollateralAmount()), 'FraFactory: collateral is zero');
+        require((_collateralAmount > Config(configAddr).minCollateralAmount()) && (_collateralAmount < Config(configAddr).maxCollateralAmount()), 'Agreement: collateral value does not match min and max');
         require(_debtValue > 0, 'Agreement: debt is zero');
         require((_interestRate > ONE) && (_interestRate <= ONE * 2), 'Agreement: interestRate should be between 0 and 100 %');
         require((_duration > Config(configAddr).minDuration()) && (_duration < Config(configAddr).maxDuration()), 'Agreement: duration is zero');
@@ -142,8 +142,7 @@ contract Agreement is AgreementInterface, Claimable, McdWrapper {
         collateralAmount = _collateralAmount;
         collateralType = _collateralType;
         
-        _initMcdWrapper();
-        cdpId = _openCdp(collateralType);
+        _initMcdWrapper(collateralType, isETH);
 
         emit AgreementInitiated(borrower, collateralAmount, debtValue, duration, interestRate);
     }
@@ -169,11 +168,16 @@ contract Agreement is AgreementInterface, Claimable, McdWrapper {
         _transferFromDai(msg.sender, address(this), debtValue);
         _lockDai(debtValue);
         if (isETH) {
-            _lockETHAndDraw(collateralType, cdpId, collateralAmount, debtValue);
+            cdpId = _openLockETHAndDraw(collateralType, collateralAmount, debtValue);
         } else {
-            _lockERC20AndDraw(collateralType, cdpId, collateralAmount, debtValue, true);
+            cdpId = _openLockERC20AndDraw(collateralType, collateralAmount, debtValue, true);
         }
-        _transferDai(borrower, debtValue);
+        uint drawnDai = _balanceDai(address(this));
+        // due to the lack of preceision in mcd cdp contracts drawn dai can be less by 1 dai wei
+        if (debtValue < drawnDai) {
+            drawnDai = debtValue;
+        }
+        _transferDai(borrower, drawnDai);
         
         matchDate = getCurrentTime();
         status = STATUS_ACTIVE;
@@ -181,7 +185,7 @@ contract Agreement is AgreementInterface, Claimable, McdWrapper {
         lender = msg.sender;
         lastCheckTime = getCurrentTime();
         
-        emit AgreementMatched(lender);
+        emit AgreementMatched(lender, expireDate, cdpId, collateralAmount, debtValue, drawnDai);
         return true;
     }
 
@@ -192,14 +196,16 @@ contract Agreement is AgreementInterface, Claimable, McdWrapper {
      * @return Operation success
      */
      function updateAgreement() public onlyContractOwner() onlyActive() returns(bool _success) {
-        _updateAgreementState();
+        if(_checkExpiringDate()) {
+            _terminateAgreement();
+        } else {
+            _updateAgreementState(false);
+        }
 
         // if(isCDPLiquidated(collateralType, cdpId)) {
         //     _liquidateAgreement();
         // }
-        if(_checkExpiringDate()) {
-            _terminateAgreement();
-        }
+        
         lastCheckTime = getCurrentTime();
         return true;
     }
@@ -321,8 +327,9 @@ contract Agreement is AgreementInterface, Claimable, McdWrapper {
      * @dev Updates the state of Agreement
      * @return Operation success
      */
-    function _updateAgreementState() internal returns(bool _success) {
-        uint timeInterval = getCurrentTime().sub(lastCheckTime);
+    function _updateAgreementState(bool _isLastUpdate) internal returns(bool _success) {
+        // if it is last update take the time interval up to expireDate, otherwise up to current time
+        uint timeInterval = (_isLastUpdate ? expireDate : getCurrentTime()).sub(lastCheckTime);
         uint injectionAmount;
         uint unlockedDai;
         uint currentDsrAnnual = rpow(getDsr(), YEAR_SECS, ONE);
@@ -333,10 +340,13 @@ contract Agreement is AgreementInterface, Claimable, McdWrapper {
         // OR (the same result, but different formula and interest rate should be in the same format as dsr, e.g. multiplier per second)
         //savingsDifference = debtValue.mul(rpow(currentDSR, timeInterval, ONE) - rpow(interestRate, timeInterval, ONE));
         // require(savingsDifferenceU <= 2**255);
-        
 
         delta = delta.add(savingsDifference);
         deltaCommon = deltaCommon.add(savingsDifference);
+        
+        if (_isLastUpdate) {
+            injectionThreshold = 1;
+        }
 
         if (fromRay(delta) >= int(injectionThreshold)) {
             injectionAmount = uint(fromRay(delta));
@@ -350,7 +360,7 @@ contract Agreement is AgreementInterface, Claimable, McdWrapper {
 
             delta = delta.sub(int(toRay(injectionAmount)));
         }
-        emit AgreementUpdated(injectionAmount, delta, deltaCommon, savingsDifference);
+        emit AgreementUpdated(injectionAmount, delta, deltaCommon, savingsDifference, currentDsrAnnual, timeInterval);
         return true;
     }
 
@@ -366,6 +376,7 @@ contract Agreement is AgreementInterface, Claimable, McdWrapper {
      * @return Operation success
      */
     function _terminateAgreement() internal returns(bool _success) {
+        _updateAgreementState(true);
         _refund(false);
         closeDate = getCurrentTime();
         status = STATUS_ENDED;

@@ -1,319 +1,44 @@
 
-// File: contracts/SafeMath.sol
+// File: contracts/mcd/McdAddressesR16.sol
 
 pragma solidity 0.5.11;
-
 /**
- * @dev Wrappers over Solidity's arithmetic operations with added overflow
- * checks.
- *
- * Arithmetic operations in Solidity wrap on overflow. This can easily result
- * in bugs, because programmers usually assume that an overflow raises an
- * error, which is the standard behavior in high level programming languages.
- * `SafeMath` restores this intuition by reverting the transaction when an
- * operation overflows.
- *
- * Using this library instead of the unchecked operations eliminates an entire
- * class of bugs, so it's recommended to use it always.
+ * @title Mcd cdp maker dao system contracts deployed for 14th release
  */
-library SafeMath {
-    /**
-     * @dev Returns the addition of two unsigned integers, reverting on
-     * overflow.
-     *
-     * Counterpart to Solidity's `+` operator.
-     *
-     * Requirements:
-     * - Addition cannot overflow.
-     */
-    function add(uint256 a, uint256 b) internal pure returns (uint256) {
-        uint256 c = a + b;
-        require(c >= a, 'SafeMath: addition overflow');
+contract McdAddressesR16 {
+    uint public constant RELEASE = 16;
+    // address public constant proxyRegistryAddr = 0x64A436ae831C1672AE81F674CAb8B6775df3475C; //15 rel
+    address constant proxyRegistryAddr = 0xda657E86db3e76BDa6d88e6a09798F0BBF5bDf75; //6 rel
+    address constant proxyLib = 0xCA8Fadc01Fef6bFC4110dC00858af6977FEA65B1;
+    address constant proxyLibDsr = 0x89aAeAaD2A5fd3AAC5306B8dAac0647f3b0018D9;
+    address constant proxyLibEnd = 0xdD61c16af37A92A2305849729c5F308D2775877F;
+    address constant cdpManagerAddr = 0x9Aa3779a1fFe9A2Ef6C9aeeb18d2731937CEfE05;
+    address constant mcdDaiAddr = 0xC27A24e60a89A03Bd2f1FfB4Ea59076fD8385fE6;
+    address constant mcdJoinDaiAddr = 0x3A3cC501d46b84F310067eF7C5DF4ae1F05810EA;
+    address constant mcdVatAddr = 0x2d9Fad7795F0658F5931b75845D14250AECC81ee;
+    address constant mcdJoinEthaAddr = 0xe5D124ec935b1B460372a28Ce8Ae7FB200fCA9c0;
+    // address constant mcdJoinEthbAddr = 0x795BF49EB037F9Fd19Bd0Ff582da42D75323A53B;
+    // address constant mcdJoinEthcAddr = 0x3aaE95264b28F6460A79Be1494AeBb6d6167D836;
+    // address constant mcdJoinZrxaAddr = 0x1F4150647b4AA5Eb36287d06d757A5247700c521;
+    // address constant mcdJoinRepaAddr = 0xd40163eA845aBBe53A12564395e33Fe108F90cd3;
+    // address constant mcdJoinOmgaAddr = 0x2EBb31F1160c7027987A03482aB0fEC130e98251;
+    address constant mcdJoinBataAddr = 0x19a681C4F316731f75d37EA6bE79a3A76B75a809;
+    // address constant mcdJoinDgdaAddr = 0xD5f63712aF0D62597Ad6bf8D357F163bc699E18c;
+    // address constant mcdJoinGntaAddr = 0xC667AC878FD8Eb4412DCAd07988Fea80008B65Ee;
 
-        return c;
-    }
-
-    /**
-     * @dev Returns the subtraction of two unsigned integers, reverting on
-     * overflow (when the result is negative).
-     *
-     * Counterpart to Solidity's `-` operator.
-     *
-     * Requirements:
-     * - Subtraction cannot overflow.
-     */
-    function sub(uint256 a, uint256 b) internal pure returns (uint256) {
-        return sub(a, b, 'SafeMath: subtraction overflow');
-    }
-
-    /**
-     * @dev Returns the subtraction of two unsigned integers, reverting with custom message on
-     * overflow (when the result is negative).
-     *
-     * Counterpart to Solidity's `-` operator.
-     *
-     * Requirements:
-     * - Subtraction cannot overflow.
-     *
-     * NOTE: This is a feature of the next version of OpenZeppelin Contracts.
-     * @dev Get it via `npm install @openzeppelin/contracts@next`.
-     */
-    function sub(uint256 a, uint256 b, string memory errorMessage) internal pure returns (uint256) {
-        require(b <= a, errorMessage);
-        uint256 c = a - b;
-
-        return c;
-    }
-
-    /**
-     * @dev Returns the multiplication of two unsigned integers, reverting on
-     * overflow.
-     *
-     * Counterpart to Solidity's `*` operator.
-     *
-     * Requirements:
-     * - Multiplication cannot overflow.
-     */
-    function mul(uint256 a, uint256 b) internal pure returns (uint256) {
-        // Gas optimization: this is cheaper than requiring 'a' not being zero, but the
-        // benefit is lost if 'b' is also tested.
-        // See: https://github.com/OpenZeppelin/openzeppelin-contracts/pull/522
-        if (a == 0) {
-            return 0;
-        }
-
-        uint256 c = a * b;
-        require(c / a == b, 'SafeMath: multiplication overflow');
-
-        return c;
-    }
-
-    /**
-     * @dev Returns the integer division of two unsigned integers. Reverts on
-     * division by zero. The result is rounded towards zero.
-     *
-     * Counterpart to Solidity's `/` operator. Note: this function uses a
-     * `revert` opcode (which leaves remaining gas untouched) while Solidity
-     * uses an invalid opcode to revert (consuming all remaining gas).
-     *
-     * Requirements:
-     * - The divisor cannot be zero.
-     */
-    function div(uint256 a, uint256 b) internal pure returns (uint256) {
-        return div(a, b, 'SafeMath: division by zero');
-    }
-
-    /**
-     * @dev Returns the integer division of two unsigned integers. Reverts with custom message on
-     * division by zero. The result is rounded towards zero.
-     *
-     * Counterpart to Solidity's `/` operator. Note: this function uses a
-     * `revert` opcode (which leaves remaining gas untouched) while Solidity
-     * uses an invalid opcode to revert (consuming all remaining gas).
-     *
-     * Requirements:
-     * - The divisor cannot be zero.
-     * NOTE: This is a feature of the next version of OpenZeppelin Contracts.
-     * @dev Get it via `npm install @openzeppelin/contracts@next`.
-     */
-    function div(uint256 a, uint256 b, string memory errorMessage) internal pure returns (uint256) {
-        // Solidity only automatically asserts when dividing by 0
-        require(b > 0, errorMessage);
-        uint256 c = a / b;
-        // assert(a == b * c + a % b); // There is no case in which this doesn't hold
-
-        return c;
-    }
-
-    /**
-     * @dev Returns the remainder of dividing two unsigned integers. (unsigned integer modulo),
-     * Reverts when dividing by zero.
-     *
-     * Counterpart to Solidity's `%` operator. This function uses a `revert`
-     * opcode (which leaves remaining gas untouched) while Solidity uses an
-     * invalid opcode to revert (consuming all remaining gas).
-     *
-     * Requirements:
-     * - The divisor cannot be zero.
-     */
-    function mod(uint256 a, uint256 b) internal pure returns (uint256) {
-        return mod(a, b, 'SafeMath: modulo by zero');
-    }
-
-    /**
-     * @dev Returns the remainder of dividing two unsigned integers. (unsigned integer modulo),
-     * Reverts with custom message when dividing by zero.
-     *
-     * Counterpart to Solidity's `%` operator. This function uses a `revert`
-     * opcode (which leaves remaining gas untouched) while Solidity uses an
-     * invalid opcode to revert (consuming all remaining gas).
-     *
-     * Requirements:
-     * - The divisor cannot be zero.
-     *
-     * NOTE: This is a feature of the next version of OpenZeppelin Contracts.
-     * @dev Get it via `npm install @openzeppelin/contracts@next`.
-     */
-    function mod(uint256 a, uint256 b, string memory errorMessage) internal pure returns (uint256) {
-        require(b != 0, errorMessage);
-        return a % b;
-    }
-}
-
-// File: contracts/helpers/RaySupport.sol
-
-pragma solidity 0.5.11;
-
-
-contract RaySupport {
-    using SafeMath for uint256;
-    uint256 constant public ONE = 10 ** 27;
-
-    function toWad(uint _val) public pure returns(uint) {
-        return _val.mul(ONE);
-    }
-
-    function fromWad(uint _val) public pure returns(uint) {
-        return _val.div(ONE);
-    }
-
-    function rpow(uint x, uint n, uint base) public pure returns (uint z) {
-        assembly {
-            switch x case 0 {switch n case 0 {z := base} default {z := 0}}
-            default {
-                switch mod(n, 2) case 0 { z := base } default { z := x }
-                let half := div(base, 2)  // for rounding.
-                for { n := div(n, 2) } n { n := div(n,2) } {
-                    let xx := mul(x, x)
-                    if iszero(eq(div(xx, x), x)) { revert(0,0) }
-                    let xxRound := add(xx, half)
-                    if lt(xxRound, xx) { revert(0,0) }
-                    x := div(xxRound, base)
-                    if mod(n,2) {
-                        let zx := mul(z, x)
-                        if and(iszero(iszero(x)), iszero(eq(div(zx, x), z))) { revert(0,0) }
-                        let zxRound := add(zx, half)
-                        if lt(zxRound, zx) { revert(0,0) }
-                        z := div(zxRound, base)
-                    }
-                }
-            }
-        }
-    }
-
-    function rmul(uint x, uint y) public pure returns (uint z) {
-        z = mul(x, y) / ONE;
-    }
-
-    function add(uint x, uint y) public pure returns (uint z) {
-        require((z = x + y) >= x);
-    }
-
-    function sub(uint x, uint y) public pure returns (uint z) {
-        require((z = x - y) <= x);
-    }
-
-    function mul(uint x, uint y) public pure returns (uint z) {
-        require(y == 0 || (z = x * y) / y == x);
-    }
-}
-
-// File: contracts/config/McdAddresses.sol
-
-pragma solidity 0.5.11;
-
-contract McdAddressesR6 {
-    uint public constant release = 6;
-    address public constant proxyRegistryAddr = 0xda657E86db3e76BDa6d88e6a09798F0BBF5bDf75;
-    address public constant proxyLib = 0x3B444f91f86d162C991D5EC048464C93b0890aE2;
-    address public constant cdpManagerAddr = 0xd2e8d886Bc185Df6f437E22DF923DdF419daD4B8;
-    address public constant mcdDaiAddr = 0xc7cC3413f169a027dccfeffe5208Ca4f38eF0c40;
-    address public constant mcdJoinDaiAddr = 0x7bb403AAE0330F1aCAAd8F2a06ebe4b4e4784418;
-    address public constant mcdVatAddr = 0xaCdd1ee0F74954Ed8F0aC581b081B7b86bD6aad9;
-    address public constant getCdpsAddr = 0x81dD44A647dAC3e052D8EAf2C9F11ED3a9941DD7;
-    address public constant mcdJoinEthaAddr = 0x75f0660705EF0dB9adde85337980F579626643af;
-    address public constant mcdJoinEthbAddr = 0xD53f951608e7F9feB3763dc2fAf89FaAA545d8F2;
-    address public constant mcdJoinCol1aAddr = 0xC4E81c9690Bb664d682826E3415134C23d08E7Bb;
-    address public constant mcdPotAddr = 0xBb3571B3F1151a2f0545a297363ACddC87099FF5;
-    address public constant mcdSpotAddr = 0x888C83473C72467C2D5289dCD6Ab26cCb8b00bd0;
-    address public constant mcdCatAddr = 0x81F7Aa9c1570de564eB511b3a1e57DAe558C65b5;
-    address public constant mcdJugAddr = 0x9f45059B6191B550356A92457ce5fFd7242FBb9B;
+    address constant mcdPotAddr = 0x1C11810B1F8551D543F33A48BA88dcB0E8002b0f;
+    address constant mcdSpotAddr = 0x0648831224D954a4adD8686B70Ef2F59A8CA9c7e;
+    address constant mcdCatAddr = 0xAB10DFC4578EE6f9389c3c3F5F010CF9df30ea2B;
+    address constant mcdJugAddr = 0x3FC6481A07d64D1D4EE157f6c207ca3f16e0C5Da;
+    address constant mcdEndAddr = 0x8E288A37b5d2F37d127A0BEAEf06FAe05197866A;
     
-    address payable public constant wethAddr = 0xb39862D7D1b11CD9B781B1473e142Cbb545A6871;
-    address payable public constant col1Addr = 0xC644e83399F3c0b4011D3dd3C61bc8b1617253E5;
-}
-
-contract McdAddressesR13 {
-    uint public constant release = 13;
-    address public constant proxyRegistryAddr = 0x64A436ae831C1672AE81F674CAb8B6775df3475C;
-    address public constant proxyLib = 0xfD561c946cD13A82962E1a28978b305560Ccd009;
-    address public constant cdpManagerAddr = 0x89DB53B3A774e6c29c4Db596281F3CA3E1247610;
-    address public constant mcdDaiAddr = 0x98738f2Ca303a7e8BF22B252E4418f2B14BbdFa2;
-    address public constant mcdJoinDaiAddr = 0xa9aC4aE91F3e933CBB12a4229c425B7CFd3Ac458;
-    address public constant mcdVatAddr = 0x1CC5ABe5C0464F3af2a10df0c711236a8446BF75;
-    address public constant getCdpsAddr = 0x4EF9C49AAe6419F3E2663D31aa104341b8Ad3DB1;
-    address public constant mcdJoinEthaAddr = 0xAAf1114dB4b7aB3cF67015358326e0805af3AEA5;
-    address public constant mcdJoinEthbAddr = 0x85F16b70d62e04f4Cdcd2b1378E657E563479732;
-    address public constant mcdJoinZrxaAddr = 0xCd0B608aAf35C81E6E3f132425244671948e16e9;
-    address public constant mcdPotAddr = 0x3d9AfbED6Ee2C2d17749B003875EAa38c0ce0c7f;
-    address public constant mcdSpotAddr = 0xa5aa0fB23322FF0A60832BB08cd0d360a71413C1;
-    address public constant mcdCatAddr = 0x48187b8b3ED3be81284C0a686A180B2b595e6d19;
-    address public constant mcdJugAddr = 0x5a4e9bb2407cf12624DBF966FE88aB77c93FBf74;
-    
-    address payable public constant wethAddr = 0xd0A1E359811322d97991E03f863a0C30C2cF029C;
-    address payable public constant zrxAddr = 0x18392097549390502069C17700d21403EA3C721A;
-}
-
-contract McdAddressesR14 {
-    uint public constant RELEASE = 14;
-    address public constant proxyRegistryAddr = 0x64A436ae831C1672AE81F674CAb8B6775df3475C;
-    address public constant proxyLib = 0xc21274797A01E133Ebd9D79b23498eDbD7166137;
-    address public constant proxyLibDsr = 0x8b31eF27d7708a7e24b43D352e837b9486B2b961;
-    address public constant proxyLibEnd = 0x45da208FB53A8d60EeEA2A055908ee82d0a6485A;
-    address public constant cdpManagerAddr = 0x1Cb0d969643aF4E929b3FafA5BA82950e31316b8;
-    address public constant mcdDaiAddr = 0x1f9BEAf12D8db1e50eA8a5eD53FB970462386aA0;
-    address public constant mcdJoinDaiAddr = 0x61Af28390D0B3E806bBaF09104317cb5d26E215D;
-    address public constant mcdVatAddr = 0x6e6073260e1a77dFaf57D0B92c44265122Da8028;
-    address public constant getCdpsAddr = 0xB5907a51e3b747DbF9D5125aB77efF3a55e50b7d;
-    address public constant mcdJoinEthaAddr = 0xc3AbbA566bb62c09b7f94704d8dFd9800935D3F9;
-    address public constant mcdJoinEthbAddr = 0x960Fb16406B56FDd7e2800fCA5457F524a393877;
-    address public constant mcdJoinZrxaAddr = 0x79f15B0DA982A99B7Bcf602c8F384C56f0B0E8CD;
-    address public constant mcdPotAddr = 0x24e89801DAD4603a3E2280eE30FB77f183Cb9eD9;
-    address public constant mcdSpotAddr = 0xF5cDfcE5A0b85fF06654EF35f4448E74C523c5Ac;
-    address public constant mcdCatAddr = 0xdD9eFf17f24F42adEf1B240fc5DAfba2aA6dCefD;
-    address public constant mcdJugAddr = 0x3793181eBbc1a72cc08ba90087D21c7862783FA5;
-    address public constant mcdEndAddr = 0xAF2bD74A519f824483E3a2cea9058fbe6bDAC036;
-    
-    address payable public constant wethAddr = 0xd0A1E359811322d97991E03f863a0C30C2cF029C;
-    address payable public constant zrxAddr = 0x18392097549390502069C17700d21403EA3C721A;
-}
-
-// File: contracts/config/McdConfig.sol
-
-pragma solidity 0.5.11;
-
-
-
-/**
- * @title Collateral addresses and details contract
- */
-contract McdConfig is McdAddressesR14, RaySupport {
-    struct CollateralAddresses{
-        bytes32 ilk;
-        address mcdJoinAddr;
-        address payable baseAddr;
-    }
-    mapping(bytes32 => CollateralAddresses) public collateralTypes;
-
-    constructor() public {
-        collateralTypes["ETH-A"].ilk = "ETH-A";
-        collateralTypes["ETH-A"].mcdJoinAddr = mcdJoinEthaAddr;
-        collateralTypes["ETH-A"].baseAddr = wethAddr;
-
-        collateralTypes["ETH-B"].ilk = "ETH-B";
-        collateralTypes["ETH-B"].mcdJoinAddr = mcdJoinEthbAddr;
-        collateralTypes["ETH-B"].baseAddr = wethAddr;
-    }
+    address payable constant wethAddr = 0xd0A1E359811322d97991E03f863a0C30C2cF029C;
+    // address payable constant zrxAddr = 0x18392097549390502069C17700d21403EA3C721A;
+    // address payable constant repAddr = 0xC7aa227823789E363f29679F23f7e8F6d9904a9B;
+    // address payable constant omgAddr = 0x441B1A74C69ee6e631834B626B29801D42076D38;
+    address payable constant batAddr = 0x9f8cFB61D3B2aF62864408DD703F9C3BEB55dff7;
+    // address payable constant dgdAddr = 0x62aeEC5fb140bb233b1c5612a8747Ca1Dc56dc1B;
+    // address payable constant gntAddr = 0xc81bA844f451d4452A01BBb2104C1c4F89252907;
 }
 
 // File: contracts/interfaces/McdInterfaces.sol
@@ -368,6 +93,7 @@ contract ProxyRegistryLike {
     mapping(address => DSProxyLike) public proxies;
     function build() public returns (address payable proxy);
     function build(address owner) public returns (address payable proxy);
+    
 }
 
 contract DSProxyLike {
@@ -392,9 +118,165 @@ contract ERC20Interface {
     event Approval(address indexed tokenOwner, address indexed spender, uint tokens);
 }
 
-// File: contracts/McdWrapper.sol
+// File: contracts/helpers/SafeMath.sol
+
+pragma solidity >=0.5.0 <0.6.0;
+
+/**
+ * @title SafeMath
+ * @dev Math operations with safety checks that throw on error
+ */
+library SafeMath {
+
+    int256 constant INT256_MIN = int256((uint256(1) << 255));
+
+    int256 constant INT256_MAX = int256(~((uint256(1) << 255)));
+
+    /**
+    * @dev Multiplies two numbers, throws on overflow.
+    */
+    function mul(uint256 a, uint256 b) internal pure returns (uint256) {
+        if (a == 0) {
+            return 0;
+        }
+        uint256 c = a * b;
+        require(c / a == b, 'SafeMath: multiplication overflow');
+        return c;
+    }
+
+    /**
+    * @dev Integer division of two numbers, truncating the quotient.
+    */
+    function div(uint256 a, uint256 b) internal pure returns (uint256) {
+        // require(b > 0); // Solidity automatically throws when dividing by 0
+        uint256 c = a / b;
+        // require(a == b * c + a % b); // There is no case in which this doesn't hold
+        return c;
+    }
+
+    /**
+    * @dev Substracts two numbers, throws on overflow (i.e. if subtrahend is greater than minuend).
+    */
+    function sub(uint256 a, uint256 b) internal pure returns (uint256) {
+        require(b <= a, 'SafeMath: subtraction overflow');
+        return a - b;
+    }
+
+    /**
+    * @dev Adds two numbers, throws on overflow.
+    */
+    function add(uint256 a, uint256 b) internal pure returns (uint256) {
+        uint256 c = a + b;
+        require(c >= a, 'SafeMath: addition overflow');
+        return c;
+    }
+
+    function sub(int256 a, int256 b) internal pure returns (int256) {
+        require(!(a > 0 && b > INT256_MIN - a), 'SafeMath: subtraction underflow');  // underflow
+        require(!(a < 0 && b < INT256_MAX - a), 'SafeMath: subtraction overflow');  // overflow
+
+        return a - b;
+    }
+
+    function add(int256 a, int256 b) internal pure returns (int256) {
+        require(!(a > 0 && b > INT256_MAX - a), 'SafeMath: addition underflow');  // overflow
+        require(!(a < 0 && b < INT256_MIN - a), 'SafeMath: addition overflow');  // underflow
+
+        return a + b;
+    }
+
+    function mul(int256 a, int256 b) internal pure returns (int256) {
+        if (a == 0) {
+            return 0;
+        }
+        int256 c = a * b;
+        require(c / a == b, 'SafeMath: multiplication overflow');
+        return c;
+    }
+
+
+}
+
+// File: contracts/helpers/RaySupport.sol
+
+pragma solidity 0.5.11;
+
+
+contract RaySupport {
+    using SafeMath for uint256;
+    using SafeMath for int256;
+    uint constant public ONE = 10 ** 27;
+    uint constant public HUNDRED = 100;
+
+    function toRay(uint _val) public pure returns(uint) {
+        return _val.mul(ONE);
+    }
+
+    function fromRay(uint _val) public pure returns(uint) {
+        return _val / ONE;
+    }
+
+    function toRay(int _val) public pure returns(int) {
+        return _val.mul(int(ONE));
+    }
+
+    function fromRay(int _val) public pure returns(int) {
+        return _val / int(ONE);
+    }
+
+    function fromPercentToRay(uint _val) public pure returns(uint) {
+        return (_val.mul(ONE) / HUNDRED).add(ONE);
+    }
+
+    function fromRayToPercent(uint _val) public pure returns(uint) {
+        return _val.mul(HUNDRED) / ONE - HUNDRED;
+    }
+
+    function rpow(uint x, uint n, uint base) public pure returns (uint z) {
+        assembly {
+            switch x case 0 {switch n case 0 {z := base} default {z := 0}}
+            default {
+                switch mod(n, 2) case 0 { z := base } default { z := x }
+                let half := div(base, 2)  // for rounding.
+                for { n := div(n, 2) } n { n := div(n,2) } {
+                    let xx := mul(x, x)
+                    if iszero(eq(div(xx, x), x)) { revert(0,0) }
+                    let xxRound := add(xx, half)
+                    if lt(xxRound, xx) { revert(0,0) }
+                    x := div(xxRound, base)
+                    if mod(n,2) {
+                        let zx := mul(z, x)
+                        if and(iszero(iszero(x)), iszero(eq(div(zx, x), z))) { revert(0,0) }
+                        let zxRound := add(zx, half)
+                        if lt(zxRound, zx) { revert(0,0) }
+                        z := div(zxRound, base)
+                    }
+                }
+            }
+        }
+    }
+
+    function rmul(uint x, uint y) public pure returns (uint z) {
+        z = mul(x, y) / ONE;
+    }
+
+    function add(uint x, uint y) public pure returns (uint z) {
+        require((z = x + y) >= x);
+    }
+
+    function sub(uint x, uint y) public pure returns (uint z) {
+        require((z = x - y) <= x);
+    }
+
+    function mul(uint x, uint y) public pure returns (uint z) {
+        require(y == 0 || (z = x * y) / y == x);
+    }
+}
+
+// File: contracts/mcd/McdWrapper.sol
 
 pragma solidity >=0.5.0;
+
 
 
 
@@ -403,94 +285,94 @@ pragma solidity >=0.5.0;
  * @title Agreement multicollateral dai wrapper for maker dao system interaction.
  * @dev delegates calls to proxy. Oriented to exact MCD release. Current version oriented to 6th release mcd cdp.
  */
-contract McdWrapper is McdConfig {
-    address public proxyAddr;
-    mapping(bytes32 => bool) collateralTypesAvailable;
+contract McdWrapper is McdAddressesR16, RaySupport {
+    address payable public proxyAddress;
+
+    /**
+     * @dev init mcd Wrapper, build proxy
+     */
+    function _initMcdWrapper() internal {
+        _buildProxy();
+    }
+
     /**
      * @dev Build proxy for current caller (msg.sender address)
      */
-    function buildProxy() public returns (address payable) {
-        return ProxyRegistryLike(proxyRegistryAddr).build();
-    }
-
-    /**
-     * @dev Get registered proxy for current caller (msg.sender address)
-     */
-    function proxy() public view returns (DSProxyLike) {
-        if (proxyAddr == address(0)) {
-            return DSProxyLike(buildProxy());
-        } else {
-            return DSProxyLike(proxyAddr);
-        }
-    }
-
-    /**
-     * @dev Get registered proxy for current caller (msg.sender address)
-     */
-    function proxyAddress() public view returns (address) {
-        if (proxyAddr == address(0)) {
-            return buildProxy();
-        } else {
-            return proxyAddr;
-        }
+    function _buildProxy() internal {
+        proxyAddress = ProxyRegistryLike(proxyRegistryAddr).build();
     }
 
     /**
      * @dev Change proxy owner to a new one
      * @param newOwner new owner address
      */
-    function setOwnerProxy(address newOwner) public {
+    function _setOwnerProxy(address newOwner) internal {
         proxy().setOwner(newOwner);
     }
 
-    function openCdp(bytes32 ilk) public returns (uint cdp) {
+    /**
+     * @dev     Create new cdp 
+     * @param   ilk     collateral type in bytes32 format
+     */
+    function _openCdp(bytes32 ilk) internal returns (uint cdp) {
         bytes memory response = proxy().execute(proxyLib, abi.encodeWithSignature(
-            'open(address,bytes32,uint256,uint256)',
+            'open(address,bytes32)',
             cdpManagerAddr, ilk));
         assembly {
             cdp := mload(add(response, 0x20))
         }
     }
 
-    function lockETHAndDraw(bytes32 ilk, uint cdp, uint wadC, uint wadD) public {
+    /**
+     * @dev     Lock ether collateral and draw dai
+     * @param   ilk     collateral type in bytes32 format
+     * @param   cdp     cdp id
+     * @param   wadC    collateral amount to be locked in cdp contract
+     * @param   wadD    dai amount to be drawn
+     */
+    function _lockETHAndDraw(bytes32 ilk, uint cdp, uint wadC, uint wadD) internal {
         bytes memory data;
+        (address collateralJoinAddr,) = _getCollateralAddreses(ilk);
         data = abi.encodeWithSignature(
             'lockETHAndDraw(address,address,address,address,uint256,uint256)',
-            cdpManagerAddr, mcdJugAddr, collateralTypes[ilk].mcdJoinAddr, mcdJoinDaiAddr, cdp, wadD);
-        proxyAddress().call.value(wadC)(abi.encodeWithSignature("execute(address,bytes)", proxyLib, data));
+            cdpManagerAddr, mcdJugAddr, collateralJoinAddr, mcdJoinDaiAddr, cdp, wadD);
+        proxyAddress.call.value(wadC)(abi.encodeWithSignature("execute(address,bytes)", proxyLib, data));
     }
 
     /**
      * @dev     Create new cdp with ERC-20 tokens as collateral, lock collateral and draw dai
      * @notice  build new Proxy for a caller before cdp creation and approve transferFrom collateral token from Agrrement by Proxy
      * @param   ilk     collateral type in bytes32 format
-     * @param   wadD    dai amount to be drawn
+     * @param   cdp     cdp id
      * @param   wadC    collateral amount to be locked in cdp contract
-     * @return  cdp     cdp ID
+     * @param   wadD    dai amount to be drawn
+     * @param   transferFrom   collateral tokens should be transfered from caller
      */
-    function lockERC20AndDraw(bytes32 ilk, uint cdp, uint wadD, uint wadC, bool transferFrom) public {
-        approveERC20(ilk, proxy(), wadC);
+    function _lockERC20AndDraw(bytes32 ilk, uint cdp, uint wadC, uint wadD, bool transferFrom) internal {
+        _approveERC20(ilk, proxyAddress, wadC);
+        (address collateralJoinAddr,) = _getCollateralAddreses(ilk);
         proxy().execute(proxyLib, abi.encodeWithSignature(
             'lockGemAndDraw(address,address,address,address,uint256,uint256,uint256,bool)',
-            cdpManagerAddr, mcdJugAddr, collateralTypes[ilk].mcdJoinAddr, mcdJoinDaiAddr, cdp, wadC, wadD, transferFrom));
+            cdpManagerAddr, mcdJugAddr, collateralJoinAddr, mcdJoinDaiAddr, cdp, wadC, wadD, transferFrom));
     }
 
     /**
      * @dev     Create new cdp with Ether as collateral, lock collateral and draw dai
      * @notice  build new Proxy for a caller before cdp creation
      * @param   ilk     collateral type in bytes32 format
-     * @param   wadD    dai amount to be drawn
      * @param   wadC    collateral amount to be locked in cdp contract
-     * @return  cdp     cdp ID
+     * @param   wadD    dai amount to be drawn
      */
-    function openLockETHAndDraw(bytes32 ilk, uint wadD, uint wadC) public returns (uint cdp) {
+    function _openLockETHAndDraw(bytes32 ilk, uint wadC, uint wadD) internal returns (uint cdp) {
+        address payable target = proxyAddress;
+        (address collateralJoinAddr,) = _getCollateralAddreses(ilk);
         bytes memory data = abi.encodeWithSignature(
             'execute(address,bytes)',
             proxyLib,
             abi.encodeWithSignature('openLockETHAndDraw(address,address,address,address,bytes32,uint256)',
-            cdpManagerAddr, mcdJugAddr, collateralTypes[ilk].mcdJoinAddr, mcdJoinDaiAddr, ilk, wadD));
+            cdpManagerAddr, mcdJugAddr, collateralJoinAddr, mcdJoinDaiAddr, ilk, wadD));
         assembly {
-            let succeeded := call(sub(gas, 5000), proxyAddress(), wadC, add(data, 0x20), mload(data), 0, 0)
+            let succeeded := call(sub(gas, 5000), target, wadC, add(data, 0x20), mload(data), 0, 0)
             let size := returndatasize
             let response := mload(0x40)
             mstore(0x40, add(response, and(add(add(size, 0x20), 0x1f), not(0x1f))))
@@ -511,15 +393,16 @@ contract McdWrapper is McdConfig {
      * @dev     Create new cdp with ERC-20 tokens as collateral, lock collateral and draw dai
      * @notice  build new Proxy for a caller before cdp creation and approve transferFrom collateral token from Agrrement by Proxy
      * @param   ilk     collateral type in bytes32 format
-     * @param   wadD    dai amount to be drawn
      * @param   wadC    collateral amount to be locked in cdp contract
-     * @return  cdp     cdp ID
+     * @param   wadD    dai amount to be drawn
+     * @param   transferFrom   collateral tokens should be transfered from caller
      */
-    function openLockERC20AndDraw(bytes32 ilk, uint wadD, uint wadC) public returns (uint cdp) {
-        approveERC20(ilk, proxy(), wadC);
+    function _openLockERC20AndDraw(bytes32 ilk, uint wadC, uint wadD, bool transferFrom) internal returns (uint cdp) {
+        _approveERC20(ilk, proxyAddress, wadC);
+        (address collateralJoinAddr,) = _getCollateralAddreses(ilk);
         bytes memory response = proxy().execute(proxyLib, abi.encodeWithSignature(
-            'openLockGemAndDraw(address,address,address,address,bytes32,uint256,uint256)',
-            cdpManagerAddr, mcdJugAddr, collateralTypes[ilk].mcdJoinAddr, mcdJoinDaiAddr, ilk, wadC, wadD));
+            'openLockGemAndDraw(address,address,address,address,bytes32,uint256,uint256,bool)',
+            cdpManagerAddr, mcdJugAddr, collateralJoinAddr, mcdJoinDaiAddr, ilk, wadC, wadD, transferFrom));
         assembly {
             cdp := mload(add(response, 0x20))
         }
@@ -528,12 +411,12 @@ contract McdWrapper is McdConfig {
     /**
      * @dev inject(wipe) some amount of dai to cdp from agreement
      * @notice approves this amount of dai tokens to proxy before injection
-     * @param cdp cdp ID
-     * @param wad amount of dai tokens
+     * @param cdp   cdp ID
+     * @param wad   amount of dai tokens
      */
-    function injectToCdp(uint cdp, uint wad) public {
-        approveDai(address(proxy()), wad);
-        wipe(cdp, wad);
+    function _injectToCdp(uint cdp, uint wad) internal {
+        _approveDai(address(proxy()), wad);
+        _wipe(cdp, wad);
     }
 
     /**
@@ -541,7 +424,7 @@ contract McdWrapper is McdConfig {
      * @param cdp cdp ID
      * @param wad amount of dai tokens
      */
-    function wipe(uint cdp, uint wad) public {
+    function _wipe(uint cdp, uint wad) internal {
         proxy().execute(
             proxyLib,
             abi.encodeWithSignature('wipe(address,address,uint256,uint256)',
@@ -553,10 +436,8 @@ contract McdWrapper is McdConfig {
      * @notice approves this amount of dai tokens to proxy before locking
      * @param wad amount of dai tokens
      */
-    function lockDai(uint wad) public {
-        // transfer dai from borrower to agreement
-        _transferFromDai(msg.sender, address(this), wad);
-        approveDai(address(proxy()), wad);
+    function _lockDai(uint wad) internal {
+        _approveDai(address(proxy()), wad);
         proxy().execute(
             proxyLibDsr,
             abi.encodeWithSignature('join(address,address,uint256)',
@@ -567,7 +448,7 @@ contract McdWrapper is McdConfig {
      * @dev unlock dai tokens from dsr(pot) contract.
      * @param wad amount of dai tokens
      */
-    function unlockDai(uint wad) public {
+    function _unlockDai(uint wad) internal {
         proxy().execute(
             proxyLibDsr,
             abi.encodeWithSignature('exit(address,address,uint256)',
@@ -578,41 +459,28 @@ contract McdWrapper is McdConfig {
      * @dev     unlock all dai tokens from dsr(pot) contract.
      * @return  pie amount of all dai tokens was unlocked in fact
      */
-    function unlockAllDai() public returns(uint pie) {
-        pie = getLockedDai();
-        unlockDai(pie);
+    function _unlockAllDai() internal returns(uint pie) {
+        // pie = getLockedDai();
+        // _unlockDai(pie);
         // function will be available in further releases (11)
-        //proxy().execute(proxyLib, abi.encodeWithSignature("exitAll(address,address)", mcdJoinDaiAddr, mcdPotAddr));
-    }
-
-    function cashETH(bytes32 ilk, uint wad) public {
         proxy().execute(
-            proxyLibEnd,
-            abi.encodeWithSignature('cashETH(address,address,bytes32,uint)',
-            collateralTypes[ilk].mcdJoinAddr, mcdEndAddr, ilk, wad));
+            proxyLibDsr, 
+            abi.encodeWithSignature("exitAll(address,address)", 
+            mcdJoinDaiAddr, mcdPotAddr));
+        pie = ERC20Interface(mcdDaiAddr).balanceOf(address(this));
     }
 
     /**
-     * @dev     should invoke liquidation process on cdp contract to return back (collateral - equivalent debt)
-     *          To determine how much collateral you would possess after a Liquidation you can use the following simplified formula:
-     *          (Collateral * Oracle Price * PETH/ETH Ratio) - (Liquidation Penalty * Stability Debt) - Stability Debt = (Remaining Collateral * Oracle Price) DAI
-     * @notice  !!! SHOULD BE REWRITTEN AFTER MCD CDP FINAL RELEASE !!!
-     * @param   ilk     collateral type in bytes32 format
-     * @param   cdpId   cdp ID
-     * @return  amount of collateral tokens returned after liquidation
+     * @dev recovers remaining ETH from cdp (pays remaining debt if exists)
+     * @param ilk     collateral type in bytes32 format
+     * @param cdp cdp ID
      */
-    function forceLiquidate(bytes32 ilk, uint cdpId) public view returns(uint) {
-        address urn = ManagerLike(cdpManagerAddr).urns(cdpId);
-        (uint ink, uint art) = VatLike(mcdVatAddr).urns(ilk, urn);
-
-        // need to be clarified what it is in mcd.
-        // In single collateral it is: The ratio of PETH/ETH is 1.012
-        // solium-disable-next-line no-unused-vars
-        (,uint rate,,,) = VatLike(mcdVatAddr).ilks(ilk);
-
-        (,uint chop,) = CatLike(mcdCatAddr).ilks(ilk); // penalty
-        uint price = getPrice(ilk);
-        return (ink * price - (chop - ONE) * art) / price;
+    function _freeETH(bytes32 ilk, uint cdp) internal {
+        (address collateralJoinAddr,) = _getCollateralAddreses(ilk);
+        proxy().execute(
+            proxyLibEnd,
+            abi.encodeWithSignature('freeETH(address,address,address,uint)',
+            cdpManagerAddr, collateralJoinAddr, mcdEndAddr, cdp));
     }
 
     /**
@@ -620,38 +488,49 @@ contract McdWrapper is McdConfig {
      * @param   to      address allowed to call transferFrom
      * @param   amount  tokens amount for approval
      */
-    function approveDai(address to, uint amount) public returns(bool) {
+    function _approveDai(address to, uint amount) internal returns(bool) {
         ERC20Interface(mcdDaiAddr).approve(to, amount);
         return true;
     }
 
     /**
+     * @dev     get balance of dai tokens
+     * @param   addr      address 
+     */
+    function _balanceDai(address addr) internal returns(uint) {
+        return ERC20Interface(mcdDaiAddr).balanceOf(addr);
+    }
+
+
+    /**
      * @dev     Approve exact amount of erc20 tokens for transferFrom
+     * @param   ilk     collateral type
      * @param   to      address allowed to call transferFrom
      * @param   amount  tokens amount for approval
      */
-    function approveERC20(bytes32 ilk, address to, uint amount) public returns(bool) {
-        ERC20Interface(collateralTypes[ilk].mcdJoinAddr).approve(to, amount);
+    function _approveERC20(bytes32 ilk, address to, uint amount) internal returns(bool) {
+        erc20TokenContract(ilk).approve(to, amount);
         return true;
     }
-    
+
     /**
      * @dev     transfer exact amount of dai tokens
      * @param   to      address of recepient
      * @param   amount  tokens amount
      */
-    function transferDai(address from, address to, uint amount) public returns(bool) {
+    function _transferDai(address to, uint amount) internal returns(bool) {
         ERC20Interface(mcdDaiAddr).transfer(to, amount);
         return true;
     }
 
     /**
      * @dev     transfer exact amount of erc20 tokens
+     * @param   ilk     collateral type
      * @param   to      address of recepient
      * @param   amount  tokens amount
      */
-    function transferERC20(bytes32 ilk, address from, address to, uint amount) public returns(bool) {
-        ERC20Interface(collateralTypes[ilk].baseAddr).transfer(to, amount);
+    function _transferERC20(bytes32 ilk, address to, uint amount) internal returns(bool) {
+        erc20TokenContract(ilk).transfer(to, amount);
         return true;
     }
 
@@ -661,42 +540,71 @@ contract McdWrapper is McdConfig {
      * @param   to      address of recepient
      * @param   amount  tokens amount
      */
-    function _transferFromDai(address from, address to, uint amount) public returns(bool) {
+    function _transferFromDai(address from, address to, uint amount) internal returns(bool) {
         ERC20Interface(mcdDaiAddr).transferFrom(from, to, amount);
         return true;
     }
 
     /**
-     * @dev     transfer exact amount of erc20 tokens, approved beforehand
+     * @dev     call transfer exact amount of dai tokens, approved beforehand
      * @param   from    address of spender
      * @param   to      address of recepient
      * @param   amount  tokens amount
      */
-    function transferFromERC20(bytes32 ilk, address from, address to, uint amount) public returns(bool) {
-        ERC20Interface(collateralTypes[ilk].baseAddr).transferFrom(from, to, amount);
+    function _callTransferFromDai(address from, address to, uint amount) internal returns(bool) {
+        (bool TransferSuccessful,) = mcdDaiAddr.call(abi.encodeWithSignature(
+                'transferFrom(address,address,uint256)', from, to, amount));
+        return TransferSuccessful;
+    }
+
+    /**
+     * @dev     transfer exact amount of erc20 tokens, approved beforehand
+     * @param   ilk     collateral type
+     * @param   from    address of spender
+     * @param   to      address of recepient
+     * @param   amount  tokens amount
+     */
+    function _transferFromERC20(bytes32 ilk, address from, address to, uint amount) internal returns(bool) {
+        erc20TokenContract(ilk).transferFrom(from, to, amount);
         return true;
     }
-    
+
     /**
      * @dev     Transfer Cdp ownership
      * @param   cdp     cdp ID
      * @param   guy     address, ownership should be transfered to
      */
-    function transferCdpOwnership(uint cdp, address guy) public {
+    function _transferCdpOwnership(uint cdp, address guy) internal {
         proxy().execute(
             proxyLib,
             abi.encodeWithSignature('give(address,uint256,address)',
             cdpManagerAddr, cdp, guy));
     }
 
-    
+    /**
+     * @dev Get registered proxy for current caller (msg.sender address)
+     */
+    function proxy() public view returns (DSProxyLike) {
+        return DSProxyLike(proxyAddress);
+    }
+
+    /**
+     * @dev     transfer exact amount of erc20 tokens, approved beforehand
+     * @param   ilk     collateral type
+     * @return          ERC20Interface instance
+     */
+    function erc20TokenContract(bytes32 ilk) public view returns(ERC20Interface) {
+        (,address payable collateralBaseAddress) = _getCollateralAddreses(ilk);
+        return ERC20Interface(collateralBaseAddress);
+    }
 
     /**
      * @dev     get amount of dai tokens currently locked in dsr(pot) contract.
      * @return  pie amount of all dai tokens locked in dsr
      */
-    function getLockedDai() public view returns(uint256) {
-        return PotLike(mcdPotAddr).pie(address(proxy()));
+    function getLockedDai() public view returns(uint256 pie, uint256 pieS) {
+        pie = PotLike(mcdPotAddr).pie(address(proxy()));
+        pieS = pie.mul(PotLike(mcdPotAddr).chi());
     }
 
     /**
@@ -794,5 +702,35 @@ contract McdWrapper is McdConfig {
         (, _chop,) = CatLike(mcdCatAddr).ilks(ilk); // penalty
         //_price = uint(pip.read());
         _price = getPrice(ilk);
+    }
+
+    function _getCollateralAddreses(bytes32 ilk) internal view returns(address, address payable)  {
+        if (ilk == "ETH-A") {
+            return (mcdJoinEthaAddr, wethAddr);
+        }
+        // if (ilk == "ETH-B") {
+        //     return (mcdJoinEthbAddr, wethAddr);
+        // }
+        // if (ilk == "ETH-C") {
+        //     return (mcdJoinEthcAddr, wethAddr);
+        // }
+        // if (ilk == "REP-A") {
+        //     return (mcdJoinRepaAddr, repAddr);
+        // }
+        // if (ilk == "ZRX-A") {
+        //     return (mcdJoinZrxaAddr, zrxAddr);
+        // }
+        // if (ilk == "OMG-A") {
+        //     return (mcdJoinOmgaAddr, omgAddr);
+        // }
+        if (ilk == "BAT-A") {
+            return (mcdJoinBataAddr, batAddr);
+        }
+        // if (ilk == "DGD-A") {
+        //     return (mcdJoinDgdaAddr, dgdAddr);
+        // }
+        // if (ilk == "GNT-A") {
+        //     return (mcdJoinGntaAddr, gntAddr);
+        // }
     }
 }

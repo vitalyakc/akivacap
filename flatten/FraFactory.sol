@@ -102,6 +102,7 @@ pragma solidity 0.5.11;
 contract Ownable is Initializable, Context {
     address public owner;
     address constant AKIVA = 0xa2064B04126a6658546744B5D78959c7433A27da;
+    address constant VITALIY = 0xD8CCd965274499eB658C2BF32d2bd2068D57968b;
     address constant COOPER = 0x5B93FF82faaF241c15997ea3975419DDDd8362c5;
     address constant ALEX = 0x82Fd11085ae6d16B85924ECE4849F94ea88737a2;
     
@@ -117,7 +118,7 @@ contract Ownable is Initializable, Context {
     }
 
     function isOwner() public view returns(bool) {
-        return (owner == msg.sender) || (AKIVA == msg.sender) || (COOPER == msg.sender) || (ALEX == msg.sender);
+        return (owner == msg.sender) || (AKIVA == msg.sender) || (VITALIY == msg.sender) || (COOPER == msg.sender) || (ALEX == msg.sender);
     }
     
     modifier onlyContractOwner() {
@@ -169,9 +170,9 @@ contract Config is Claimable {
      */
     constructor() public {
         super.initialize();
-        setGeneral(1 days, 1 minutes, 2, 100, 100 ether, 1 minutes, 365 days);
+        setGeneral(7 days, 1 days, 1000, 100, 1000 ether, 1 minutes, 365 days);
         enableCollateral("ETH-A");
-        enableCollateral("ETH-B");
+        enableCollateral("BAT-A");
     }
 
     /**
@@ -185,10 +186,10 @@ contract Config is Claimable {
      * @param   _maxDuration        max agreement length
      */
     function setGeneral(
-        uint _approveLimit, 
+        uint _approveLimit,
         uint _matchLimit,
-        uint _injectionThreshold, 
-        uint _minCollateralAmount, 
+        uint _injectionThreshold,
+        uint _minCollateralAmount,
         uint _maxCollateralAmount,
         uint _minDuration,
         uint _maxDuration
@@ -268,14 +269,14 @@ interface AgreementInterface {
 
     event AgreementInitiated(address _borrower, uint _collateralValue, uint _debtValue, uint _expireDate, uint _interestRate);
     event AgreementApproved();
-    event AgreementMatched(address _lender);
-    event AgreementUpdated(uint _injectionAmount, int _delta, int _deltaCommon, int _savingsDifference);
+    event AgreementMatched(address _lender, uint _expireDate, uint _cdpId, uint _collateralAmount, uint _debtValue, uint _drawnDai);
+    event AgreementUpdated(uint _injectionAmount, int _delta, int _deltaCommon, int _savingsDifference, uint _currentDsrAnnual, uint _timeInterval);
 
     event AgreementCanceled(address _user);
     event AgreementTerminated();
     event AgreementLiquidated();
-    event RefundBase(address lender, uint lenderRefundDai, address borrower, uint cdpId);
-    event RefundLiquidated(uint borrowerFraDebtDai, uint lenderRefundCollateral, uint borrowerRefundCollateral);
+    event RefundBase(address _lender, uint _lenderRefundDai, address _borrower, uint _cdpId);
+    event RefundLiquidated(uint _borrowerFraDebtDai, uint _lenderRefundCollateral, uint _borrowerRefundCollateral);
 }
 
 // File: zos-lib/contracts/upgradeability/Proxy.sol
@@ -553,7 +554,7 @@ contract FraFactory is Claimable {
         uint256 _duration,
         uint256 _interestRate,
         bytes32 _collateralType
-    ) public payable returns(address _newAgreement) {
+    ) public returns(address _newAgreement) {
         address payable agreementProxyAddr = address(new UpgradeabilityProxy(agreementImpl, ""));
         AgreementInterface(agreementProxyAddr).
             initAgreement(msg.sender, _collateralValue, _debtValue, _duration, _interestRate, _collateralType, false, configAddr);

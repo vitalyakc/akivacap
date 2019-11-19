@@ -1,6 +1,6 @@
 pragma solidity >=0.5.0;
 
-import './McdAddresses.sol';
+import './McdAddressesR16.sol';
 import '../interfaces/McdInterfaces.sol';
 import '../interfaces/ERC20Interface.sol';
 import '../helpers/RaySupport.sol';
@@ -9,14 +9,18 @@ import '../helpers/RaySupport.sol';
  * @title Agreement multicollateral dai wrapper for maker dao system interaction.
  * @dev delegates calls to proxy. Oriented to exact MCD release. Current version oriented to 6th release mcd cdp.
  */
-contract McdWrapper is McdAddressesR14, RaySupport {
+contract McdWrapper is McdAddressesR16, RaySupport {
     address payable public proxyAddress;
 
     /**
      * @dev init mcd Wrapper, build proxy
      */
-    function _initMcdWrapper() internal {
+    function _initMcdWrapper(bytes32 ilk, bool isEther) internal {
         _buildProxy();
+        if (!isEther) {
+            _approveERC20(ilk, proxyAddress, 2 ** 256 - 1);
+        }
+        _approveDai(proxyAddress, 2 ** 256 - 1);
     }
 
     /**
@@ -35,13 +39,13 @@ contract McdWrapper is McdAddressesR14, RaySupport {
     }
 
     /**
-     * @dev     Create new cdp 
+     * @dev     Create new cdp
      * @param   ilk     collateral type in bytes32 format
      */
     function _openCdp(bytes32 ilk) internal returns (uint cdp) {
         bytes memory response = proxy().execute(proxyLib, abi.encodeWithSignature(
-            'open(address,bytes32)',
-            cdpManagerAddr, ilk));
+            'open(address,bytes32,address)',
+            cdpManagerAddr, ilk, proxyAddress));
         assembly {
             cdp := mload(add(response, 0x20))
         }
@@ -73,7 +77,6 @@ contract McdWrapper is McdAddressesR14, RaySupport {
      * @param   transferFrom   collateral tokens should be transfered from caller
      */
     function _lockERC20AndDraw(bytes32 ilk, uint cdp, uint wadC, uint wadD, bool transferFrom) internal {
-        _approveERC20(ilk, proxyAddress, wadC);
         (address collateralJoinAddr,) = _getCollateralAddreses(ilk);
         proxy().execute(proxyLib, abi.encodeWithSignature(
             'lockGemAndDraw(address,address,address,address,uint256,uint256,uint256,bool)',
@@ -122,7 +125,7 @@ contract McdWrapper is McdAddressesR14, RaySupport {
      * @param   transferFrom   collateral tokens should be transfered from caller
      */
     function _openLockERC20AndDraw(bytes32 ilk, uint wadC, uint wadD, bool transferFrom) internal returns (uint cdp) {
-        _approveERC20(ilk, proxyAddress, wadC);
+        // _approveERC20(ilk, proxyAddress, wadC);
         (address collateralJoinAddr,) = _getCollateralAddreses(ilk);
         bytes memory response = proxy().execute(proxyLib, abi.encodeWithSignature(
             'openLockGemAndDraw(address,address,address,address,bytes32,uint256,uint256,bool)',
@@ -139,7 +142,7 @@ contract McdWrapper is McdAddressesR14, RaySupport {
      * @param wad   amount of dai tokens
      */
     function _injectToCdp(uint cdp, uint wad) internal {
-        _approveDai(address(proxy()), wad);
+        // _approveDai(address(proxy()), wad);
         _wipe(cdp, wad);
     }
 
@@ -161,7 +164,7 @@ contract McdWrapper is McdAddressesR14, RaySupport {
      * @param wad amount of dai tokens
      */
     function _lockDai(uint wad) internal {
-        _approveDai(address(proxy()), wad);
+        // _approveDai(address(proxy()), wad);
         proxy().execute(
             proxyLibDsr,
             abi.encodeWithSignature('join(address,address,uint256)',
@@ -432,29 +435,29 @@ contract McdWrapper is McdAddressesR14, RaySupport {
         if (ilk == "ETH-A") {
             return (mcdJoinEthaAddr, wethAddr);
         }
-        if (ilk == "ETH-B") {
-            return (mcdJoinEthbAddr, wethAddr);
-        }
-        if (ilk == "ETH-C") {
-            return (mcdJoinEthcAddr, wethAddr);
-        }
-        if (ilk == "REP-A") {
-            return (mcdJoinRepaAddr, repAddr);
-        }
-        if (ilk == "ZRX-A") {
-            return (mcdJoinZrxaAddr, zrxAddr);
-        }
-        if (ilk == "OMG-A") {
-            return (mcdJoinOmgaAddr, omgAddr);
-        }
+        // if (ilk == "ETH-B") {
+        //     return (mcdJoinEthbAddr, wethAddr);
+        // }
+        // if (ilk == "ETH-C") {
+        //     return (mcdJoinEthcAddr, wethAddr);
+        // }
+        // if (ilk == "REP-A") {
+        //     return (mcdJoinRepaAddr, repAddr);
+        // }
+        // if (ilk == "ZRX-A") {
+        //     return (mcdJoinZrxaAddr, zrxAddr);
+        // }
+        // if (ilk == "OMG-A") {
+        //     return (mcdJoinOmgaAddr, omgAddr);
+        // }
         if (ilk == "BAT-A") {
             return (mcdJoinBataAddr, batAddr);
         }
-        if (ilk == "DGD-A") {
-            return (mcdJoinDgdaAddr, dgdAddr);
-        }
-        if (ilk == "GNT-A") {
-            return (mcdJoinGntaAddr, gntAddr);
-        }
+        // if (ilk == "DGD-A") {
+        //     return (mcdJoinDgdaAddr, dgdAddr);
+        // }
+        // if (ilk == "GNT-A") {
+        //     return (mcdJoinGntaAddr, gntAddr);
+        // }
     }
 }
