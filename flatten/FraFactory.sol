@@ -102,55 +102,6 @@ pragma solidity 0.5.11;
 contract Ownable is Initializable, Context {
     address public owner;
     address constant AKIVA = 0xa2064B04126a6658546744B5D78959c7433A27da;
-    address constant COOPER = 0x5B93FF82faaF241c15997ea3975419DDDd8362c5;
-    address constant ALEX = 0x82Fd11085ae6d16B85924ECE4849F94ea88737a2;
-    
-    event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
-
-    /**
-     * @dev The Ownable constructor sets the original `owner` of the contract to the sender
-     * account.
-     */
-    function initialize() public initializer {
-        owner = msg.sender;
-        emit OwnershipTransferred(address(0), owner);
-    }
-
-    function isOwner() public view returns(bool) {
-        return (owner == msg.sender) || (AKIVA == msg.sender) || (COOPER == msg.sender) || (ALEX == msg.sender);
-    }
-    
-    modifier onlyContractOwner() {
-        require(isOwner(), 'Not a contract owner');
-        _;
-    }
-}
-
-<<<<<<< HEAD
-contract Claimable is Ownable {
-    address public pendingOwner;
-    
-    function transferOwnership(address _newOwner) public onlyContractOwner() {
-        pendingOwner = _newOwner;
-    }
-    
-    function claimOwnership() public {
-        require(msg.sender == pendingOwner, 'Not a pending owner');
-
-        address previousOwner = owner;
-        owner = msg.sender;
-        pendingOwner = address(0);
-
-        emit OwnershipTransferred(previousOwner, msg.sender);
-    }
-=======
-// File: contracts\helpers\Claimable.sol
-
-pragma solidity 0.5.11;
-
-contract Ownable is Initializable, Context {
-    address public owner;
-    address constant AKIVA = 0xa2064B04126a6658546744B5D78959c7433A27da;
     address constant VITALIY = 0xD8CCd965274499eB658C2BF32d2bd2068D57968b;
     address constant COOPER = 0x5B93FF82faaF241c15997ea3975419DDDd8362c5;
     address constant ALEX = 0x82Fd11085ae6d16B85924ECE4849F94ea88737a2;
@@ -192,7 +143,6 @@ contract Claimable is Ownable {
 
         emit OwnershipTransferred(previousOwner, msg.sender);
     }
->>>>>>> bugfix/match-1wei-lack
 }
 
 // File: contracts/config/Config.sol
@@ -287,7 +237,6 @@ contract ERC20Interface {
     event Approval(address indexed tokenOwner, address indexed spender, uint tokens);
 }
 
-<<<<<<< HEAD
 // File: contracts/interfaces/AgreementInterface.sol
 
 pragma solidity 0.5.11;
@@ -320,55 +269,14 @@ interface AgreementInterface {
 
     event AgreementInitiated(address _borrower, uint _collateralValue, uint _debtValue, uint _expireDate, uint _interestRate);
     event AgreementApproved();
-    event AgreementMatched(address _lender);
-    event AgreementUpdated(uint _injectionAmount, int _delta, int _deltaCommon, int _savingsDifference, uint currentDsrAnnual, uint timeInterval);
+    event AgreementMatched(address _lender, uint _expireDate, uint _cdpId, uint _collateralAmount, uint _debtValue, uint _drawnDai);
+    event AgreementUpdated(uint _injectionAmount, int _delta, int _deltaCommon, int _savingsDifference, uint _currentDsrAnnual, uint _timeInterval);
 
     event AgreementCanceled(address _user);
     event AgreementTerminated();
     event AgreementLiquidated();
-    event RefundBase(address lender, uint lenderRefundDai, address borrower, uint cdpId);
-    event RefundLiquidated(uint borrowerFraDebtDai, uint lenderRefundCollateral, uint borrowerRefundCollateral);
-=======
-// File: contracts\interfaces\AgreementInterface.sol
-
-pragma solidity 0.5.11;
-
-/**
- * @title Interface for Agreement contract
- */
-interface AgreementInterface {
-    function initAgreement(address payable _borrower, uint256 _collateralAmount,
-        uint256 _debtValue, uint256 _duration, uint256 _interestRate, bytes32 _collateralType, bool _isETH, address _configAddr) external payable;
-    function approveAgreement() external returns(bool);
-    function updateAgreement() external returns(bool);
-    function cancelAgreement() external returns(bool);
-    function rejectAgreement() external returns(bool);
-    function getInfo() external view returns(address _addr, uint _status, uint _duration, address _borrower, address _lender, bytes32 _collateralType, uint _collateralAmount, uint _debtValue, uint _interestRate);
-    function status() external view returns(uint);
-    function lender() external view returns(address);
-    function borrower() external view returns(address);
-    function collateralType() external view returns(bytes32);
-    function isActive() external view returns(bool);
-    function isOpen() external view returns(bool);
-    function isEnded() external view returns(bool);
-    function isPending() external view returns(bool);
-    function isClosed() external view returns(bool);
-    function isBeforeMatched() external view returns(bool);
-    function checkTimeToCancel(uint _approveLimit, uint _matchLimit) external view returns(bool);
-    function cdpId() external view returns(uint);
-    function erc20TokenContract(bytes32 ilk) external view returns(ERC20Interface);
-
-    event AgreementInitiated(address _borrower, uint _collateralValue, uint _debtValue, uint _expireDate, uint _interestRate);
-    event AgreementApproved();
-    event AgreementMatched(address _lender);
-    event AgreementUpdated(uint _injectionAmount, int _delta, int _deltaCommon, int _savingsDifference);
-
-    event AgreementCanceled(address _user);
-    event AgreementTerminated();
-    event AgreementLiquidated();
-    event RefundBase(address lender, uint lenderRefundDai, address borrower, uint cdpId);
-    event RefundLiquidated(uint borrowerFraDebtDai, uint lenderRefundCollateral, uint borrowerRefundCollateral);
->>>>>>> bugfix/match-1wei-lack
+    event RefundBase(address _lender, uint _lenderRefundDai, address _borrower, uint _cdpId);
+    event RefundLiquidated(uint _borrowerFraDebtDai, uint _lenderRefundCollateral, uint _borrowerRefundCollateral);
 }
 
 // File: zos-lib/contracts/upgradeability/Proxy.sol
@@ -565,7 +473,6 @@ contract UpgradeabilityProxy is BaseUpgradeabilityProxy {
   }  
 }
 
-<<<<<<< HEAD
 // File: contracts/FraFactory.sol
 
 pragma solidity 0.5.11;
@@ -757,192 +664,4 @@ contract FraFactory is Claimable {
     function getAgreementList() public view returns(address[] memory _agreementList) {
         return agreementList;
     }
-=======
-// File: contracts\FraFactory.sol
-
-pragma solidity 0.5.11;
-// import 'zos-lib/contracts/upgradeability/AdminUpgradeabilityProxy.sol';
-
-/**
- * @title Handler of all agreements
- */
-contract FraFactory is Claimable {
-    mapping(address => address[]) public agreements;
-    address[] public agreementList;
-    address payable public agreementImpl;
-    address public configAddr;
-
-    constructor(address payable _agreementImpl, address _configAddr) public {
-        super.initialize();
-        configAddr  = _configAddr;
-        setAgreementImpl(_agreementImpl);
-    }
-
-    /**
-     * @dev Set the new agreement implememntation adresss
-     * @param _agreementImpl address of agreement implementation contract
-     */
-    function setAgreementImpl(address payable _agreementImpl) public onlyContractOwner() {
-        require(_agreementImpl != address(0), 'FraFactory: agreement impl address should not be zero');
-        agreementImpl = _agreementImpl;
-    }
-
-    /**
-     * @dev Set the new config adresss
-     * @param _configAddr address of config contract
-     */
-    function setConfigAddr(address _configAddr) public onlyContractOwner() {
-        require(_configAddr != address(0), 'FraFactory: agreement impl address should not be zero');
-        configAddr = _configAddr;
-    }
-
-    /**
-     * @dev Requests egreement on ETH collateralType
-     * @param _debtValue value of borrower's ETH put into the contract as collateral
-     * @param _duration number of minutes which agreement should be terminated after
-     * @param _interestRate percent of interest rate, should be passed like RAY
-     * @param _collateralType type of collateral, should be passed as bytes32
-     * @return agreement address
-     */
-    function initAgreementETH (
-        uint256 _debtValue, 
-        uint256 _duration,
-        uint256 _interestRate,
-        bytes32 _collateralType
-    ) public payable returns(address _newAgreement) {
-        // address payable agreementProxyAddr = address(new AdminUpgradeabilityProxy(agreementImpl, owner, ""));
-        address payable agreementProxyAddr = address(new UpgradeabilityProxy(agreementImpl, ""));
-        AgreementInterface(agreementProxyAddr).
-            initAgreement.value(msg.value)(msg.sender, msg.value, _debtValue, _duration, _interestRate, _collateralType, true, configAddr);
-        
-        agreements[msg.sender].push(agreementProxyAddr);
-        agreementList.push(agreementProxyAddr);
-        return agreementProxyAddr; //address(agreement);
-    }
-
-    /**
-     * @dev Requests agreement on ETH collateralType
-     * @param _debtValue value of borrower's collateral
-     * @param _duration number of minutes which agreement should be terminated after
-     * @param _interestRate percent of interest rate, should be passed like
-     * @param _collateralType type of collateral, should be passed as bytes32
-     * @return agreement address
-     */
-    function initAgreementERC20 (
-        uint256 _collateralValue,
-        uint256 _debtValue,
-        uint256 _duration,
-        uint256 _interestRate,
-        bytes32 _collateralType
-    ) public payable returns(address _newAgreement) {
-        address payable agreementProxyAddr = address(new UpgradeabilityProxy(agreementImpl, ""));
-        AgreementInterface(agreementProxyAddr).
-            initAgreement(msg.sender, _collateralValue, _debtValue, _duration, _interestRate, _collateralType, false, configAddr);
-
-        AgreementInterface(agreementProxyAddr).erc20TokenContract(_collateralType).transferFrom(
-            msg.sender, address(agreementProxyAddr), _collateralValue);
-
-        agreements[msg.sender].push(agreementProxyAddr);
-        agreementList.push(agreementProxyAddr);
-        return agreementProxyAddr;
-    }
-    
-    /**
-     * @dev Makes the specific agreement valid
-     * @param _address agreement address
-     * @return operation success
-     */
-    function approveAgreement(address _address) public onlyContractOwner() returns(bool _success) {
-        return AgreementInterface(_address).approveAgreement();
-    }
-
-    /**
-    * @dev Multi approve
-    * @param _addresses agreements addresses array
-    */
-    function batchApproveAgreements(address[] memory _addresses) public onlyContractOwner() {
-        require(_addresses.length <= 256, "FraMain: batch count is greater than 256");
-        for (uint256 i = 0; i < _addresses.length; i++) {
-            if (AgreementInterface(_addresses[i]).isPending()) {
-                AgreementInterface(_addresses[i]).approveAgreement();
-            }
-        }
-    }
-
-    /**
-     * @dev Reject specific agreement
-     * @param _address agreement address
-     * @return operation success
-     */
-    function rejectAgreement(address _address) public onlyContractOwner() returns(bool _success) {
-        return AgreementInterface(_address).rejectAgreement();
-    }
-    
-    /**
-    * @dev Multi reject
-    * @param _addresses agreements addresses array
-    */
-    function batchRejectAgreements(address[] memory _addresses) public onlyContractOwner() {
-        require(_addresses.length <= 256, "FraMain: batch count is greater than 256");
-        for (uint256 i = 0; i < _addresses.length; i++) {
-            if (AgreementInterface(_addresses[i]).isBeforeMatched()) {
-                AgreementInterface(_addresses[i]).rejectAgreement();
-            }
-        }
-    }
-
-    /**
-     * @dev Function for cron autoreject (close agreements if matchLimit expired)
-     */
-    function autoRejectAgreements() public onlyContractOwner() {
-        uint _approveLimit = Config(configAddr).approveLimit();
-        uint _matchLimit = Config(configAddr).matchLimit();
-        for(uint256 i = 0; i < agreementList.length; i++) {
-            if (AgreementInterface(agreementList[i]).isBeforeMatched() && AgreementInterface(agreementList[i]).checkTimeToCancel(_approveLimit, _matchLimit)) {
-                AgreementInterface(agreementList[i]).rejectAgreement();
-            }
-        }
-    }
-
-    /**
-     * @dev Update the state of specific agreement
-     * @param _address agreement address
-     * @return operation success
-     */
-    function updateAgreement(address _address) public onlyContractOwner() returns(bool _success) {
-        return AgreementInterface(_address).updateAgreement();
-    }
-
-    /**
-     * @dev Update the states of all agreemnets
-     * @return operation success
-     */
-    function updateAgreements() public onlyContractOwner() {
-        for(uint256 i = 0; i < agreementList.length; i++) {
-            if (AgreementInterface(agreementList[i]).isActive()) {
-                AgreementInterface(agreementList[i]).updateAgreement();
-            }
-        }
-    }
-
-    /**
-    * @dev Update state of exact agreements
-    * @param _addresses agreements addresses array
-    */
-    function batchUpdateAgreements(address[] memory _addresses) public onlyContractOwner {
-        require(_addresses.length <= 256, "FraMain: batch count is greater than 256");
-        for (uint256 i = 0; i < _addresses.length; i++) {
-            if (AgreementInterface(_addresses[i]).isActive()) {
-                AgreementInterface(_addresses[i]).updateAgreement();
-            }
-        }
-    }
-
-    /**
-     * @dev Returns a full list of existing agreements
-     */
-    function getAgreementList() public view returns(address[] memory _agreementList) {
-        return agreementList;
-    }
->>>>>>> bugfix/match-1wei-lack
 }

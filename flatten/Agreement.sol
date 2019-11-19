@@ -537,7 +537,7 @@ contract McdWrapper is McdAddressesR16, RaySupport {
     }
 
     /**
-     * @dev     Create new cdp 
+     * @dev     Create new cdp
      * @param   ilk     collateral type in bytes32 format
      */
     function _openCdp(bytes32 ilk) internal returns (uint cdp) {
@@ -992,14 +992,14 @@ interface AgreementInterface {
 
     event AgreementInitiated(address _borrower, uint _collateralValue, uint _debtValue, uint _expireDate, uint _interestRate);
     event AgreementApproved();
-    event AgreementMatched(address _lender);
+    event AgreementMatched(address _lender, uint _expireDate, uint _cdpId, uint _collateralAmount, uint _debtValue, uint _drawnDai);
     event AgreementUpdated(uint _injectionAmount, int _delta, int _deltaCommon, int _savingsDifference, uint _currentDsrAnnual, uint _timeInterval);
 
     event AgreementCanceled(address _user);
     event AgreementTerminated();
     event AgreementLiquidated();
-    event RefundBase(address lender, uint lenderRefundDai, address borrower, uint cdpId);
-    event RefundLiquidated(uint borrowerFraDebtDai, uint lenderRefundCollateral, uint borrowerRefundCollateral);
+    event RefundBase(address _lender, uint _lenderRefundDai, address _borrower, uint _cdpId);
+    event RefundLiquidated(uint _borrowerFraDebtDai, uint _lenderRefundCollateral, uint _borrowerRefundCollateral);
 }
 
 // File: contracts/Agreement.sol
@@ -1179,11 +1179,10 @@ contract Agreement is AgreementInterface, Claimable, McdWrapper {
         }
         uint drawnDai = _balanceDai(address(this));
         // due to the lack of preceision in mcd cdp contracts drawn dai can be less by 1 dai wei
-        if (drawnDai < debtValue) {
-            _transferDai(borrower, drawnDai);
-        } else {
-            _transferDai(borrower, debtValue);
+        if (debtValue < drawnDai) {
+            drawnDai = debtValue;
         }
+        _transferDai(borrower, drawnDai);
         
         matchDate = getCurrentTime();
         status = STATUS_ACTIVE;
@@ -1191,7 +1190,7 @@ contract Agreement is AgreementInterface, Claimable, McdWrapper {
         lender = msg.sender;
         lastCheckTime = getCurrentTime();
         
-        emit AgreementMatched(lender);
+        emit AgreementMatched(lender, expireDate, cdpId, collateralAmount, debtValue, drawnDai);
         return true;
     }
 
