@@ -8,6 +8,7 @@
   "scripts": {
     "private-network": "ganache-cli",
     "test": "truffle test",
+    "test-local": "ganache-cli -q & truffle test",
     "test-mcdWrapper": "truffle test --network kovan test/mcdWrapperTest/*.js",
     "compile": "truffle compile",
     "validate-tests": "eslint test/*.js test/helpers/*.js test/mcdWrapperTest --fix",
