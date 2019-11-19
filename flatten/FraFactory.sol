@@ -170,7 +170,7 @@ contract Config is Claimable {
      */
     constructor() public {
         super.initialize();
-        setGeneral(7 days, 1 days, 5, 100, 1000 ether, 1 minutes, 365 days);
+        setGeneral(7 days, 1 days, 1000, 100, 1000 ether, 1 minutes, 365 days);
         enableCollateral("ETH-A");
         enableCollateral("BAT-A");
     }
