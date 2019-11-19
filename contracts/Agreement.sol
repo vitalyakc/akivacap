@@ -174,11 +174,10 @@ contract Agreement is AgreementInterface, Claimable, McdWrapper {
         }
         uint drawnDai = _balanceDai(address(this));
         // due to the lack of preceision in mcd cdp contracts drawn dai can be less by 1 dai wei
-        if (drawnDai < debtValue) {
-            _transferDai(borrower, drawnDai);
-        } else {
-            _transferDai(borrower, debtValue);
+        if (debtValue < drawnDai) {
+            drawnDai = debtValue;
         }
+        _transferDai(borrower, drawnDai);
         
         matchDate = getCurrentTime();
         status = STATUS_ACTIVE;
@@ -186,7 +185,7 @@ contract Agreement is AgreementInterface, Claimable, McdWrapper {
         lender = msg.sender;
         lastCheckTime = getCurrentTime();
         
-        emit AgreementMatched(lender);
+        emit AgreementMatched(lender, expireDate, cdpId, collateralAmount, debtValue, drawnDai);
         return true;
     }
 

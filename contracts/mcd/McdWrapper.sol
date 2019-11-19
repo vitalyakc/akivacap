@@ -39,7 +39,7 @@ contract McdWrapper is McdAddressesR16, RaySupport {
     }
 
     /**
-     * @dev     Create new cdp 
+     * @dev     Create new cdp
      * @param   ilk     collateral type in bytes32 format
      */
     function _openCdp(bytes32 ilk) internal returns (uint cdp) {
