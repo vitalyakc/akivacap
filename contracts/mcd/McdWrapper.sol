@@ -1,6 +1,6 @@
 pragma solidity >=0.5.0;
 
-import './McdAddressesR16.sol';
+import './McdAddressesR17.sol';
 import '../interfaces/McdInterfaces.sol';
 import '../interfaces/ERC20Interface.sol';
 import '../helpers/RaySupport.sol';
@@ -9,7 +9,7 @@ import '../helpers/RaySupport.sol';
  * @title Agreement multicollateral dai wrapper for maker dao system interaction.
  * @dev delegates calls to proxy. Oriented to exact MCD release. Current version oriented to 6th release mcd cdp.
  */
-contract McdWrapper is McdAddressesR16, RaySupport {
+contract McdWrapper is McdAddressesR17, RaySupport {
     address payable public proxyAddress;
 
     /**
