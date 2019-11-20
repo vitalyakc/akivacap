@@ -416,7 +416,7 @@ contract Agreement is AgreementInterface, Claimable, McdWrapper {
             }
         }
         _transferDai(lender, lenderRefundDai);
-        _transferCdpOwnership(cdpId, borrower);
+        _transferCdpOwnershipToProxy(cdpId, borrower);
         emit RefundBase(lender, lenderRefundDai, borrower, cdpId);
     }
 

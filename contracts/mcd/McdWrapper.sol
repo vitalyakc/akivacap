@@ -297,7 +297,7 @@ contract McdWrapper is McdAddressesR17, RaySupport {
     }
 
     /**
-     * @dev     Transfer Cdp ownership
+     * @dev     Transfer Cdp ownership to guy
      * @param   cdp     cdp ID
      * @param   guy     address, ownership should be transfered to
      */
@@ -306,6 +306,18 @@ contract McdWrapper is McdAddressesR17, RaySupport {
             proxyLib,
             abi.encodeWithSignature('give(address,uint256,address)',
             cdpManagerAddr, cdp, guy));
+    }
+
+    /**
+     * @dev     Transfer Cdp ownership to guy's proxy
+     * @param   cdp     cdp ID
+     * @param   guy     address, ownership should be transfered to
+     */
+    function _transferCdpOwnershipToProxy(uint cdp, address guy) internal {
+        proxy().execute(
+            proxyLib,
+            abi.encodeWithSignature('giveToProxy(address,address,uint256,address)',
+            proxyRegistryAddrMD, cdpManagerAddr, cdp, guy));
     }
 
     /**
