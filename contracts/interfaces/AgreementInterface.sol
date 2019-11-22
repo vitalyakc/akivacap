@@ -35,6 +35,7 @@ interface AgreementInterface {
     event AgreementCanceled(address _user);
     event AgreementTerminated();
     event AgreementLiquidated();
+    event AgreementBlocked();
     event RefundBase(address _lender, uint _lenderRefundDai, address _borrower, uint _cdpId);
     event RefundLiquidated(uint _borrowerFraDebtDai, uint _lenderRefundCollateral, uint _borrowerRefundCollateral);
 }

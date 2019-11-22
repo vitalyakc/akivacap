@@ -35,7 +35,7 @@ contract Agreement is AgreementInterface, Claimable, McdWrapper {
     uint constant STATUS_CLOSED = 8;            // 1000
     uint constant STATUS_ENDED = 9;             // 1001
     uint constant STATUS_LIQUIDATED = 10;       // 1010
-    uint constant STATUS_ENDED_LIQUIDATED = 11; // 1011
+    uint constant STATUS_BLOCKED = 11;          // 1011
     uint constant STATUS_CANCELED = 12;         // 1100
     
     bool public isETH;
@@ -61,6 +61,7 @@ contract Agreement is AgreementInterface, Claimable, McdWrapper {
     int public deltaCommon;
 
     uint public injectionThreshold;
+    bool public isBlocked;
 
     /**
      * @dev Grants access only to agreement borrower
@@ -220,8 +221,13 @@ contract Agreement is AgreementInterface, Claimable, McdWrapper {
         return true;
     }
 
+    function blockAgreement() public onlyActive() onlyContractOwner() returns(bool _success)  {
+        _blockAgreement();
+        return true;
+    }
+
     /**
-     * @dev check if status is pending
+     * @dev check if agreement is not matched yet
      */
     function isBeforeMatched() public view returns(bool) {
         return (status < STATUS_ACTIVE);
@@ -235,14 +241,14 @@ contract Agreement is AgreementInterface, Claimable, McdWrapper {
     }
 
     /**
-     * @dev check if status is pending
+     * @dev check if status is open
      */
     function isOpen() public view returns(bool) {
         return (status == STATUS_OPEN);
     }
 
     /**
-     * @dev check if status is pending
+     * @dev check if status is active
      */
     function isActive() public view returns(bool) {
         return (status == STATUS_ACTIVE);
@@ -252,19 +258,19 @@ contract Agreement is AgreementInterface, Claimable, McdWrapper {
      * @dev check if status is pending
      */
     function isEnded() public view returns(bool) {
-        // return (status == STATUS_ENDED);
-        return ((status & STATUS_ENDED) == STATUS_ENDED);
+        return (status == STATUS_ENDED);
+        // return ((status & STATUS_ENDED) == STATUS_ENDED);
     }
 
     /**
-     * @dev check if status is pending
+     * @dev check if status is liquidated
      */
     function isLiquidated() public view returns(bool) {
         return (status == STATUS_LIQUIDATED);
     }
 
     /**
-     * @dev check if status is pending
+     * @dev check if status is closed
      */
     function isClosed() public view returns(bool) {
         return ((status & STATUS_CLOSED) == STATUS_CLOSED);
@@ -398,6 +404,18 @@ contract Agreement is AgreementInterface, Claimable, McdWrapper {
     //     emit AgreementLiquidated();
     //     return true;
     // }
+
+    /**
+     * @dev Block agreement
+     * @return Operation success
+     */
+    function _blockAgreement() internal returns(bool _success) {
+        _refund(false);
+        status = STATUS_BLOCKED;
+
+        emit AgreementBlocked();
+        return true;
+    }
 
     function _refund(bool _isCdpLiquidated) internal {
         uint lenderRefundDai = _unlockAllDai();
