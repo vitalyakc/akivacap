@@ -308,8 +308,8 @@ pragma solidity 0.5.11;
  */
 contract McdAddressesR17 {
     uint public constant RELEASE = 17;
-    // address public constant proxyRegistryAddr = 0x64A436ae831C1672AE81F674CAb8B6775df3475C; //15 rel
-    address constant proxyRegistryAddr = 0xda657E86db3e76BDa6d88e6a09798F0BBF5bDf75; //6 rel
+    address public constant proxyRegistryAddrMD = 0x64A436ae831C1672AE81F674CAb8B6775df3475C; // used by MakerDao portal oasis
+    address constant proxyRegistryAddr = 0xda657E86db3e76BDa6d88e6a09798F0BBF5bDf75; // compatible with 5.11 solc
     address constant proxyLib = 0xd1D24637b9109B7f61459176EdcfF9Be56283a7B;
     address constant proxyLibDsr = 0xc5CC1Dfb64A62B9C7Bb6Cbf53C2A579E2856bf92;
     address constant proxyLibEnd = 0x5652779B00e056d7DF87D03fe09fd656fBc322DF;
@@ -795,7 +795,7 @@ contract McdWrapper is McdAddressesR17, RaySupport {
     }
 
     /**
-     * @dev     Transfer Cdp ownership
+     * @dev     Transfer Cdp ownership to guy
      * @param   cdp     cdp ID
      * @param   guy     address, ownership should be transfered to
      */
@@ -804,6 +804,18 @@ contract McdWrapper is McdAddressesR17, RaySupport {
             proxyLib,
             abi.encodeWithSignature('give(address,uint256,address)',
             cdpManagerAddr, cdp, guy));
+    }
+
+    /**
+     * @dev     Transfer Cdp ownership to guy's proxy
+     * @param   cdp     cdp ID
+     * @param   guy     address, ownership should be transfered to
+     */
+    function _transferCdpOwnershipToProxy(uint cdp, address guy) internal {
+        proxy().execute(
+            proxyLib,
+            abi.encodeWithSignature('giveToProxy(address,address,uint256,address)',
+            proxyRegistryAddrMD, cdpManagerAddr, cdp, guy));
     }
 
     /**
@@ -1444,7 +1456,7 @@ contract Agreement is AgreementInterface, Claimable, McdWrapper {
             }
         }
         _transferDai(lender, lenderRefundDai);
-        _transferCdpOwnership(cdpId, borrower);
+        _transferCdpOwnershipToProxy(cdpId, borrower);
         emit RefundBase(lender, lenderRefundDai, borrower, cdpId);
     }
 
