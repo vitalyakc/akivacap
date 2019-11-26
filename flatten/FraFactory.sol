@@ -252,6 +252,7 @@ interface AgreementInterface {
     function updateAgreement() external returns(bool);
     function cancelAgreement() external returns(bool);
     function rejectAgreement() external returns(bool);
+    function blockAgreement() external returns(bool);
     function getInfo() external view returns(address _addr, uint _status, uint _duration, address _borrower, address _lender, bytes32 _collateralType, uint _collateralAmount, uint _debtValue, uint _interestRate);
     function status() external view returns(uint);
     function lender() external view returns(address);
@@ -275,6 +276,7 @@ interface AgreementInterface {
     event AgreementCanceled(address _user);
     event AgreementTerminated();
     event AgreementLiquidated();
+    event AgreementBlocked();
     event RefundBase(address _lender, uint _lenderRefundDai, address _borrower, uint _cdpId);
     event RefundLiquidated(uint _borrowerFraDebtDai, uint _lenderRefundCollateral, uint _borrowerRefundCollateral);
 }
@@ -487,7 +489,8 @@ pragma solidity 0.5.11;
  * @title Handler of all agreements
  */
 contract FraFactory is Claimable {
-    mapping(address => address[]) public agreements;
+    // mapping(address => address[]) public agreements;
+    mapping(address => bool) public isAgreement;
     address[] public agreementList;
     address payable public agreementImpl;
     address public configAddr;
@@ -535,7 +538,7 @@ contract FraFactory is Claimable {
         AgreementInterface(agreementProxyAddr).
             initAgreement.value(msg.value)(msg.sender, msg.value, _debtValue, _duration, _interestRate, _collateralType, true, configAddr);
         
-        agreements[msg.sender].push(agreementProxyAddr);
+        // agreements[msg.sender].push(agreementProxyAddr);
         agreementList.push(agreementProxyAddr);
         return agreementProxyAddr; //address(agreement);
     }
@@ -562,7 +565,7 @@ contract FraFactory is Claimable {
         AgreementInterface(agreementProxyAddr).erc20TokenContract(_collateralType).transferFrom(
             msg.sender, address(agreementProxyAddr), _collateralValue);
 
-        agreements[msg.sender].push(agreementProxyAddr);
+        // agreements[msg.sender].push(agreementProxyAddr);
         agreementList.push(agreementProxyAddr);
         return agreementProxyAddr;
     }
@@ -581,7 +584,7 @@ contract FraFactory is Claimable {
     * @param _addresses agreements addresses array
     */
     function batchApproveAgreements(address[] memory _addresses) public onlyContractOwner() {
-        require(_addresses.length <= 256, "FraMain: batch count is greater than 256");
+        require(_addresses.length <= 256, 'FraMain: batch count is greater than 256');
         for (uint256 i = 0; i < _addresses.length; i++) {
             if (AgreementInterface(_addresses[i]).isPending()) {
                 AgreementInterface(_addresses[i]).approveAgreement();
@@ -603,7 +606,7 @@ contract FraFactory is Claimable {
     * @param _addresses agreements addresses array
     */
     function batchRejectAgreements(address[] memory _addresses) public onlyContractOwner() {
-        require(_addresses.length <= 256, "FraMain: batch count is greater than 256");
+        require(_addresses.length <= 256, 'FraMain: batch count is greater than 256');
         for (uint256 i = 0; i < _addresses.length; i++) {
             if (AgreementInterface(_addresses[i]).isBeforeMatched()) {
                 AgreementInterface(_addresses[i]).rejectAgreement();
@@ -650,12 +653,22 @@ contract FraFactory is Claimable {
     * @param _addresses agreements addresses array
     */
     function batchUpdateAgreements(address[] memory _addresses) public onlyContractOwner {
-        require(_addresses.length <= 256, "FraMain: batch count is greater than 256");
+        require(_addresses.length <= 256, 'FraMain: batch count is greater than 256');
         for (uint256 i = 0; i < _addresses.length; i++) {
+            // check in order to prevent revert
             if (AgreementInterface(_addresses[i]).isActive()) {
                 AgreementInterface(_addresses[i]).updateAgreement();
             }
         }
+    }
+
+    /**
+     * @dev Block specific agreement
+     * @param _address agreement address
+     * @return operation success
+     */
+    function blockAgreement(address _address) public onlyContractOwner() returns(bool _success) {
+        return AgreementInterface(_address).blockAgreement();
     }
 
     /**

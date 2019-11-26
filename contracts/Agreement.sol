@@ -61,7 +61,6 @@ contract Agreement is AgreementInterface, Claimable, McdWrapper {
     int public deltaCommon;
 
     uint public injectionThreshold;
-    bool public isBlocked;
 
     /**
      * @dev Grants access only to agreement borrower
@@ -221,6 +220,10 @@ contract Agreement is AgreementInterface, Claimable, McdWrapper {
         return true;
     }
 
+    /**
+     * @dev Block agreement, change status to the correspondant one, refund 
+     * @return operation success
+     */
     function blockAgreement() public onlyActive() onlyContractOwner() returns(bool _success)  {
         _blockAgreement();
         return true;

@@ -184,6 +184,15 @@ contract FraFactory is Claimable {
     }
 
     /**
+     * @dev Block specific agreement
+     * @param _address agreement address
+     * @return operation success
+     */
+    function blockAgreement(address _address) public onlyContractOwner() returns(bool _success) {
+        return AgreementInterface(_address).blockAgreement();
+    }
+
+    /**
      * @dev Returns a full list of existing agreements
      */
     function getAgreementList() public view returns(address[] memory _agreementList) {
