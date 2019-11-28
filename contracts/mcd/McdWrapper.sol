@@ -174,12 +174,15 @@ contract McdWrapper is McdAddressesR17, RaySupport {
     /**
      * @dev unlock dai tokens from dsr(pot) contract.
      * @param wad amount of dai tokens
+     * @return actually unlocked amount of dai
      */
-    function _unlockDai(uint wad) internal {
+    function _unlockDai(uint wad) internal returns(uint unlockedWad) {
+        uint _balanceBefore = _balanceDai(address(this));
         proxy().execute(
             proxyLibDsr,
             abi.encodeWithSignature('exit(address,address,uint256)',
             mcdJoinDaiAddr, mcdPotAddr, wad));
+        unlockedWad = _balanceDai(address(this)) - _balanceBefore;
     }
 
     /**
@@ -187,14 +190,12 @@ contract McdWrapper is McdAddressesR17, RaySupport {
      * @return  pie amount of all dai tokens was unlocked in fact
      */
     function _unlockAllDai() internal returns(uint pie) {
-        // pie = getLockedDai();
-        // _unlockDai(pie);
-        // function will be available in further releases (11)
+        uint _balanceBefore = _balanceDai(address(this));
         proxy().execute(
-            proxyLibDsr, 
-            abi.encodeWithSignature("exitAll(address,address)", 
+            proxyLibDsr,
+            abi.encodeWithSignature("exitAll(address,address)",
             mcdJoinDaiAddr, mcdPotAddr));
-        pie = ERC20Interface(mcdDaiAddr).balanceOf(address(this));
+        pie = _balanceDai(address(this)) - _balanceBefore;
     }
 
     /**
@@ -222,7 +223,7 @@ contract McdWrapper is McdAddressesR17, RaySupport {
 
     /**
      * @dev     get balance of dai tokens
-     * @param   addr      address 
+     * @param   addr      address
      */
     function _balanceDai(address addr) internal returns(uint) {
         return ERC20Interface(mcdDaiAddr).balanceOf(addr);

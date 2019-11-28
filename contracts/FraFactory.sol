@@ -41,7 +41,7 @@ contract FraFactory is Claimable {
     }
 
     /**
-     * @dev Requests egreement on ETH collateralType
+     * @dev Requests agreement on ETH collateralType
      * @param _debtValue value of borrower's ETH put into the contract as collateral
      * @param _duration number of minutes which agreement should be terminated after
      * @param _interestRate percent of interest rate, should be passed like RAY
@@ -65,7 +65,7 @@ contract FraFactory is Claimable {
     }
 
     /**
-     * @dev Requests agreement on ETH collateralType
+     * @dev Requests agreement on ERC-20 collateralType
      * @param _debtValue value of borrower's collateral
      * @param _duration number of minutes which agreement should be terminated after
      * @param _interestRate percent of interest rate, should be passed like
