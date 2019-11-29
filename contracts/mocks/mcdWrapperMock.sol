@@ -13,10 +13,6 @@ contract McdWrapperMock is McdWrapper {
     _setOwnerProxy(newOwner);
   }
 
-  function openCdp(bytes32 ilk) public {
-    cdpId = _openCdp(ilk);
-  }
-
   function lockETHAndDraw(bytes32 ilk, uint cdp, uint wadC, uint wadD) public { // send eth here firstly
     _lockETHAndDraw(ilk, cdp, wadC, wadD);
   }
@@ -50,7 +46,7 @@ contract McdWrapperMock is McdWrapper {
   }
 
   function transferCdpOwnership(uint cdp, address guy) public {
-    _transferCdpOwnership(cdp, guy);
+    _transferCdpOwnershipToProxy(cdp, guy);
   }
 
   function getCollateralAddreses(bytes32 ilk) public view returns(address mcdJoinEthaAddr, address payable wethAddr){

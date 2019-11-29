@@ -4,15 +4,15 @@ import './config/Config.sol';
 import './helpers/Claimable.sol';
 import './helpers/SafeMath.sol';
 import './mcd/McdWrapper.sol';
-import './interfaces/ERC20Interface.sol';
-import './interfaces/AgreementInterface.sol';
+import './interfaces/IERC20.sol';
+import './interfaces/IAgreement.sol';
 
 /**
  * @title Base Agreement contract
  * @notice Contract will be deployed only once as logic(implementation), proxy will be deployed for each agreement as storage
  * @dev Should not be deployed. It is being used as an abstract class
  */
-contract Agreement is AgreementInterface, Claimable, McdWrapper {
+contract Agreement is IAgreement, Claimable, McdWrapper {
     using SafeMath for uint;
     using SafeMath for int;
     uint constant YEAR_SECS = 365 days;
@@ -27,7 +27,7 @@ contract Agreement is AgreementInterface, Claimable, McdWrapper {
     uint constant STATUS_ACTIVE = 3;            // 0011
 
     /**
-     * in all closed statused the forth bit = 1, binary "AND" will equal:
+     * @dev in all closed statused the forth bit = 1, binary "AND" will equal:
      * STATUS_ENDED & STATUS_CLOSED -> STATUS_CLOSED
      * STATUS_LIQUIDATED & STATUS_CLOSED -> STATUS_CLOSED
      * STATUS_CANCELED & STATUS_CLOSED -> STATUS_CLOSED
@@ -63,7 +63,7 @@ contract Agreement is AgreementInterface, Claimable, McdWrapper {
     uint public injectionThreshold;
 
     /**
-     * @dev Grants access only to agreement's borrower
+     * @notice Grants access only to agreement's borrower
      */
     modifier onlyBorrower() {
         require(msg.sender == borrower, 'Agreement: Accessible only for borrower');
@@ -71,7 +71,7 @@ contract Agreement is AgreementInterface, Claimable, McdWrapper {
     }
 
     /**
-     * @dev Grants access only if agreement is not closed in any way yet
+     * @notice Grants access only if agreement is not closed in any way yet
      */
     modifier onlyNotClosed() {
         require(!isClosed(), 'Agreement: Agreement should be neither closed nor ended nor liquidated');
@@ -79,7 +79,15 @@ contract Agreement is AgreementInterface, Claimable, McdWrapper {
     }
 
     /**
-     * @dev Grants access only if agreement is not matched yet
+     * @notice Grants access only if agreement is closed in any way
+     */
+    modifier onlyClosed() {
+        require(isClosed(), 'Agreement: Agreement should be closed or ended or liquidated or blocked');
+        _;
+    }
+
+    /**
+     * @notice Grants access only if agreement is not matched yet
      */
     modifier onlyBeforeMatched() {
         require(isBeforeMatched(), 'Agreement: Agreement should be pending or open');
@@ -87,7 +95,7 @@ contract Agreement is AgreementInterface, Claimable, McdWrapper {
     }
     
     /**
-     * @dev Grants access only if agreement is active
+     * @notice Grants access only if agreement is active
      */
     modifier onlyActive() {
         require(isActive(), 'Agreement: Agreement should be active');
@@ -95,7 +103,7 @@ contract Agreement is AgreementInterface, Claimable, McdWrapper {
     }
 
     /**
-     * @dev Grants access only if agreement is pending
+     * @notice Grants access only if agreement is pending
      */
     modifier onlyPending() {
         require(isPending(), 'Agreement: Agreement should be pending');
@@ -103,7 +111,7 @@ contract Agreement is AgreementInterface, Claimable, McdWrapper {
     }
     
     /**
-     * @dev Grants access only if agreement is open (ready to be matched)
+     * @notice Grants access only if agreement is open (ready to be matched)
      */
     modifier onlyOpen() {
         require(isOpen(), 'Agreement: Agreement should be approved');
@@ -111,57 +119,7 @@ contract Agreement is AgreementInterface, Claimable, McdWrapper {
     }
 
     /**
-     * @dev check if agreement is not matched yet
-     */
-    function isBeforeMatched() public view returns(bool) {
-        return (status < STATUS_ACTIVE);
-    }
-
-    /**
-     * @dev check if status is pending
-     */
-    function isPending() public view returns(bool) {
-        return (status == STATUS_PENDING);
-    }
-
-    /**
-     * @dev check if status is open
-     */
-    function isOpen() public view returns(bool) {
-        return (status == STATUS_OPEN);
-    }
-
-    /**
-     * @dev check if status is active
-     */
-    function isActive() public view returns(bool) {
-        return (status == STATUS_ACTIVE);
-    }
-
-    /**
-     * @dev check if status is pending
-     */
-    function isEnded() public view returns(bool) {
-        return (status == STATUS_ENDED);
-        // return ((status & STATUS_ENDED) == STATUS_ENDED);
-    }
-
-    /**
-     * @dev check if status is liquidated
-     */
-    function isLiquidated() public view returns(bool) {
-        return (status == STATUS_LIQUIDATED);
-    }
-
-    /**
-     * @dev check if status is closed
-     */
-    function isClosed() public view returns(bool) {
-        return ((status & STATUS_CLOSED) == STATUS_CLOSED);
-    }
-
-    /**
-     * @dev Initialize new agreement
+     * @notice Initialize new agreement
      * @param _borrower borrower address
      * @param _collateralAmount value of borrower's collateral amount put into the contract as collateral or approved to transferFrom
      * @param _debtValue value of debt
@@ -169,6 +127,7 @@ contract Agreement is AgreementInterface, Claimable, McdWrapper {
      * @param _interestRate percent of interest rate, should be passed like RAY
      * @param _collateralType type of collateral, should be passed as bytes32
      * @param _isETH true if ether and false if erc-20 token
+     * @param _configAddr config contract address
      */
     function initAgreement(
         address payable _borrower,
@@ -178,28 +137,28 @@ contract Agreement is AgreementInterface, Claimable, McdWrapper {
         uint256 _interestRate,
         bytes32 _collateralType,
         bool _isETH,
-        address configAddr
-    ) external payable initializer {
+        address _configAddr
+    ) public payable initializer {
         Ownable.initialize();
         
-        require((_collateralAmount > Config(configAddr).minCollateralAmount()) &&
-            (_collateralAmount < Config(configAddr).maxCollateralAmount()), 'Agreement: collateral value does not match min and max');
+        require((_collateralAmount > Config(_configAddr).minCollateralAmount()) &&
+            (_collateralAmount < Config(_configAddr).maxCollateralAmount()), 'Agreement: collateral value does not match min and max');
         require(_debtValue > 0, 'Agreement: debt is zero');
         require((_interestRate > ONE) && (_interestRate <= ONE * 2), 'Agreement: interestRate should be between 0 and 100 %');
-        require((_duration > Config(configAddr).minDuration()) &&
-            (_duration < Config(configAddr).maxDuration()), 'Agreement: duration value does not match min and max');
-        require(Config(configAddr).isCollateralEnabled(_collateralType), 'Agreement: collateral type is currencly disabled');
+        require((_duration > Config(_configAddr).minDuration()) &&
+            (_duration < Config(_configAddr).maxDuration()), 'Agreement: duration value does not match min and max');
+        require(Config(_configAddr).isCollateralEnabled(_collateralType), 'Agreement: collateral type is currencly disabled');
 
         if (_isETH) {
             require(msg.value == _collateralAmount, 'Agreement: Actual ehter sent value is not correct');
         }
-        injectionThreshold = Config(configAddr).injectionThreshold();
+        injectionThreshold = Config(_configAddr).injectionThreshold();
         status = STATUS_PENDING;
         isETH = _isETH;
         borrower = _borrower;
         debtValue = _debtValue;
         duration = _duration;
-        initialDate = getCurrentTime();
+        initialDate = now;
         interestRate = _interestRate;
         collateralAmount = _collateralAmount;
         collateralType = _collateralType;
@@ -210,27 +169,27 @@ contract Agreement is AgreementInterface, Claimable, McdWrapper {
     }
     
     /**
-     * @dev Approves the agreement. Only for contract owner
+     * @notice Approve the agreement. Only for contract owner (FraFactory)
      * @return Operation success
      */
-    function approveAgreement() external onlyContractOwner() onlyPending() returns(bool _success) {
+    function approveAgreement() external onlyContractOwner onlyPending returns(bool _success) {
         status = STATUS_OPEN;
-        approveDate = getCurrentTime();
+        approveDate = now;
         emit AgreementApproved();
 
         return true;
     }
     
     /**
-     * @dev Match lender to the agreement.
+     * @notice Match lender to the agreement.
      * @return Operation success
      */
-    function matchAgreement() external onlyOpen() returns(bool _success) {
-        matchDate = getCurrentTime();
+    function matchAgreement() external onlyOpen returns(bool _success) {
+        matchDate = now;
         status = STATUS_ACTIVE;
         expireDate = matchDate.add(duration);
         lender = msg.sender;
-        lastCheckTime = getCurrentTime();
+        lastCheckTime = now;
 
         // transfer dai from lender to agreement & lock lender's dai to dsr
         _transferFromDai(msg.sender, address(this), debtValue);
@@ -253,67 +212,61 @@ contract Agreement is AgreementInterface, Claimable, McdWrapper {
     }
 
     /**
-     * @dev Update agreement state
-     * @notice Calls needed function according to the expireDate
+     * @notice Update agreement state
+     * @dev Calls needed function according to the expireDate
      * (terminates or liquidated or updates the agreement)
      * @return Operation success
      */
-     function updateAgreement() external onlyContractOwner() onlyActive() returns(bool _success) {
-        if(_checkExpiringDate()) {
-            _terminateAgreement();
+     function updateAgreement() external onlyContractOwner onlyActive returns(bool _success) {
+        if(isCDPUnsafe(collateralType, cdpId)) {
+            _liquidateAgreement();
         } else {
-            _updateAgreementState(false);
+            if(now > expireDate) {
+                _terminateAgreement();
+            } else {
+                _updateAgreementState(false);
+            }
         }
-
-        // if(isCDPLiquidated(collateralType, cdpId)) {
-        //     _liquidateAgreement();
-        // }
         return true;
     }
 
     /**
-     * @dev Cancel agreement by borrower before it is matched, change status to the correspondant one, refund
+     * @notice Cancel agreement by borrower before it is matched, change status to the correspondant one, refund
      * @return Operation success
      */
-    function cancelAgreement() external onlyBeforeMatched() onlyBorrower() returns(bool _success)  {
+    function cancelAgreement() external onlyBeforeMatched onlyBorrower returns(bool _success)  {
         _cancelAgreement();
         return true;
     }
 
     /**
-     * @dev Reject agreement by admin or cron job before it is matched, change status to the correspondant one, refund
+     * @notice Reject agreement by admin or cron job before it is matched, change status to the correspondant one, refund
      * @return Operation success
      */
-    function rejectAgreement() external onlyBeforeMatched() onlyContractOwner() returns(bool _success)  {
+    function rejectAgreement() external onlyBeforeMatched onlyContractOwner returns(bool _success)  {
         _cancelAgreement();
         return true;
     }
 
     /**
-     * @dev Block active agreement, change status to the correspondant one, refund
+     * @notice Block active agreement, change status to the correspondant one, refund
      * @return Operation success
      */
-    function blockAgreement() external onlyActive() onlyContractOwner() returns(bool _success)  {
+    function blockAgreement() external onlyActive onlyContractOwner returns(bool _success)  {
         _blockAgreement();
         return true;
     }
 
     /**
-     * @dev Borrower debt according to FRA
+     * @notice Withdraw accidentally locked ether in the contract, can be called only after agreement is closed and all assets are refunded
+     * @return Operation success
      */
-    function borrowerFraDebt() public view returns(uint) {
-        return (delta < 0) ? uint(fromRay(-delta)) : 0;
+    function withdrawEth(address payable _to) external onlyClosed onlyContractOwner {
+        _to.transfer(address(this).balance);
     }
 
     /**
-     * @dev Get current time
-     */
-    function getCurrentTime() public view returns(uint) {
-        return now;
-    }
-
-    /**
-     * @dev Get agreement main info
+     * @notice Get agreement main info
      */
     function getInfo() external view returns(
         address _addr,
@@ -338,22 +291,78 @@ contract Agreement is AgreementInterface, Claimable, McdWrapper {
     }
 
     /**
-     * @dev check whether pending or open agreement should be canceled automatically by cron
+     * @notice check if agreement is not matched yet
+     */
+    function isBeforeMatched() public view returns(bool) {
+        return (status < STATUS_ACTIVE);
+    }
+
+    /**
+     * @notice check if status is pending
+     */
+    function isPending() public view returns(bool) {
+        return (status == STATUS_PENDING);
+    }
+
+    /**
+     * @notice check if status is open
+     */
+    function isOpen() public view returns(bool) {
+        return (status == STATUS_OPEN);
+    }
+
+    /**
+     * @notice check if status is active
+     */
+    function isActive() public view returns(bool) {
+        return (status == STATUS_ACTIVE);
+    }
+
+    /**
+     * @notice check if status is pending
+     */
+    function isEnded() public view returns(bool) {
+        return (status == STATUS_ENDED);
+    }
+
+    /**
+     * @notice check if status is liquidated
+     */
+    function isLiquidated() public view returns(bool) {
+        return (status == STATUS_LIQUIDATED);
+    }
+
+    /**
+     * @notice check if status is closed
+     */
+    function isClosed() public view returns(bool) {
+        return ((status & STATUS_CLOSED) == STATUS_CLOSED);
+    }
+
+    /**
+     * @notice Borrower debt according to FRA
+     */
+    function borrowerFraDebt() public view returns(uint) {
+        return (delta < 0) ? uint(fromRay(-delta)) : 0;
+    }
+
+    /**
+     * @notice check whether pending or open agreement should be canceled automatically by cron
      */
     function checkTimeToCancel(uint _approveLimit, uint _matchLimit) public view returns(bool){
-        if ((isPending() && (getCurrentTime() > initialDate.add(_approveLimit))) ||
-            (isOpen() && (getCurrentTime() > approveDate.add(_matchLimit)))
+        if ((isPending() && (now > initialDate.add(_approveLimit))) ||
+            (isOpen() && (now > approveDate.add(_matchLimit)))
         ) {
             return true;
         }
     }
 
     /**
-     * @dev Closes agreement before it is matched and
+     * @notice Closes agreement before it is matched and
      * transfers collateral ETH back to user
      */
     function _cancelAgreement() internal {
-        closeDate = getCurrentTime();
+        closeDate = now;
         status = STATUS_CANCELED;
         if (isETH) {
             borrower.transfer(collateralAmount);
@@ -364,13 +373,13 @@ contract Agreement is AgreementInterface, Claimable, McdWrapper {
     }
 
     /**
-     * @dev Updates the state of Agreement
+     * @notice Updates the state of Agreement
      * @param _isLastUpdate true if the agreement is going to be terminated, false otherwise
      * @return Operation success
      */
     function _updateAgreementState(bool _isLastUpdate) internal returns(bool _success) {
         // if it is last update take the time interval up to expireDate, otherwise up to current time
-        uint timeInterval = (_isLastUpdate ? expireDate : getCurrentTime()).sub(lastCheckTime);
+        uint timeInterval = (_isLastUpdate ? expireDate : now).sub(lastCheckTime);
         uint injectionAmount;
         uint currentDsrAnnual = rpow(getDsr(), YEAR_SECS, ONE);
 
@@ -380,7 +389,7 @@ contract Agreement is AgreementInterface, Claimable, McdWrapper {
         delta = delta.add(savingsDifference);
         deltaCommon = deltaCommon.add(savingsDifference);
 
-        lastCheckTime = getCurrentTime();
+        lastCheckTime = now;
 
         if (fromRay(delta) >= int(_isLastUpdate ? 1 : injectionThreshold)) {
             injectionAmount = uint(fromRay(delta));
@@ -397,18 +406,11 @@ contract Agreement is AgreementInterface, Claimable, McdWrapper {
     }
 
     /**
-     * @dev check whether active agreement period is expired
-     */
-    function _checkExpiringDate() internal view returns(bool) {
-        return getCurrentTime() > expireDate;
-    }
-
-    /**
-     * @dev Terminates agreement
+     * @notice Terminates agreement
      * @return Operation success
      */
     function _terminateAgreement() internal returns(bool _success) {
-        closeDate = getCurrentTime();
+        closeDate = now;
         status = STATUS_ENDED;
         _updateAgreementState(true);
         _refund(false);
@@ -417,22 +419,24 @@ contract Agreement is AgreementInterface, Claimable, McdWrapper {
         return true;
     }
 
-    // /**
-    //  * @dev Liquidates agreement, mostly the sam as terminate
-    //  * but also covers collateral transfers after liquidation
-    //  * @return Operation success
-    //  */
-    // function _liquidateAgreement() internal returns(bool _success) {
-    //     _refund(true);
-    //     closeDate = getCurrentTime();
-    //     status = STATUS_LIQUIDATED;
+    /**
+     * @dev Liquidates agreement, mostly the sam as terminate
+     * but also covers collateral transfers after liquidation
+     * @return Operation success
+     */
+    function _liquidateAgreement() internal returns(bool _success) {
+        closeDate = now;
+        status = STATUS_LIQUIDATED;
+        _refund(true);
+        
+        emit AgreementLiquidated();
+        return true;
+    }
 
-    //     emit AgreementLiquidated();
-    //     return true;
-    // }
+    
 
     /**
-     * @dev Block agreement
+     * @notice Block agreement
      * @return Operation success
      */
     function _blockAgreement() internal returns(bool _success) {
@@ -443,6 +447,10 @@ contract Agreement is AgreementInterface, Claimable, McdWrapper {
         return true;
     }
 
+    /**
+     * @notice Refund agreement, transfer dai to lender, cdp ownership to borrower if debt is payed
+     * @return Operation success
+     */
     function _refund(bool _isCdpLiquidated) internal {
         uint lenderRefundDai = _unlockAllDai();
         uint borrowerFraDebtDai = borrowerFraDebt();
@@ -463,9 +471,27 @@ contract Agreement is AgreementInterface, Claimable, McdWrapper {
         _transferCdpOwnershipToProxy(cdpId, borrower);
         emit RefundBase(lender, lenderRefundDai, borrower, cdpId);
     }
+    /*
+    function _refund(bool _isCdpLiquidated) internal {
+        uint lenderRefundDai = _unlockAllDai();
+        uint borrowerFraDebtDai = borrowerFraDebt();
+        address cdpOwnershipTo;
+
+        if (borrowerFraDebtDai > 0) {
+            if (_callTransferFromDai(borrower, address(this), borrowerFraDebtDai)) {
+                lenderRefundDai = lenderRefundDai.add(borrowerFraDebtDai);
+                cdpOwnershipTo = borrower;
+            } else {
+                emit FraDebtPaybackFailed(borrower, borrowerFraDebtDai);
+            }
+        }
+        _transferDai(lender, lenderRefundDai);
+        _transferCdpOwnership(cdpId, cdpOwnershipTo);
+        emit RefundBase(lender, lenderRefundDai, cdpOwnershipTo, cdpId);
+    }*/
 
     /**
-     * @dev Executes all required transfers after liquidation
+     * @notice Executes all required transfers after liquidation
      * @return Operation success
      */
     function _refundAfterCdpLiquidation(uint _borrowerFraDebtDai) internal returns(bool _success) {
@@ -492,14 +518,14 @@ contract Agreement is AgreementInterface, Claimable, McdWrapper {
  */
 contract AgreementLiquidationMock is Agreement {
     /**
-     * @dev Executes all required transfers after liquidation
+     * @notice Executes all required transfers after liquidation
      * @return Operation success
      */
     function _refundAfterCdpLiquidation(uint _borrowerFraDebtDai) internal returns(bool _success) {
     }
 
     /**
-     * @dev recovers remaining ETH from cdp (pays remaining debt if exists)
+     * @notice recovers remaining ETH from cdp (pays remaining debt if exists)
      * @param ilk     collateral type in bytes32 format
      * @param cdp cdp ID
      */

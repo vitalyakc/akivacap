@@ -34,7 +34,7 @@ contract Ownable is Initializable, Context {
 contract Claimable is Ownable {
     address public pendingOwner;
     
-    function transferOwnership(address _newOwner) public onlyContractOwner() {
+    function transferOwnership(address _newOwner) public onlyContractOwner {
         pendingOwner = _newOwner;
     }
     
