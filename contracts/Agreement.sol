@@ -384,7 +384,7 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
         uint currentDsrAnnual = rpow(getDsr(), YEAR_SECS, ONE);
 
         // calculate savings difference between dsr and interest rate during time interval
-        int savingsDifference = int(debtValue.mul(timeInterval)).mul((int(currentDsrAnnual)).sub(int(interestRate))) / (int(YEAR_SECS));
+        int savingsDifference = int(debtValue.mul(timeInterval)).mul((int(currentDsrAnnual)).sub(int(interestRate))).div(int(YEAR_SECS));
         
         delta = delta.add(savingsDifference);
         deltaCommon = deltaCommon.add(savingsDifference);

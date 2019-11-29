@@ -55,8 +55,8 @@ contract McdWrapper is McdAddressesR17, RaySupport {
      */
     function getCollateralEquivalent(bytes32 ilk, uint daiAmount) public view returns(uint) {
         uint price = getPrice(ilk);
-        uint ethAmount = daiAmount * ONE / price;
-        return (ethAmount * price / ONE == daiAmount) ? ethAmount : (ethAmount + 1);
+        uint ethAmount = daiAmount.mul(ONE).div(price);
+        return (ethAmount.mul(price).div(ONE) == daiAmount) ? ethAmount : (ethAmount.add(1));
     }
 
     /**
