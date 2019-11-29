@@ -138,17 +138,17 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
         bytes32 _collateralType,
         bool _isETH,
         address _configAddr
-    ) public payable initializer {
+    ) public payable initializer onlyContractOwner {
         Ownable.initialize();
-        
+
+        require(Config(_configAddr).isCollateralEnabled(_collateralType), 'Agreement: collateral type is currencly disabled');
+        require(_debtValue > 0, 'Agreement: debt is zero');
         require((_collateralAmount > Config(_configAddr).minCollateralAmount()) &&
             (_collateralAmount < Config(_configAddr).maxCollateralAmount()), 'Agreement: collateral value does not match min and max');
-        require(_debtValue > 0, 'Agreement: debt is zero');
-        require((_interestRate > ONE) && (_interestRate <= ONE * 2), 'Agreement: interestRate should be between 0 and 100 %');
+        require((_interestRate > ONE) && 
+            (_interestRate <= ONE * 2), 'Agreement: interestRate should be between 0 and 100 %');
         require((_duration > Config(_configAddr).minDuration()) &&
             (_duration < Config(_configAddr).maxDuration()), 'Agreement: duration value does not match min and max');
-        require(Config(_configAddr).isCollateralEnabled(_collateralType), 'Agreement: collateral type is currencly disabled');
-
         if (_isETH) {
             require(msg.value == _collateralAmount, 'Agreement: Actual ehter sent value is not correct');
         }
