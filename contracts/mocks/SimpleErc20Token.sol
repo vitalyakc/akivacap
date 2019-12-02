@@ -1,9 +1,9 @@
 pragma solidity ^0.5.0;
 
-import "./Context.sol";
+import "../helpers/Context.sol";
 import "../interfaces/IERC20.sol";
-import "./Claimable.sol";
-import "./SafeMath.sol";
+import "../helpers/Claimable.sol";
+import "../helpers/SafeMath.sol";
 
 /**
  * @dev Implementation of the {IERC20} interface.

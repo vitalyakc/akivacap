@@ -1,5 +1,5 @@
 pragma solidity 0.5.11;
-import './interfaces/IAgreement.sol';
+import "./interfaces/IAgreement.sol";
 
 contract FraFactoryI {
     mapping(address => address[]) public agreements;

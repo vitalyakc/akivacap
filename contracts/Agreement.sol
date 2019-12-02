@@ -1,11 +1,11 @@
 pragma solidity 0.5.11;
 
-import './config/Config.sol';
-import './helpers/Claimable.sol';
-import './helpers/SafeMath.sol';
-import './mcd/McdWrapper.sol';
-import './interfaces/IERC20.sol';
-import './interfaces/IAgreement.sol';
+import "./config/Config.sol";
+import "./helpers/Claimable.sol";
+import "./helpers/SafeMath.sol";
+import "./mcd/McdWrapper.sol";
+import "./interfaces/IERC20.sol";
+import "./interfaces/IAgreement.sol";
 
 /**
  * @title Base Agreement contract
@@ -15,16 +15,16 @@ import './interfaces/IAgreement.sol';
 contract Agreement is IAgreement, Claimable, McdWrapper {
     using SafeMath for uint;
     using SafeMath for int;
-    uint constant YEAR_SECS = 365 days;
+    uint constant internal YEAR_SECS = 365 days;
 
     uint public status;
 
     /**
      * @dev set of statuses
      */
-    uint constant STATUS_PENDING = 1;           // 0001
-    uint constant STATUS_OPEN = 2;              // 0010
-    uint constant STATUS_ACTIVE = 3;            // 0011
+    uint constant internal STATUS_PENDING = 1;           // 0001
+    uint constant internal STATUS_OPEN = 2;              // 0010
+    uint constant internal STATUS_ACTIVE = 3;            // 0011
 
     /**
      * @dev in all closed statused the forth bit = 1, binary "AND" will equal:
@@ -32,11 +32,11 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
      * STATUS_LIQUIDATED & STATUS_CLOSED -> STATUS_CLOSED
      * STATUS_CANCELED & STATUS_CLOSED -> STATUS_CLOSED
      */
-    uint constant STATUS_CLOSED = 8;            // 1000
-    uint constant STATUS_ENDED = 9;             // 1001
-    uint constant STATUS_LIQUIDATED = 10;       // 1010
-    uint constant STATUS_BLOCKED = 11;          // 1011
-    uint constant STATUS_CANCELED = 12;         // 1100
+    uint constant internal STATUS_CLOSED = 8;            // 1000
+    uint constant internal STATUS_ENDED = 9;             // 1001
+    uint constant internal STATUS_LIQUIDATED = 10;       // 1010
+    uint constant internal STATUS_BLOCKED = 11;          // 1011
+    uint constant internal STATUS_CANCELED = 12;         // 1100
     
     bool public isETH;
 
@@ -66,7 +66,7 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
      * @notice Grants access only to agreement's borrower
      */
     modifier onlyBorrower() {
-        require(msg.sender == borrower, 'Agreement: Accessible only for borrower');
+        require(msg.sender == borrower, "Agreement: Accessible only for borrower");
         _;
     }
 
@@ -74,7 +74,7 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
      * @notice Grants access only if agreement is not closed in any way yet
      */
     modifier onlyNotClosed() {
-        require(!isClosed(), 'Agreement: Agreement should be neither closed nor ended nor liquidated');
+        require(!isClosed(), "Agreement: Agreement should be neither closed nor ended nor liquidated");
         _;
     }
 
@@ -82,7 +82,7 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
      * @notice Grants access only if agreement is closed in any way
      */
     modifier onlyClosed() {
-        require(isClosed(), 'Agreement: Agreement should be closed or ended or liquidated or blocked');
+        require(isClosed(), "Agreement: Agreement should be closed or ended or liquidated or blocked");
         _;
     }
 
@@ -90,7 +90,7 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
      * @notice Grants access only if agreement is not matched yet
      */
     modifier onlyBeforeMatched() {
-        require(isBeforeMatched(), 'Agreement: Agreement should be pending or open');
+        require(isBeforeMatched(), "Agreement: Agreement should be pending or open");
         _;
     }
     
@@ -98,7 +98,7 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
      * @notice Grants access only if agreement is active
      */
     modifier onlyActive() {
-        require(isActive(), 'Agreement: Agreement should be active');
+        require(isActive(), "Agreement: Agreement should be active");
         _;
     }
 
@@ -106,7 +106,7 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
      * @notice Grants access only if agreement is pending
      */
     modifier onlyPending() {
-        require(isPending(), 'Agreement: Agreement should be pending');
+        require(isPending(), "Agreement: Agreement should be pending");
         _;
     }
     
@@ -114,7 +114,7 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
      * @notice Grants access only if agreement is open (ready to be matched)
      */
     modifier onlyOpen() {
-        require(isOpen(), 'Agreement: Agreement should be approved');
+        require(isOpen(), "Agreement: Agreement should be approved");
         _;
     }
 
@@ -138,19 +138,19 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
         bytes32 _collateralType,
         bool _isETH,
         address _configAddr
-    ) public payable initializer onlyContractOwner {
+    ) public payable initializer     {
         Ownable.initialize();
 
-        require(Config(_configAddr).isCollateralEnabled(_collateralType), 'Agreement: collateral type is currencly disabled');
-        require(_debtValue > 0, 'Agreement: debt is zero');
+        require(Config(_configAddr).isCollateralEnabled(_collateralType), "Agreement: collateral type is currencly disabled");
+        require(_debtValue > 0, "Agreement: debt is zero");
         require((_collateralAmount > Config(_configAddr).minCollateralAmount()) &&
-            (_collateralAmount < Config(_configAddr).maxCollateralAmount()), 'Agreement: collateral value does not match min and max');
+            (_collateralAmount < Config(_configAddr).maxCollateralAmount()), "Agreement: collateral value does not match min and max");
         require((_interestRate > ONE) && 
-            (_interestRate <= ONE * 2), 'Agreement: interestRate should be between 0 and 100 %');
+            (_interestRate <= ONE * 2), "Agreement: interestRate should be between 0 and 100 %");
         require((_duration > Config(_configAddr).minDuration()) &&
-            (_duration < Config(_configAddr).maxDuration()), 'Agreement: duration value does not match min and max');
+            (_duration < Config(_configAddr).maxDuration()), "Agreement: duration value does not match min and max");
         if (_isETH) {
-            require(msg.value == _collateralAmount, 'Agreement: Actual ehter sent value is not correct');
+            require(msg.value == _collateralAmount, "Agreement: Actual ehter sent value is not correct");
         }
         injectionThreshold = Config(_configAddr).injectionThreshold();
         status = STATUS_PENDING;
@@ -217,7 +217,7 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
      * (terminates or liquidated or updates the agreement)
      * @return Operation success
      */
-     function updateAgreement() external onlyContractOwner onlyActive returns(bool _success) {
+    function updateAgreement() external onlyContractOwner onlyActive returns(bool _success) {
         if(isCDPUnsafe(collateralType, cdpId)) {
             _liquidateAgreement();
         } else {
@@ -433,8 +433,6 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
         return true;
     }
 
-    
-
     /**
      * @notice Block agreement
      * @return Operation success
@@ -498,8 +496,8 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
         uint256 lenderRefundCollateral = getCollateralEquivalent(collateralType, _borrowerFraDebtDai);
         uint borrowerRefundCollateral;
         if (isETH) {
-            lender.transfer(lenderRefundCollateral);
             borrowerRefundCollateral = address(this).balance;
+            lender.transfer(lenderRefundCollateral);
             borrower.transfer(borrowerRefundCollateral);
         } else {
             _transferERC20(collateralType, lender, lenderRefundCollateral);

@@ -1,7 +1,7 @@
 pragma solidity 0.5.11;
 
-import '../Agreement.sol';
-import './ConfigMock.sol';
+import "../Agreement.sol";
+import "./ConfigMock.sol";
 
 /*
  * @title Base Agreement Mock contract
@@ -70,7 +70,7 @@ contract AgreementMock is Agreement {
         return unlockedDai;
     }
 
-    function _balanceDai(address addr) internal returns(uint) {
+    function _balanceDai(address addr) internal view returns(uint) {
         return unlockedDai;
     }
 

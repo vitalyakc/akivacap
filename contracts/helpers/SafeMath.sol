@@ -18,7 +18,7 @@ library SafeMath {
             return 0;
         }
         uint256 c = a * b;
-        require(c / a == b, 'SafeMath: multiplication overflow');
+        require(c / a == b, "SafeMath: multiplication overflow");
         return c;
     }
 
@@ -36,7 +36,7 @@ library SafeMath {
     * @dev Substracts two numbers, throws on overflow (i.e. if subtrahend is greater than minuend).
     */
     function sub(uint256 a, uint256 b) internal pure returns (uint256) {
-        require(b <= a, 'SafeMath: subtraction overflow');
+        require(b <= a, "SafeMath: subtraction overflow");
         return a - b;
     }
 
@@ -45,7 +45,7 @@ library SafeMath {
     */
     function add(uint256 a, uint256 b) internal pure returns (uint256) {
         uint256 c = a + b;
-        require(c >= a, 'SafeMath: addition overflow');
+        require(c >= a, "SafeMath: addition overflow");
         return c;
     }
 
@@ -57,7 +57,7 @@ library SafeMath {
             return 0;
         }
         int256 c = a * b;
-        require(c / a == b, 'SafeMath: multiplication overflow');
+        require(c / a == b, "SafeMath: multiplication overflow");
         return c;
     }
 
@@ -75,8 +75,8 @@ library SafeMath {
     * @dev Substracts two int numbers, throws on overflow (i.e. if subtrahend is greater than minuend).
     */
     function sub(int256 a, int256 b) internal pure returns (int256) {
-        require(!(a > 0 && b > INT256_MIN - a), 'SafeMath: subtraction underflow');  // underflow
-        require(!(a < 0 && b < INT256_MAX - a), 'SafeMath: subtraction overflow');  // overflow
+        require(!(a > 0 && b > INT256_MIN - a), "SafeMath: subtraction underflow");  // underflow
+        require(!(a < 0 && b < INT256_MAX - a), "SafeMath: subtraction overflow");  // overflow
 
         return a - b;
     }
@@ -85,8 +85,8 @@ library SafeMath {
     * @dev Adds two int numbers, throws on overflow.
     */
     function add(int256 a, int256 b) internal pure returns (int256) {
-        require(!(a > 0 && b > INT256_MAX - a), 'SafeMath: addition underflow');  // overflow
-        require(!(a < 0 && b < INT256_MIN - a), 'SafeMath: addition overflow');  // underflow
+        require(!(a > 0 && b > INT256_MAX - a), "SafeMath: addition underflow");  // overflow
+        require(!(a < 0 && b < INT256_MIN - a), "SafeMath: addition overflow");  // underflow
 
         return a + b;
     }

@@ -1,6 +1,6 @@
 pragma solidity 0.5.11;
 
-import './SafeMath.sol';
+import "./SafeMath.sol";
 
 contract RaySupport {
     using SafeMath for uint256;
@@ -56,19 +56,15 @@ contract RaySupport {
         }
     }
 
-    function rmul(uint x, uint y) public pure returns (uint z) {
-        z = mul(x, y) / ONE;
-    }
+    // function rmul(uint x, uint y) public pure returns (uint z) {
+    //     z = mul(x, y) / ONE;
+    // }
 
-    function add(uint x, uint y) public pure returns (uint z) {
-        require((z = x + y) >= x);
-    }
+    // function add(uint x, uint y) internal view returns (uint z) {
+    //     require((z = x + y) >= x);
+    // }
 
-    function sub(uint x, uint y) public pure returns (uint z) {
-        require((z = x - y) <= x);
-    }
-
-    function mul(uint x, uint y) public pure returns (uint z) {
-        require(y == 0 || (z = x * y) / y == x);
-    }
+    // function mul(uint x, uint y) internal view returns (uint z) {
+    //     require(y == 0 || (z = x * y) / y == x);
+    // }
 }
