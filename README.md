@@ -47,9 +47,9 @@ This repository contains the core smart contract code for Forward Rate Agreement
 - `borrower` - borrower's address
 - `lender` - lender's address
 - `collateralType` - type of collateral (ETH-A, BAT-A), should be passed as bytes32 
-- `collateralAmount` - value of borrower's collateral amount put into the contract as collateral or approved to transferFrom
-- `debtValue` - value of debt
-- `interestRate` - percent of interest rate, should be passed like RAY
+- `collateralAmount` (in *wad* units) - value of borrower's collateral amount put into the contract as collateral or approved to transferFrom
+- `debtValue` (in *wad* units) - value of debt
+- `interestRate` (in *ray* units) - percent of interest rate, should be passed like RAY
 - `cdpId` - CDP id (Vault ID) of multi-collateral dai system
 - `duration` - number of seconds which agreement should be terminated after
 
@@ -62,8 +62,8 @@ This repository contains the core smart contract code for Forward Rate Agreement
 - `lastCheckTime`
 
 **Forward rate agreement current results**
-- `delta` (*rad* units) - signed integer, if < 0 - shows borrowers Fra debt, if > 0 shows dai amount waiting for injection (waiting of excess of injectionThreshold which is set during agrement init (is defined in Config contract)). Every agreement update `delta` is increased or decreased according to difference between current `dsr` from Multi Collateral Dai `Pot.sol` % and fixed `interestRate` %. After injection `delta` resets to zero
-- `deltaCommon` (*rad* units) - shows common profit for lender (< 0) or borrower (> 0). Every agreement update `delta` is increased or decreased according to difference between current `dsr` from Multi Collateral Dai `Pot.sol` % and fixed `interestRate` %. Unlike to `delta`, `deltaCommon` doesn't reset to zero after injection.
+- `delta` (in *rad* units) - signed integer, if < 0 - shows borrowers Fra debt, if > 0 shows dai amount waiting for injection (waiting of excess of injectionThreshold which is set during agrement init (is defined in Config contract)). Every agreement update `delta` is increased or decreased according to difference between current `dsr` from Multi Collateral Dai `Pot.sol` % and fixed `interestRate` %. After injection `delta` resets to zero
+- `deltaCommon` (in *rad* units) - shows common profit for lender (< 0) or borrower (> 0). Every agreement update `delta` is increased or decreased according to difference between current `dsr` from Multi Collateral Dai `Pot.sol` % and fixed `interestRate` %. Unlike to `delta`, `deltaCommon` doesn't reset to zero after injection.
 
 **Basic agreement lifecycle**
 - borrower calls initAgreement via `FraFactory`. `FraFactory` deploys new storage for Agreement.
@@ -76,19 +76,31 @@ This repository contains the core smart contract code for Forward Rate Agreement
 - if agreement CR is less than MCR - it is liquidated
 - during termination\liquidation the dai locked from dsr + borrowersFraDebt if any is refunded to lender, cdp ownership (if borrowersFradebt is zero or settled) is transferred to borrower
 
-The **savings difference** is calculated according to formula:
+The **savings difference** (in *rad* units) is calculated according to formula:
 
 `savingsDifference = debtValue * (currentDsrAnnual - interestRate) * timeInterval / YEAR_SECS`
 
 where
 
-`currentDsrAnnual = (dsr / RAY)  ^ YEAR_SECS`
+`currentDsrAnnual = (dsr / ONE)  ^ YEAR_SECS`
 
 where
 
 `dsr` is dsr value from `Pot.sol` in mcd cdp system
 
+### Units
 
+Dai has three different numerical units: `wad`, `ray` and `rad`
+
+- `wad`: fixed point decimal with 18 decimals (for basic quantities, e.g. balances)
+- `ray`: fixed point decimal with 27 decimals (for precise quantites, e.g. ratios)
+- `rad`: fixed point decimal with 45 decimals (result of integer multiplication with a `wad` and a `ray`)
+
+`rad` is a new unit exists to prevent precision loss.
+
+The base of `ray` is `ONE = 10 ** 27`.
+
+A good explanation of fixed point arithmetic can be found at [Wikipedia](https://en.wikipedia.org/wiki/Fixed-point_arithmetic).
 
 ## McdWrapper
 `McdWrapper.sol` acts as agreement multicollateral dai wrapper for maker dao system interaction
