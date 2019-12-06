@@ -122,7 +122,7 @@ contract Ownable is Initializable, Context {
     }
     
     modifier onlyContractOwner() {
-        require(isOwner(), 'Not a contract owner');
+        require(isOwner(), "Not a contract owner");
         _;
     }
 }
@@ -130,12 +130,12 @@ contract Ownable is Initializable, Context {
 contract Claimable is Ownable {
     address public pendingOwner;
     
-    function transferOwnership(address _newOwner) public onlyContractOwner() {
+    function transferOwnership(address _newOwner) public onlyContractOwner {
         pendingOwner = _newOwner;
     }
     
     function claimOwnership() public {
-        require(msg.sender == pendingOwner, 'Not a pending owner');
+        require(msg.sender == pendingOwner, "Not a pending owner");
 
         address previousOwner = owner;
         owner = msg.sender;
@@ -243,7 +243,7 @@ library SafeMath {
             return 0;
         }
         uint256 c = a * b;
-        require(c / a == b, 'SafeMath: multiplication overflow');
+        require(c / a == b, "SafeMath: multiplication overflow");
         return c;
     }
 
@@ -261,7 +261,7 @@ library SafeMath {
     * @dev Substracts two numbers, throws on overflow (i.e. if subtrahend is greater than minuend).
     */
     function sub(uint256 a, uint256 b) internal pure returns (uint256) {
-        require(b <= a, 'SafeMath: subtraction overflow');
+        require(b <= a, "SafeMath: subtraction overflow");
         return a - b;
     }
 
@@ -270,34 +270,51 @@ library SafeMath {
     */
     function add(uint256 a, uint256 b) internal pure returns (uint256) {
         uint256 c = a + b;
-        require(c >= a, 'SafeMath: addition overflow');
+        require(c >= a, "SafeMath: addition overflow");
         return c;
     }
 
-    function sub(int256 a, int256 b) internal pure returns (int256) {
-        require(!(a > 0 && b > INT256_MIN - a), 'SafeMath: subtraction underflow');  // underflow
-        require(!(a < 0 && b < INT256_MAX - a), 'SafeMath: subtraction overflow');  // overflow
-
-        return a - b;
-    }
-
-    function add(int256 a, int256 b) internal pure returns (int256) {
-        require(!(a > 0 && b > INT256_MAX - a), 'SafeMath: addition underflow');  // overflow
-        require(!(a < 0 && b < INT256_MIN - a), 'SafeMath: addition overflow');  // underflow
-
-        return a + b;
-    }
-
+    /**
+    * @dev Multiplies two int numbers, throws on overflow.
+    */
     function mul(int256 a, int256 b) internal pure returns (int256) {
         if (a == 0) {
             return 0;
         }
         int256 c = a * b;
-        require(c / a == b, 'SafeMath: multiplication overflow');
+        require(c / a == b, "SafeMath: multiplication overflow");
         return c;
     }
 
+    /**
+    * @dev Division of two int numbers, truncating the quotient.
+    */
+    function div(int256 a, int256 b) internal pure returns (int256) {
+        // require(b > 0); // Solidity automatically throws when dividing by 0
+        int256 c = a / b;
+        // require(a == b * c + a % b); // There is no case in which this doesn't hold
+        return c;
+    }
 
+    /**
+    * @dev Substracts two int numbers, throws on overflow (i.e. if subtrahend is greater than minuend).
+    */
+    function sub(int256 a, int256 b) internal pure returns (int256) {
+        require(!(a > 0 && b > INT256_MIN - a), "SafeMath: subtraction underflow");  // underflow
+        require(!(a < 0 && b < INT256_MAX - a), "SafeMath: subtraction overflow");  // overflow
+
+        return a - b;
+    }
+
+    /**
+    * @dev Adds two int numbers, throws on overflow.
+    */
+    function add(int256 a, int256 b) internal pure returns (int256) {
+        require(!(a > 0 && b > INT256_MAX - a), "SafeMath: addition underflow");  // overflow
+        require(!(a < 0 && b < INT256_MIN - a), "SafeMath: addition overflow");  // underflow
+
+        return a + b;
+    }
 }
 
 // File: contracts/mcd/McdAddressesR17.sol
@@ -308,8 +325,8 @@ pragma solidity 0.5.11;
  */
 contract McdAddressesR17 {
     uint public constant RELEASE = 17;
-    // address public constant proxyRegistryAddr = 0x64A436ae831C1672AE81F674CAb8B6775df3475C; //15 rel
-    address constant proxyRegistryAddr = 0xda657E86db3e76BDa6d88e6a09798F0BBF5bDf75; //6 rel
+    address public constant proxyRegistryAddrMD = 0x64A436ae831C1672AE81F674CAb8B6775df3475C; // used by MakerDao portal oasis
+    address constant proxyRegistryAddr = 0xda657E86db3e76BDa6d88e6a09798F0BBF5bDf75; // compatible with 5.11 solc
     address constant proxyLib = 0xd1D24637b9109B7f61459176EdcfF9Be56283a7B;
     address constant proxyLibDsr = 0xc5CC1Dfb64A62B9C7Bb6Cbf53C2A579E2856bf92;
     address constant proxyLibEnd = 0x5652779B00e056d7DF87D03fe09fd656fBc322DF;
@@ -318,14 +335,7 @@ contract McdAddressesR17 {
     address constant mcdJoinDaiAddr = 0x5AA71a3ae1C0bd6ac27A1f28e1415fFFB6F15B8c;
     address constant mcdVatAddr = 0xbA987bDB501d131f766fEe8180Da5d81b34b69d9;
     address constant mcdJoinEthaAddr = 0x775787933e92b709f2a3C70aa87999696e74A9F8;
-    // address constant mcdJoinEthbAddr = 0x795BF49EB037F9Fd19Bd0Ff582da42D75323A53B;
-    // address constant mcdJoinEthcAddr = 0x3aaE95264b28F6460A79Be1494AeBb6d6167D836;
-    // address constant mcdJoinZrxaAddr = 0x1F4150647b4AA5Eb36287d06d757A5247700c521;
-    // address constant mcdJoinRepaAddr = 0xd40163eA845aBBe53A12564395e33Fe108F90cd3;
-    // address constant mcdJoinOmgaAddr = 0x2EBb31F1160c7027987A03482aB0fEC130e98251;
     address constant mcdJoinBataAddr = 0x2a4C485B1B8dFb46acCfbeCaF75b6188A59dBd0a;
-    // address constant mcdJoinDgdaAddr = 0xD5f63712aF0D62597Ad6bf8D357F163bc699E18c;
-    // address constant mcdJoinGntaAddr = 0xC667AC878FD8Eb4412DCAd07988Fea80008B65Ee;
 
     address constant mcdPotAddr = 0xEA190DBDC7adF265260ec4dA6e9675Fd4f5A78bb;
     address constant mcdSpotAddr = 0x3a042de6413eDB15F2784f2f97cC68C7E9750b2D;
@@ -334,15 +344,10 @@ contract McdAddressesR17 {
     address constant mcdEndAddr = 0x24728AcF2E2C403F5d2db4Df6834B8998e56aA5F;
     
     address payable constant wethAddr = 0xd0A1E359811322d97991E03f863a0C30C2cF029C;
-    // address payable constant zrxAddr = 0x18392097549390502069C17700d21403EA3C721A;
-    // address payable constant repAddr = 0xC7aa227823789E363f29679F23f7e8F6d9904a9B;
-    // address payable constant omgAddr = 0x441B1A74C69ee6e631834B626B29801D42076D38;
     address payable constant batAddr = 0x9f8cFB61D3B2aF62864408DD703F9C3BEB55dff7;
-    // address payable constant dgdAddr = 0x62aeEC5fb140bb233b1c5612a8747Ca1Dc56dc1B;
-    // address payable constant gntAddr = 0xc81bA844f451d4452A01BBb2104C1c4F89252907;
 }
 
-// File: contracts/interfaces/McdInterfaces.sol
+// File: contracts/interfaces/IMcd.sol
 
 pragma solidity 0.5.11;
 
@@ -403,11 +408,11 @@ contract DSProxyLike {
     function setOwner(address owner_) public;
 }
 
-// File: contracts/interfaces/ERC20Interface.sol
+// File: contracts/interfaces/IERC20.sol
 
 pragma solidity 0.5.11;
 
-contract ERC20Interface {
+contract IERC20 {
     function totalSupply() public view returns (uint);
     function balanceOf(address tokenOwner) public view returns (uint balance);
     function allowance(address tokenOwner, address spender) public view returns (uint remaining);
@@ -478,26 +483,22 @@ contract RaySupport {
         }
     }
 
-    function rmul(uint x, uint y) public pure returns (uint z) {
-        z = mul(x, y) / ONE;
-    }
+    // function rmul(uint x, uint y) public pure returns (uint z) {
+    //     z = mul(x, y) / ONE;
+    // }
 
-    function add(uint x, uint y) public pure returns (uint z) {
-        require((z = x + y) >= x);
-    }
+    // function add(uint x, uint y) internal view returns (uint z) {
+    //     require((z = x + y) >= x);
+    // }
 
-    function sub(uint x, uint y) public pure returns (uint z) {
-        require((z = x - y) <= x);
-    }
-
-    function mul(uint x, uint y) public pure returns (uint z) {
-        require(y == 0 || (z = x * y) / y == x);
-    }
+    // function mul(uint x, uint y) internal view returns (uint z) {
+    //     require(y == 0 || (z = x * y) / y == x);
+    // }
 }
 
 // File: contracts/mcd/McdWrapper.sol
 
-pragma solidity >=0.5.0;
+pragma solidity 0.5.11;
 
 
 
@@ -505,13 +506,116 @@ pragma solidity >=0.5.0;
 
 /**
  * @title Agreement multicollateral dai wrapper for maker dao system interaction.
- * @dev delegates calls to proxy. Oriented to exact MCD release. Current version oriented to 6th release mcd cdp.
+ * @notice delegates calls to proxy. Oriented to exact MCD release. Current version oriented to 17th release mcd cdp.
  */
 contract McdWrapper is McdAddressesR17, RaySupport {
     address payable public proxyAddress;
 
     /**
-     * @dev init mcd Wrapper, build proxy
+     * @notice  Get registered proxy for current caller (msg.sender address)
+     */
+    function proxy() public view returns (DSProxyLike) {
+        return DSProxyLike(proxyAddress);
+    }
+
+    /**
+     * @notice  transfer exact amount of erc20 tokens, approved beforehand
+     * @param   ilk     collateral type
+     * @return  IERC20 instance
+     */
+    function erc20TokenContract(bytes32 ilk) public view returns(IERC20) {
+        (,address payable collateralBaseAddress) = _getCollateralAddreses(ilk);
+        return IERC20(collateralBaseAddress);
+    }
+
+    /**
+     * @notice  get amount of dai tokens currently locked in dsr(pot) contract.
+     * @return  pie amount of all dai tokens locked in dsr
+     */
+    function getLockedDai() public view returns(uint256 pie, uint256 pieS) {
+        pie = PotLike(mcdPotAddr).pie(address(proxy()));
+        pieS = pie.mul(PotLike(mcdPotAddr).chi());
+    }
+
+    /**
+     * @notice  get dai savings rate
+     * @return  dsr value in multiplier format defined by maker dao system. 100 * 10^25 - means 0% dsr. 103 * 10^25 means 3% dsr.
+     */
+    function getDsr() public view returns(uint) {
+        return PotLike(mcdPotAddr).dsr();
+    }
+
+    /**
+     * @notice  Get the equivalent of exact dai amount in terms of collateral type.
+     * @dev     Add one more collateral token unit in case if calculated value doesn't cover dai amount
+     * @param   ilk         collateral type in bytes32 format
+     * @param   daiAmount   dai tokens amount
+     * @return  collateral tokens amount worth dai amount
+     */
+    function getCollateralEquivalent(bytes32 ilk, uint daiAmount) public view returns(uint) {
+        uint price = getPrice(ilk);
+        uint ethAmount = daiAmount.mul(ONE).div(price);
+        return (ethAmount.mul(price).div(ONE) == daiAmount) ? ethAmount : (ethAmount.add(1));
+    }
+
+    /**
+     * @notice  Get current cdp main info: collateral amount, dai (debt) amount
+     * @param   ilk     collateral type in bytes32 format
+     * @param   cdpId   cdp ID
+     * @return  ink     collateral tokens amount
+     *          art     dai debt amount
+     */
+    function getCdpInfo(bytes32 ilk, uint cdpId) public view returns(uint ink, uint art) {
+        address urn = ManagerLike(cdpManagerAddr).urns(cdpId);
+        (ink, art) = VatLike(mcdVatAddr).urns(ilk, urn);
+    }
+
+    /**
+     * @notice  Get collateral token price to USD
+     * @param   ilk     collateral type in bytes32 format
+     * @return  collateral to USD price
+     */
+    function getPrice(bytes32 ilk) public view returns(uint) {
+        return getSafePrice(ilk).mul(getLiquidationRatio(ilk)).div(ONE);
+    }
+
+    /**
+     * @notice  Get collateral token safe price to USD. Equals current origin price devided by liquidation ratio
+     * @param   ilk     collateral type in bytes32 format
+     * @return  collateral to USD price
+     */
+    function getSafePrice(bytes32 ilk) public view returns(uint) {
+        (,, uint spot,,) = VatLike(mcdVatAddr).ilks(ilk);
+        return spot;
+    }
+
+    /**
+     * @notice  Get collateral liquidation ratio. Percent of overcollateralization. If collateral / debt < liauidation ratio - cdp should be autoliquidated
+     * @param   ilk     collateral type in bytes32 format
+     * @return  liquidation ratio  150 * 10^25 - means 150%
+     */
+    function getLiquidationRatio(bytes32 ilk) public view returns(uint) {
+        (,uint mat) = SpotterLike(mcdSpotAddr).ilks(ilk);
+        return mat;
+    }
+
+    /**
+     * @notice  Check is cdp is unsafe already
+     * @param   ilk     collateral type in bytes32 format
+     * @param   cdpId   cdp ID
+     * @return  liquidation ratio. For example 150 * 10^25 - means 150%
+     */
+    function isCDPUnsafe(bytes32 ilk, uint cdpId) public view returns(bool) {
+        (, uint rate, uint spot,,) = VatLike(mcdVatAddr).ilks(ilk);
+        (uint ink, uint art) = VatLike(mcdVatAddr).urns(ilk, ManagerLike(cdpManagerAddr).urns(cdpId));
+        
+        return ((spot > 0) && (ink.mul(spot) < art.mul(rate)));
+    }
+
+    /**
+     * @notice init mcd Wrapper, build proxy
+     * @param   ilk     collateral type in bytes32 format
+     * @param   isEther  true if ether and false if erc-20 token
      */
     function _initMcdWrapper(bytes32 ilk, bool isEther) internal {
         _buildProxy();
@@ -522,35 +626,22 @@ contract McdWrapper is McdAddressesR17, RaySupport {
     }
 
     /**
-     * @dev Build proxy for current caller (msg.sender address)
+     * @notice Build proxy for current caller (msg.sender address)
      */
     function _buildProxy() internal {
         proxyAddress = ProxyRegistryLike(proxyRegistryAddr).build();
     }
 
     /**
-     * @dev Change proxy owner to a new one
-     * @param newOwner new owner address
+     * @notice  Change proxy owner to a new one
+     * @param   newOwner new owner address
      */
     function _setOwnerProxy(address newOwner) internal {
         proxy().setOwner(newOwner);
     }
 
     /**
-     * @dev     Create new cdp
-     * @param   ilk     collateral type in bytes32 format
-     */
-    function _openCdp(bytes32 ilk) internal returns (uint cdp) {
-        bytes memory response = proxy().execute(proxyLib, abi.encodeWithSignature(
-            'open(address,bytes32,address)',
-            cdpManagerAddr, ilk, proxyAddress));
-        assembly {
-            cdp := mload(add(response, 0x20))
-        }
-    }
-
-    /**
-     * @dev     Lock ether collateral and draw dai
+     * @notice  Lock ether collateral and draw dai
      * @param   ilk     collateral type in bytes32 format
      * @param   cdp     cdp id
      * @param   wadC    collateral amount to be locked in cdp contract
@@ -560,14 +651,15 @@ contract McdWrapper is McdAddressesR17, RaySupport {
         bytes memory data;
         (address collateralJoinAddr,) = _getCollateralAddreses(ilk);
         data = abi.encodeWithSignature(
-            'lockETHAndDraw(address,address,address,address,uint256,uint256)',
+            "lockETHAndDraw(address,address,address,address,uint256,uint256)",
             cdpManagerAddr, mcdJugAddr, collateralJoinAddr, mcdJoinDaiAddr, cdp, wadD);
-        proxyAddress.call.value(wadC)(abi.encodeWithSignature("execute(address,bytes)", proxyLib, data));
+        (bool success,) = proxyAddress.call.value(wadC)(abi.encodeWithSignature("execute(address,bytes)", proxyLib, data));
+        require(success);
     }
 
     /**
-     * @dev     Create new cdp with ERC-20 tokens as collateral, lock collateral and draw dai
-     * @notice  build new Proxy for a caller before cdp creation and approve transferFrom collateral token from Agrrement by Proxy
+     * @notice  Create new cdp with ERC-20 tokens as collateral, lock collateral and draw dai
+     * @dev     build new Proxy for a caller before cdp creation and approve transferFrom collateral token from Agrrement by Proxy
      * @param   ilk     collateral type in bytes32 format
      * @param   cdp     cdp id
      * @param   wadC    collateral amount to be locked in cdp contract
@@ -577,13 +669,13 @@ contract McdWrapper is McdAddressesR17, RaySupport {
     function _lockERC20AndDraw(bytes32 ilk, uint cdp, uint wadC, uint wadD, bool transferFrom) internal {
         (address collateralJoinAddr,) = _getCollateralAddreses(ilk);
         proxy().execute(proxyLib, abi.encodeWithSignature(
-            'lockGemAndDraw(address,address,address,address,uint256,uint256,uint256,bool)',
+            "lockGemAndDraw(address,address,address,address,uint256,uint256,uint256,bool)",
             cdpManagerAddr, mcdJugAddr, collateralJoinAddr, mcdJoinDaiAddr, cdp, wadC, wadD, transferFrom));
     }
 
     /**
-     * @dev     Create new cdp with Ether as collateral, lock collateral and draw dai
-     * @notice  build new Proxy for a caller before cdp creation
+     * @notice  Create new cdp with Ether as collateral, lock collateral and draw dai
+     * @dev     build new Proxy for a caller before cdp creation
      * @param   ilk     collateral type in bytes32 format
      * @param   wadC    collateral amount to be locked in cdp contract
      * @param   wadD    dai amount to be drawn
@@ -592,9 +684,9 @@ contract McdWrapper is McdAddressesR17, RaySupport {
         address payable target = proxyAddress;
         (address collateralJoinAddr,) = _getCollateralAddreses(ilk);
         bytes memory data = abi.encodeWithSignature(
-            'execute(address,bytes)',
+            "execute(address,bytes)",
             proxyLib,
-            abi.encodeWithSignature('openLockETHAndDraw(address,address,address,address,bytes32,uint256)',
+            abi.encodeWithSignature("openLockETHAndDraw(address,address,address,address,bytes32,uint256)",
             cdpManagerAddr, mcdJugAddr, collateralJoinAddr, mcdJoinDaiAddr, ilk, wadD));
         assembly {
             let succeeded := call(sub(gas, 5000), target, wadC, add(data, 0x20), mload(data), 0, 0)
@@ -615,8 +707,8 @@ contract McdWrapper is McdAddressesR17, RaySupport {
     }
 
     /**
-     * @dev     Create new cdp with ERC-20 tokens as collateral, lock collateral and draw dai
-     * @notice  build new Proxy for a caller before cdp creation and approve transferFrom collateral token from Agrrement by Proxy
+     * @notice  Create new cdp with ERC-20 tokens as collateral, lock collateral and draw dai
+     * @dev     build new Proxy for a caller before cdp creation and approve transferFrom collateral token from Agrrement by Proxy
      * @param   ilk     collateral type in bytes32 format
      * @param   wadC    collateral amount to be locked in cdp contract
      * @param   wadD    dai amount to be drawn
@@ -626,7 +718,7 @@ contract McdWrapper is McdAddressesR17, RaySupport {
         // _approveERC20(ilk, proxyAddress, wadC);
         (address collateralJoinAddr,) = _getCollateralAddreses(ilk);
         bytes memory response = proxy().execute(proxyLib, abi.encodeWithSignature(
-            'openLockGemAndDraw(address,address,address,address,bytes32,uint256,uint256,bool)',
+            "openLockGemAndDraw(address,address,address,address,bytes32,uint256,uint256,bool)",
             cdpManagerAddr, mcdJugAddr, collateralJoinAddr, mcdJoinDaiAddr, ilk, wadC, wadD, transferFrom));
         assembly {
             cdp := mload(add(response, 0x20))
@@ -634,101 +726,81 @@ contract McdWrapper is McdAddressesR17, RaySupport {
     }
 
     /**
-     * @dev inject(wipe) some amount of dai to cdp from agreement
-     * @notice approves this amount of dai tokens to proxy before injection
-     * @param cdp   cdp ID
-     * @param wad   amount of dai tokens
+     * @notice  inject(wipe) some amount of dai to cdp from agreement (pay off some amount of dai to cdp)
+     * @param   cdp   cdp ID
+     * @param   wad   amount of dai tokens
      */
     function _injectToCdp(uint cdp, uint wad) internal {
-        // _approveDai(address(proxy()), wad);
-        _wipe(cdp, wad);
-    }
-
-    /**
-     * @dev pay off some amount of dai to cdp
-     * @param cdp cdp ID
-     * @param wad amount of dai tokens
-     */
-    function _wipe(uint cdp, uint wad) internal {
         proxy().execute(
             proxyLib,
-            abi.encodeWithSignature('wipe(address,address,uint256,uint256)',
+            abi.encodeWithSignature("wipe(address,address,uint256,uint256)",
             cdpManagerAddr, mcdJoinDaiAddr, cdp, wad));
     }
 
     /**
-     * @dev lock dai tokens to dsr(pot) contract.
-     * @notice approves this amount of dai tokens to proxy before locking
-     * @param wad amount of dai tokens
+     * @notice  lock dai tokens to dsr(pot) contract.
+     * @dev     approves this amount of dai tokens to proxy before locking
+     * @param   wad amount of dai tokens
      */
     function _lockDai(uint wad) internal {
-        // _approveDai(address(proxy()), wad);
         proxy().execute(
             proxyLibDsr,
-            abi.encodeWithSignature('join(address,address,uint256)',
+            abi.encodeWithSignature("join(address,address,uint256)",
             mcdJoinDaiAddr, mcdPotAddr, wad));
     }
 
     /**
-     * @dev unlock dai tokens from dsr(pot) contract.
-     * @param wad amount of dai tokens
+     * @notice  unlock dai tokens from dsr(pot) contract.
+     * @param   wad amount of dai tokens
+     * @return  actually unlocked amount of dai
      */
-    function _unlockDai(uint wad) internal {
+    function _unlockDai(uint wad) internal returns(uint unlockedWad) {
+        uint _balanceBefore = _balanceDai(address(this));
         proxy().execute(
             proxyLibDsr,
-            abi.encodeWithSignature('exit(address,address,uint256)',
+            abi.encodeWithSignature("exit(address,address,uint256)",
             mcdJoinDaiAddr, mcdPotAddr, wad));
+        unlockedWad = _balanceDai(address(this)).sub(_balanceBefore);
     }
 
     /**
-     * @dev     unlock all dai tokens from dsr(pot) contract.
+     * @notice  unlock all dai tokens from dsr(pot) contract.
      * @return  pie amount of all dai tokens was unlocked in fact
      */
     function _unlockAllDai() internal returns(uint pie) {
-        // pie = getLockedDai();
-        // _unlockDai(pie);
-        // function will be available in further releases (11)
+        uint _balanceBefore = _balanceDai(address(this));
         proxy().execute(
-            proxyLibDsr, 
-            abi.encodeWithSignature("exitAll(address,address)", 
+            proxyLibDsr,
+            abi.encodeWithSignature("exitAll(address,address)",
             mcdJoinDaiAddr, mcdPotAddr));
-        pie = ERC20Interface(mcdDaiAddr).balanceOf(address(this));
+        pie = _balanceDai(address(this)).sub(_balanceBefore);
     }
 
     /**
-     * @dev recovers remaining ETH from cdp (pays remaining debt if exists)
-     * @param ilk     collateral type in bytes32 format
-     * @param cdp cdp ID
+     * @notice  recovers remaining ETH from cdp (pays remaining debt if exists)
+     * @param   ilk     collateral type in bytes32 format
+     * @param   cdp cdp ID
      */
     function _freeETH(bytes32 ilk, uint cdp) internal {
         (address collateralJoinAddr,) = _getCollateralAddreses(ilk);
         proxy().execute(
             proxyLibEnd,
-            abi.encodeWithSignature('freeETH(address,address,address,uint)',
+            abi.encodeWithSignature("freeETH(address,address,address,uint)",
             cdpManagerAddr, collateralJoinAddr, mcdEndAddr, cdp));
     }
 
     /**
-     * @dev     Approve exact amount of dai tokens for transferFrom
+     * @notice  Approve exact amount of dai tokens for transferFrom
      * @param   to      address allowed to call transferFrom
      * @param   amount  tokens amount for approval
      */
     function _approveDai(address to, uint amount) internal returns(bool) {
-        ERC20Interface(mcdDaiAddr).approve(to, amount);
+        IERC20(mcdDaiAddr).approve(to, amount);
         return true;
     }
 
     /**
-     * @dev     get balance of dai tokens
-     * @param   addr      address 
-     */
-    function _balanceDai(address addr) internal returns(uint) {
-        return ERC20Interface(mcdDaiAddr).balanceOf(addr);
-    }
-
-
-    /**
-     * @dev     Approve exact amount of erc20 tokens for transferFrom
+     * @notice  Approve exact amount of erc20 tokens for transferFrom
      * @param   ilk     collateral type
      * @param   to      address allowed to call transferFrom
      * @param   amount  tokens amount for approval
@@ -739,17 +811,17 @@ contract McdWrapper is McdAddressesR17, RaySupport {
     }
 
     /**
-     * @dev     transfer exact amount of dai tokens
+     * @notice  transfer exact amount of dai tokens
      * @param   to      address of recepient
      * @param   amount  tokens amount
      */
     function _transferDai(address to, uint amount) internal returns(bool) {
-        ERC20Interface(mcdDaiAddr).transfer(to, amount);
+        IERC20(mcdDaiAddr).transfer(to, amount);
         return true;
     }
 
     /**
-     * @dev     transfer exact amount of erc20 tokens
+     * @notice  transfer exact amount of erc20 tokens
      * @param   ilk     collateral type
      * @param   to      address of recepient
      * @param   amount  tokens amount
@@ -760,207 +832,76 @@ contract McdWrapper is McdAddressesR17, RaySupport {
     }
 
     /**
-     * @dev     transfer exact amount of dai tokens, approved beforehand
+     * @notice  transfer exact amount of dai tokens, approved beforehand
      * @param   from    address of spender
      * @param   to      address of recepient
      * @param   amount  tokens amount
      */
     function _transferFromDai(address from, address to, uint amount) internal returns(bool) {
-        ERC20Interface(mcdDaiAddr).transferFrom(from, to, amount);
-        return true;
+        return IERC20(mcdDaiAddr).transferFrom(from, to, amount);
     }
 
     /**
-     * @dev     call transfer exact amount of dai tokens, approved beforehand
+     * @notice  try transfer exact amount of dai tokens, approved beforehand
      * @param   from    address of spender
      * @param   to      address of recepient
      * @param   amount  tokens amount
      */
     function _callTransferFromDai(address from, address to, uint amount) internal returns(bool) {
-        (bool TransferSuccessful,) = mcdDaiAddr.call(abi.encodeWithSignature(
-                'transferFrom(address,address,uint256)', from, to, amount));
-        return TransferSuccessful;
+        if ((IERC20(mcdDaiAddr).allowance(from, to) >= amount) && (IERC20(mcdDaiAddr).balanceOf(from) >= amount)) {
+            return _transferFromDai(from, to, amount);
+        }
+        return false;
     }
 
     /**
-     * @dev     transfer exact amount of erc20 tokens, approved beforehand
+     * @notice  transfer exact amount of erc20 tokens, approved beforehand
      * @param   ilk     collateral type
      * @param   from    address of spender
      * @param   to      address of recepient
      * @param   amount  tokens amount
      */
     function _transferFromERC20(bytes32 ilk, address from, address to, uint amount) internal returns(bool) {
-        erc20TokenContract(ilk).transferFrom(from, to, amount);
-        return true;
+        return erc20TokenContract(ilk).transferFrom(from, to, amount);
     }
 
     /**
-     * @dev     Transfer Cdp ownership
+     * @notice  Transfer Cdp ownership to guy's proxy
      * @param   cdp     cdp ID
      * @param   guy     address, ownership should be transfered to
      */
-    function _transferCdpOwnership(uint cdp, address guy) internal {
+    function _transferCdpOwnershipToProxy(uint cdp, address guy) internal {
         proxy().execute(
             proxyLib,
-            abi.encodeWithSignature('give(address,uint256,address)',
-            cdpManagerAddr, cdp, guy));
+            abi.encodeWithSignature("giveToProxy(address,address,uint256,address)",
+            proxyRegistryAddrMD, cdpManagerAddr, cdp, guy));
     }
 
     /**
-     * @dev Get registered proxy for current caller (msg.sender address)
+     * @notice  Get balance of dai tokens
+     * @param   addr      address
      */
-    function proxy() public view returns (DSProxyLike) {
-        return DSProxyLike(proxyAddress);
+    function _balanceDai(address addr) internal view returns(uint) {
+        return IERC20(mcdDaiAddr).balanceOf(addr);
     }
 
     /**
-     * @dev     transfer exact amount of erc20 tokens, approved beforehand
+     * @notice  transfer exact amount of erc20 tokens, approved beforehand
      * @param   ilk     collateral type
-     * @return          ERC20Interface instance
+     * @return  token adapter address
+     * @return  token erc20 contract address
      */
-    function erc20TokenContract(bytes32 ilk) public view returns(ERC20Interface) {
-        (,address payable collateralBaseAddress) = _getCollateralAddreses(ilk);
-        return ERC20Interface(collateralBaseAddress);
-    }
-
-    /**
-     * @dev     get amount of dai tokens currently locked in dsr(pot) contract.
-     * @return  pie amount of all dai tokens locked in dsr
-     */
-    function getLockedDai() public view returns(uint256 pie, uint256 pieS) {
-        pie = PotLike(mcdPotAddr).pie(address(proxy()));
-        pieS = pie.mul(PotLike(mcdPotAddr).chi());
-    }
-
-    /**
-     * @dev     get dai savings rate
-     * @return  dsr value in multiplier format defined by maker dao system. 100 * 10^25 - means 0% dsr. 103 * 10^25 means 3% dsr.
-     */
-    function getDsr() public view returns(uint) {
-        return PotLike(mcdPotAddr).dsr();
-    }
-
-    /**
-     * @dev     Get the equivalent of exact dai amount in terms of collateral type.
-     * @notice  Add one more collateral token unit in case if calculated value doesn't cover dai amount
-     * @param   ilk         collateral type in bytes32 format
-     * @param   daiAmount   dai tokens amount
-     * @return  collateral tokens amount worth dai amount
-     */
-    function getCollateralEquivalent(bytes32 ilk, uint daiAmount) public view returns(uint) {
-        uint price = getPrice(ilk);
-        uint ethAmount = daiAmount * ONE / price;
-        if (ethAmount * price / ONE == daiAmount) {
-            return ethAmount;
-        } else {
-            return ethAmount + 1;
-        }
-    }
-
-    /**
-     * @dev     Get current cdp main info: collateral amount, dai (debt) amount
-     * @param   ilk     collateral type in bytes32 format
-     * @param   cdpId   cdp ID
-     * @return  ink     collateral tokens amount
-     *          art     dai debt amount
-     */
-    function getCdpInfo(bytes32 ilk, uint cdpId) public view returns(uint ink, uint art) {
-        address urn = ManagerLike(cdpManagerAddr).urns(cdpId);
-        (ink, art) = VatLike(mcdVatAddr).urns(ilk, urn);
-    }
-
-    /**
-     * @dev     Get collateral token price to USD
-     * @notice  !!! SHOULD BE REWRITTEN AFTER MCD CDP FINAL RELEASE !!! Now is calculated as safe price multiplied with liquidation ratio
-     * @param   ilk     collateral type in bytes32 format
-     * @return  collateral to USD price
-     */
-    function getPrice(bytes32 ilk) public view returns(uint) {
-        // should be rewritten after release, price is stored in pip contract. now returns empty
-        //return _mcdPip().read();
-        //(pip,) = SpotterLike(mcdCatAddr).ilks(ilk);
-        return getSafePrice(ilk) * getLiquidationRatio(ilk) / ONE;
-    }
-
-    /**
-     * @dev     Get collateral token safe price to USD. Equals current origin price devided by liquidation ratio
-     * @param   ilk     collateral type in bytes32 format
-     * @return  collateral to USD price
-     */
-    function getSafePrice(bytes32 ilk) public view returns(uint) {
-        (,, uint spot,,) = VatLike(mcdVatAddr).ilks(ilk);
-        return spot;
-    }
-
-    /**
-     * @dev     Get collateral liquidation ratio. Percent of overcollateralization. If collateral / debt < liauidation ratio - cdp should be autoliquidated
-     * @param   ilk     collateral type in bytes32 format
-     * @return  liquidation ratio  150 * 10^25 - means 150%
-     */
-    function getLiquidationRatio(bytes32 ilk) public view returns(uint) {
-        (,uint mat) = SpotterLike(mcdSpotAddr).ilks(ilk);
-        return mat;
-    }
-
-    /**
-     * @dev     Check is cdp is liquidated already
-     * @param   ilk     collateral type in bytes32 format
-     * @param   cdpId   cdp ID
-     * @return  liquidation ratio. For example 150 * 10^25 - means 150%
-     */
-    function isCDPLiquidated(bytes32 ilk, uint cdpId) public view returns(bool) {
-        return false;
-    }
-
-    /**
-     * @dev     Get collateral datailes
-     * @param   ilk     collateral type in bytes32 format
-     * @return  _price  collateral price to USD
-     * @return  _duty   collateral stability fee
-     * @return  _mat    collateral minimum liquidation ratio
-     * @return  _chop   collateral liquidation penalty
-     */
-    function getCollateralDetails(bytes32 ilk) public view returns(uint _price, uint _duty, uint _mats, uint _chop) {
-        PipLike pip;
-        (pip, _mats) = SpotterLike(mcdSpotAddr).ilks(ilk); // mat - minimum col.ratio
-        (_duty,) = JugLike(mcdJugAddr).ilks(ilk); // stability fee
-        (, _chop,) = CatLike(mcdCatAddr).ilks(ilk); // penalty
-        //_price = uint(pip.read());
-        _price = getPrice(ilk);
-    }
-
-    function _getCollateralAddreses(bytes32 ilk) internal view returns(address, address payable)  {
+    function _getCollateralAddreses(bytes32 ilk) internal pure returns(address, address payable) {
         if (ilk == "ETH-A") {
             return (mcdJoinEthaAddr, wethAddr);
         }
-        // if (ilk == "ETH-B") {
-        //     return (mcdJoinEthbAddr, wethAddr);
-        // }
-        // if (ilk == "ETH-C") {
-        //     return (mcdJoinEthcAddr, wethAddr);
-        // }
-        // if (ilk == "REP-A") {
-        //     return (mcdJoinRepaAddr, repAddr);
-        // }
-        // if (ilk == "ZRX-A") {
-        //     return (mcdJoinZrxaAddr, zrxAddr);
-        // }
-        // if (ilk == "OMG-A") {
-        //     return (mcdJoinOmgaAddr, omgAddr);
-        // }
         if (ilk == "BAT-A") {
             return (mcdJoinBataAddr, batAddr);
         }
-        // if (ilk == "DGD-A") {
-        //     return (mcdJoinDgdaAddr, dgdAddr);
-        // }
-        // if (ilk == "GNT-A") {
-        //     return (mcdJoinGntaAddr, gntAddr);
-        // }
     }
 }
 
-// File: contracts/interfaces/AgreementInterface.sol
+// File: contracts/interfaces/IAgreement.sol
 
 pragma solidity 0.5.11;
 
@@ -968,14 +909,17 @@ pragma solidity 0.5.11;
 /**
  * @title Interface for Agreement contract
  */
-interface AgreementInterface {
+interface IAgreement {
     function initAgreement(address payable _borrower, uint256 _collateralAmount,
         uint256 _debtValue, uint256 _duration, uint256 _interestRate, bytes32 _collateralType, bool _isETH, address _configAddr) external payable;
+    function transferOwnership(address _newOwner) external;
     function approveAgreement() external returns(bool);
     function updateAgreement() external returns(bool);
     function cancelAgreement() external returns(bool);
     function rejectAgreement() external returns(bool);
-    function getInfo() external view returns(address _addr, uint _status, uint _duration, address _borrower, address _lender, bytes32 _collateralType, uint _collateralAmount, uint _debtValue, uint _interestRate);
+    function blockAgreement() external returns(bool);
+    function getInfo() external view returns(address _addr, uint _status, uint _duration, address _borrower, address _lender, bytes32 _collateralType, 
+        uint _collateralAmount, uint _debtValue, uint _interestRate);
     function status() external view returns(uint);
     function lender() external view returns(address);
     function borrower() external view returns(address);
@@ -988,16 +932,16 @@ interface AgreementInterface {
     function isBeforeMatched() external view returns(bool);
     function checkTimeToCancel(uint _approveLimit, uint _matchLimit) external view returns(bool);
     function cdpId() external view returns(uint);
-    function erc20TokenContract(bytes32 ilk) external view returns(ERC20Interface);
+    function erc20TokenContract(bytes32 ilk) external view returns(IERC20);
 
     event AgreementInitiated(address _borrower, uint _collateralValue, uint _debtValue, uint _expireDate, uint _interestRate);
     event AgreementApproved();
     event AgreementMatched(address _lender, uint _expireDate, uint _cdpId, uint _collateralAmount, uint _debtValue, uint _drawnDai);
     event AgreementUpdated(uint _injectionAmount, int _delta, int _deltaCommon, int _savingsDifference, uint _currentDsrAnnual, uint _timeInterval);
-
     event AgreementCanceled(address _user);
     event AgreementTerminated();
     event AgreementLiquidated();
+    event AgreementBlocked();
     event RefundBase(address _lender, uint _lenderRefundDai, address _borrower, uint _cdpId);
     event RefundLiquidated(uint _borrowerFraDebtDai, uint _lenderRefundCollateral, uint _borrowerRefundCollateral);
 }
@@ -1017,31 +961,31 @@ pragma solidity 0.5.11;
  * @notice Contract will be deployed only once as logic(implementation), proxy will be deployed for each agreement as storage
  * @dev Should not be deployed. It is being used as an abstract class
  */
-contract Agreement is AgreementInterface, Claimable, McdWrapper {
+contract Agreement is IAgreement, Claimable, McdWrapper {
     using SafeMath for uint;
     using SafeMath for int;
-    uint constant YEAR_SECS = 365 days;
+    uint constant internal YEAR_SECS = 365 days;
 
     uint public status;
 
     /**
      * @dev set of statuses
      */
-    uint constant STATUS_PENDING = 1;           // 0001
-    uint constant STATUS_OPEN = 2;              // 0010   
-    uint constant STATUS_ACTIVE = 3;            // 0011
+    uint constant internal STATUS_PENDING = 1;           // 0001
+    uint constant internal STATUS_OPEN = 2;              // 0010
+    uint constant internal STATUS_ACTIVE = 3;            // 0011
 
     /**
-     * in all closed statused the forth bit = 1, binary "AND" will equal:
+     * @dev in all closed statused the forth bit = 1, binary "AND" will equal:
      * STATUS_ENDED & STATUS_CLOSED -> STATUS_CLOSED
      * STATUS_LIQUIDATED & STATUS_CLOSED -> STATUS_CLOSED
      * STATUS_CANCELED & STATUS_CLOSED -> STATUS_CLOSED
      */
-    uint constant STATUS_CLOSED = 8;            // 1000
-    uint constant STATUS_ENDED = 9;             // 1001
-    uint constant STATUS_LIQUIDATED = 10;       // 1010
-    uint constant STATUS_ENDED_LIQUIDATED = 11; // 1011
-    uint constant STATUS_CANCELED = 12;         // 1100
+    uint constant internal STATUS_CLOSED = 8;            // 1000
+    uint constant internal STATUS_ENDED = 9;             // 1001
+    uint constant internal STATUS_LIQUIDATED = 10;       // 1010
+    uint constant internal STATUS_BLOCKED = 11;          // 1011
+    uint constant internal STATUS_CANCELED = 12;         // 1100
     
     bool public isETH;
 
@@ -1068,53 +1012,72 @@ contract Agreement is AgreementInterface, Claimable, McdWrapper {
     uint public injectionThreshold;
 
     /**
-     * @dev Grants access only to agreement borrower
+     * @notice Grants access only to agreement's borrower
      */
     modifier onlyBorrower() {
-        require(msg.sender == borrower, 'Agreement: Accessible only for borrower');
+        require(msg.sender == borrower, "Agreement: Accessible only for borrower");
         _;
     }
 
     /**
-     * @dev Grants access only if agreement is not closed in any way yet
+     * @notice Grants access only if agreement is not closed in any way yet
      */
     modifier onlyNotClosed() {
-        require(!isClosed(), 'Agreement: Agreement should be neither closed nor ended nor liquidated');
+        require(!isClosed(), "Agreement: Agreement should be neither closed nor ended nor liquidated");
         _;
     }
 
     /**
-     * @dev Grants access only if agreement is not matched yet
+     * @notice Grants access only if agreement is closed in any way
+     */
+    modifier onlyClosed() {
+        require(isClosed(), "Agreement: Agreement should be closed or ended or liquidated or blocked");
+        _;
+    }
+
+    /**
+     * @notice Grants access only if agreement is not matched yet
      */
     modifier onlyBeforeMatched() {
-        require(isBeforeMatched(), 'Agreement: Agreement should be pending or open');
+        require(isBeforeMatched(), "Agreement: Agreement should be pending or open");
         _;
     }
     
     /**
-     * @dev Grants access only if agreement is pending
+     * @notice Grants access only if agreement is active
      */
     modifier onlyActive() {
-        require(isActive(), 'Agreement: Agreement should be active');
+        require(isActive(), "Agreement: Agreement should be active");
         _;
     }
 
     /**
-     * @dev Grants access only if agreement is pending
+     * @notice Grants access only if agreement is pending
      */
     modifier onlyPending() {
-        require(isPending(), 'Agreement: Agreement should be pending');
+        require(isPending(), "Agreement: Agreement should be pending");
         _;
     }
     
     /**
-     * @dev Grants access only if agreement is approved
+     * @notice Grants access only if agreement is open (ready to be matched)
      */
     modifier onlyOpen() {
-        require(isOpen(), 'Agreement: Agreement should be approved');
+        require(isOpen(), "Agreement: Agreement should be approved");
         _;
     }
 
+    /**
+     * @notice Initialize new agreement
+     * @param _borrower borrower address
+     * @param _collateralAmount value of borrower's collateral amount put into the contract as collateral or approved to transferFrom
+     * @param _debtValue value of debt
+     * @param _duration number of seconds which agreement should be terminated after
+     * @param _interestRate percent of interest rate, should be passed like RAY
+     * @param _collateralType type of collateral, should be passed as bytes32
+     * @param _isETH true if ether and false if erc-20 token
+     * @param _configAddr config contract address
+     */
     function initAgreement(
         address payable _borrower,
         uint256 _collateralAmount,
@@ -1123,27 +1086,29 @@ contract Agreement is AgreementInterface, Claimable, McdWrapper {
         uint256 _interestRate,
         bytes32 _collateralType,
         bool _isETH,
-        address configAddr
-    ) public payable initializer {
+        address _configAddr
+    ) public payable initializer     {
         Ownable.initialize();
-        
-        require((_collateralAmount > Config(configAddr).minCollateralAmount()) && (_collateralAmount < Config(configAddr).maxCollateralAmount()), 'Agreement: collateral value does not match min and max');
-        require(_debtValue > 0, 'Agreement: debt is zero');
-        require((_interestRate > ONE) && (_interestRate <= ONE * 2), 'Agreement: interestRate should be between 0 and 100 %');
-        require((_duration > Config(configAddr).minDuration()) && (_duration < Config(configAddr).maxDuration()), 'Agreement: duration is zero');
-        require(Config(configAddr).isCollateralEnabled(_collateralType), 'Agreement: collateral type is currencly disabled');
 
-        if (_isETH) {   
-            require(msg.value == _collateralAmount, 'Actual ehter value is not correct');
+        require(Config(_configAddr).isCollateralEnabled(_collateralType), "Agreement: collateral type is currencly disabled");
+        require(_debtValue > 0, "Agreement: debt is zero");
+        require((_collateralAmount > Config(_configAddr).minCollateralAmount()) &&
+            (_collateralAmount < Config(_configAddr).maxCollateralAmount()), "Agreement: collateral value does not match min and max");
+        require((_interestRate > ONE) && 
+            (_interestRate <= ONE * 2), "Agreement: interestRate should be between 0 and 100 %");
+        require((_duration > Config(_configAddr).minDuration()) &&
+            (_duration < Config(_configAddr).maxDuration()), "Agreement: duration value does not match min and max");
+        if (_isETH) {
+            require(msg.value == _collateralAmount, "Agreement: Actual ehter sent value is not correct");
         }
-        injectionThreshold = Config(configAddr).injectionThreshold();
+        injectionThreshold = Config(_configAddr).injectionThreshold();
         status = STATUS_PENDING;
         isETH = _isETH;
         borrower = _borrower;
         debtValue = _debtValue;
         duration = _duration;
-        initialDate = getCurrentTime();
-        interestRate = _interestRate; //fromPercentToRay(_interestRatePercent);
+        initialDate = now;
+        interestRate = _interestRate;
         collateralAmount = _collateralAmount;
         collateralType = _collateralType;
         
@@ -1153,25 +1118,32 @@ contract Agreement is AgreementInterface, Claimable, McdWrapper {
     }
     
     /**
-     * @dev Approves the agreement. Only for contract owner
+     * @notice Approve the agreement. Only for contract owner (FraFactory)
      * @return Operation success
      */
-    function approveAgreement() public onlyContractOwner() onlyPending() returns(bool _success) {
+    function approveAgreement() external onlyContractOwner onlyPending returns(bool _success) {
         status = STATUS_OPEN;
-        approveDate = getCurrentTime();
+        approveDate = now;
         emit AgreementApproved();
 
         return true;
     }
     
     /**
-     * @dev Connects lender to the agreement.
+     * @notice Match lender to the agreement.
      * @return Operation success
      */
-    function matchAgreement() public onlyOpen() returns(bool _success) {
-        // transfer dai from borrower to agreement
+    function matchAgreement() external onlyOpen returns(bool _success) {
+        matchDate = now;
+        status = STATUS_ACTIVE;
+        expireDate = matchDate.add(duration);
+        lender = msg.sender;
+        lastCheckTime = now;
+
+        // transfer dai from lender to agreement & lock lender's dai to dsr
         _transferFromDai(msg.sender, address(this), debtValue);
         _lockDai(debtValue);
+
         if (isETH) {
             cdpId = _openLockETHAndDraw(collateralType, collateralAmount, debtValue);
         } else {
@@ -1179,118 +1151,83 @@ contract Agreement is AgreementInterface, Claimable, McdWrapper {
         }
         uint drawnDai = _balanceDai(address(this));
         // due to the lack of preceision in mcd cdp contracts drawn dai can be less by 1 dai wei
-        if (debtValue < drawnDai) {
+        if (debtValue < drawnDai) { // !!! check for == debtValue-1
             drawnDai = debtValue;
         }
         _transferDai(borrower, drawnDai);
-        
-        matchDate = getCurrentTime();
-        status = STATUS_ACTIVE;
-        expireDate = matchDate.add(duration);
-        lender = msg.sender;
-        lastCheckTime = getCurrentTime();
-        
+
         emit AgreementMatched(lender, expireDate, cdpId, collateralAmount, debtValue, drawnDai);
         return true;
     }
 
     /**
-     * @dev check for close
-     * @notice Calls needed function according to the expireDate
-     * (terminates or updates the agreement)
+     * @notice Update agreement state
+     * @dev Calls needed function according to the expireDate
+     * (terminates or liquidated or updates the agreement)
      * @return Operation success
      */
-     function updateAgreement() public onlyContractOwner() onlyActive() returns(bool _success) {
-        if(_checkExpiringDate()) {
-            _terminateAgreement();
+    function updateAgreement() external onlyContractOwner onlyActive returns(bool _success) {
+        if(isCDPUnsafe(collateralType, cdpId)) {
+            _liquidateAgreement();
         } else {
-            _updateAgreementState(false);
+            if(now > expireDate) {
+                _terminateAgreement();
+            } else {
+                _updateAgreementState(false);
+            }
         }
-
-        // if(isCDPLiquidated(collateralType, cdpId)) {
-        //     _liquidateAgreement();
-        // }
-        
-        lastCheckTime = getCurrentTime();
         return true;
     }
 
-    function cancelAgreement() public onlyBeforeMatched() onlyBorrower() returns(bool _success)  {
+    /**
+     * @notice Cancel agreement by borrower before it is matched, change status to the correspondant one, refund
+     * @return Operation success
+     */
+    function cancelAgreement() external onlyBeforeMatched onlyBorrower returns(bool _success)  {
         _cancelAgreement();
         return true;
     }
 
-    function rejectAgreement() public onlyBeforeMatched() onlyContractOwner() returns(bool _success)  {
+    /**
+     * @notice Reject agreement by admin or cron job before it is matched, change status to the correspondant one, refund
+     * @return Operation success
+     */
+    function rejectAgreement() external onlyBeforeMatched onlyContractOwner returns(bool _success)  {
         _cancelAgreement();
         return true;
     }
 
     /**
-     * @dev check if status is pending
+     * @notice Block active agreement, change status to the correspondant one, refund
+     * @return Operation success
      */
-    function isBeforeMatched() public view returns(bool) {
-        return (status < STATUS_ACTIVE);
+    function blockAgreement() external onlyActive onlyContractOwner returns(bool _success)  {
+        _blockAgreement();
+        return true;
     }
 
     /**
-     * @dev check if status is pending
+     * @notice Withdraw accidentally locked ether in the contract, can be called only after agreement is closed and all assets are refunded
+     * @return Operation success
      */
-    function isPending() public view returns(bool) {
-        return (status == STATUS_PENDING);
+    function withdrawEth(address payable _to) external onlyClosed onlyContractOwner {
+        _to.transfer(address(this).balance);
     }
 
     /**
-     * @dev check if status is pending
+     * @notice Get agreement main info
      */
-    function isOpen() public view returns(bool) {
-        return (status == STATUS_OPEN);
-    }
-
-    /**
-     * @dev check if status is pending
-     */
-    function isActive() public view returns(bool) {
-        return (status == STATUS_ACTIVE);
-    }
-
-    /**
-     * @dev check if status is pending
-     */
-    function isEnded() public view returns(bool) {
-        // return (status == STATUS_ENDED);
-        return ((status & STATUS_ENDED) == STATUS_ENDED);
-    }
-
-    /**
-     * @dev check if status is pending
-     */
-    function isLiquidated() public view returns(bool) {
-        return (status == STATUS_LIQUIDATED);
-    }
-
-    /**
-     * @dev check if status is pending
-     */
-    function isClosed() public view returns(bool) {
-        return ((status & STATUS_CLOSED) == STATUS_CLOSED);
-    }
-
-    /**
-     * @dev borrower debt according to FRA
-     */
-    function borrowerFraDebt() public view returns(uint) {
-        if (delta < 0) {
-            return uint(fromRay(-delta));
-        } else {
-            return 0;
-        }
-    }
-
-    function getCurrentTime() public view returns(uint) {
-        return now;
-    }
-
-    function getInfo() public view returns(address _addr, uint _status, uint _duration, address _borrower, address _lender, bytes32 _collateralType, uint _collateralAmount, uint _debtValue, uint _interestRate) {
+    function getInfo() external view returns(
+        address _addr,
+        uint _status,
+        uint _duration,
+        address _borrower,
+        address _lender,
+        bytes32 _collateralType,
+        uint _collateralAmount,
+        uint _debtValue,
+        uint _interestRate
+    ) {
         _addr = address(this);
         _status = status;
         _duration = duration;
@@ -1303,107 +1240,164 @@ contract Agreement is AgreementInterface, Claimable, McdWrapper {
     }
 
     /**
-     * @dev check whether pending agreement should be canceled automatically
+     * @notice check if agreement is not matched yet
+     */
+    function isBeforeMatched() public view returns(bool) {
+        return (status < STATUS_ACTIVE);
+    }
+
+    /**
+     * @notice check if status is pending
+     */
+    function isPending() public view returns(bool) {
+        return (status == STATUS_PENDING);
+    }
+
+    /**
+     * @notice check if status is open
+     */
+    function isOpen() public view returns(bool) {
+        return (status == STATUS_OPEN);
+    }
+
+    /**
+     * @notice check if status is active
+     */
+    function isActive() public view returns(bool) {
+        return (status == STATUS_ACTIVE);
+    }
+
+    /**
+     * @notice check if status is pending
+     */
+    function isEnded() public view returns(bool) {
+        return (status == STATUS_ENDED);
+    }
+
+    /**
+     * @notice check if status is liquidated
+     */
+    function isLiquidated() public view returns(bool) {
+        return (status == STATUS_LIQUIDATED);
+    }
+
+    /**
+     * @notice check if status is closed
+     */
+    function isClosed() public view returns(bool) {
+        return ((status & STATUS_CLOSED) == STATUS_CLOSED);
+    }
+
+    /**
+     * @notice Borrower debt according to FRA
+     */
+    function borrowerFraDebt() public view returns(uint) {
+        return (delta < 0) ? uint(fromRay(-delta)) : 0;
+    }
+
+    /**
+     * @notice check whether pending or open agreement should be canceled automatically by cron
      */
     function checkTimeToCancel(uint _approveLimit, uint _matchLimit) public view returns(bool){
-        if (
-            //(isPending() && (getCurrentTime() > initialDate.add(_approveLimit))) ||
-            (isOpen() && (getCurrentTime() > approveDate.add(_matchLimit)))) {
+        if ((isPending() && (now > initialDate.add(_approveLimit))) ||
+            (isOpen() && (now > approveDate.add(_matchLimit)))
+        ) {
             return true;
         }
     }
 
     /**
-     * @dev Closes agreement before it is matched and
+     * @notice Closes agreement before it is matched and
      * transfers collateral ETH back to user
      */
     function _cancelAgreement() internal {
+        closeDate = now;
+        status = STATUS_CANCELED;
         if (isETH) {
             borrower.transfer(collateralAmount);
         } else {
             _transferERC20(collateralType, borrower, collateralAmount);
         }
-        closeDate = getCurrentTime();
         emit AgreementCanceled(msg.sender);
-        status = STATUS_CANCELED;
     }
 
     /**
-     * @dev Updates the state of Agreement
+     * @notice Updates the state of Agreement
+     * @param _isLastUpdate true if the agreement is going to be terminated, false otherwise
      * @return Operation success
      */
     function _updateAgreementState(bool _isLastUpdate) internal returns(bool _success) {
         // if it is last update take the time interval up to expireDate, otherwise up to current time
-        uint timeInterval = (_isLastUpdate ? expireDate : getCurrentTime()).sub(lastCheckTime);
+        uint timeInterval = (_isLastUpdate ? expireDate : now).sub(lastCheckTime);
         uint injectionAmount;
-        uint unlockedDai;
         uint currentDsrAnnual = rpow(getDsr(), YEAR_SECS, ONE);
 
-        int savingsDifference = (currentDsrAnnual > interestRate) ?
-            int(debtValue.mul(currentDsrAnnual.sub(interestRate)).mul(timeInterval) / YEAR_SECS) :
-            -int(debtValue.mul(interestRate.sub(currentDsrAnnual)).mul(timeInterval) / YEAR_SECS);
-        // OR (the same result, but different formula and interest rate should be in the same format as dsr, e.g. multiplier per second)
-        //savingsDifference = debtValue.mul(rpow(currentDSR, timeInterval, ONE) - rpow(interestRate, timeInterval, ONE));
-        // require(savingsDifferenceU <= 2**255);
-
+        // calculate savings difference between dsr and interest rate during time interval
+        int savingsDifference = int(debtValue.mul(timeInterval)).mul((int(currentDsrAnnual)).sub(int(interestRate))).div(int(YEAR_SECS));
+        
         delta = delta.add(savingsDifference);
         deltaCommon = deltaCommon.add(savingsDifference);
-        
-        if (_isLastUpdate) {
-            injectionThreshold = 1;
-        }
 
-        if (fromRay(delta) >= int(injectionThreshold)) {
+        lastCheckTime = now;
+
+        if (fromRay(delta) >= int(_isLastUpdate ? 1 : injectionThreshold)) {
             injectionAmount = uint(fromRay(delta));
 
-            _unlockDai(injectionAmount);
-            unlockedDai = _balanceDai(address(this));
-            if (unlockedDai < injectionAmount) {
+            uint unlockedDai = _unlockDai(injectionAmount);
+            if (unlockedDai < injectionAmount) { // !!! check if = injectionAmount - 1
                 injectionAmount = unlockedDai;
             }
-            _injectToCdp(cdpId, injectionAmount);
-
             delta = delta.sub(int(toRay(injectionAmount)));
+            _injectToCdp(cdpId, injectionAmount);
         }
         emit AgreementUpdated(injectionAmount, delta, deltaCommon, savingsDifference, currentDsrAnnual, timeInterval);
         return true;
     }
 
     /**
-     * @dev check whether active agreement period is expired
-     */
-    function _checkExpiringDate() internal view returns(bool) {
-        return getCurrentTime() > expireDate;
-    }
-
-    /**
-     * @dev Terminates agreement
+     * @notice Terminates agreement
      * @return Operation success
      */
     function _terminateAgreement() internal returns(bool _success) {
+        closeDate = now;
+        status = STATUS_ENDED;
         _updateAgreementState(true);
         _refund(false);
-        closeDate = getCurrentTime();
-        status = STATUS_ENDED;
-
+        
         emit AgreementTerminated();
         return true;
     }
 
-    // /**
-    //  * @dev Liquidates agreement, mostly the sam as terminate
-    //  * but also covers collateral transfers after liquidation
-    //  * @return Operation success
-    //  */
-    // function _liquidateAgreement() internal returns(bool _success) {
-    //     _refund(true);
-    //     closeDate = getCurrentTime();
-    //     status = STATUS_LIQUIDATED;
+    /**
+     * @dev Liquidates agreement, mostly the sam as terminate
+     * but also covers collateral transfers after liquidation
+     * @return Operation success
+     */
+    function _liquidateAgreement() internal returns(bool _success) {
+        closeDate = now;
+        status = STATUS_LIQUIDATED;
+        _refund(true);
+        
+        emit AgreementLiquidated();
+        return true;
+    }
 
-    //     emit AgreementLiquidated();
-    //     return true;
-    // }
+    /**
+     * @notice Block agreement
+     * @return Operation success
+     */
+    function _blockAgreement() internal returns(bool _success) {
+        status = STATUS_BLOCKED;
+        _refund(false);
+        
+        emit AgreementBlocked();
+        return true;
+    }
 
+    /**
+     * @notice Refund agreement, transfer dai to lender, cdp ownership to borrower if debt is payed
+     * @return Operation success
+     */
     function _refund(bool _isCdpLiquidated) internal {
         uint lenderRefundDai = _unlockAllDai();
         uint borrowerFraDebtDai = borrowerFraDebt();
@@ -1421,20 +1415,38 @@ contract Agreement is AgreementInterface, Claimable, McdWrapper {
             }
         }
         _transferDai(lender, lenderRefundDai);
-        _transferCdpOwnership(cdpId, borrower);
+        _transferCdpOwnershipToProxy(cdpId, borrower);
         emit RefundBase(lender, lenderRefundDai, borrower, cdpId);
     }
+    /*
+    function _refund(bool _isCdpLiquidated) internal {
+        uint lenderRefundDai = _unlockAllDai();
+        uint borrowerFraDebtDai = borrowerFraDebt();
+        address cdpOwnershipTo;
+
+        if (borrowerFraDebtDai > 0) {
+            if (_callTransferFromDai(borrower, address(this), borrowerFraDebtDai)) {
+                lenderRefundDai = lenderRefundDai.add(borrowerFraDebtDai);
+                cdpOwnershipTo = borrower;
+            } else {
+                emit FraDebtPaybackFailed(borrower, borrowerFraDebtDai);
+            }
+        }
+        _transferDai(lender, lenderRefundDai);
+        _transferCdpOwnership(cdpId, cdpOwnershipTo);
+        emit RefundBase(lender, lenderRefundDai, cdpOwnershipTo, cdpId);
+    }*/
 
     /**
-     * @dev Executes all required transfers after liquidation
+     * @notice Executes all required transfers after liquidation
      * @return Operation success
      */
     function _refundAfterCdpLiquidation(uint _borrowerFraDebtDai) internal returns(bool _success) {
         uint256 lenderRefundCollateral = getCollateralEquivalent(collateralType, _borrowerFraDebtDai);
         uint borrowerRefundCollateral;
         if (isETH) {
-            lender.transfer(lenderRefundCollateral);
             borrowerRefundCollateral = address(this).balance;
+            lender.transfer(lenderRefundCollateral);
             borrower.transfer(borrowerRefundCollateral);
         } else {
             _transferERC20(collateralType, lender, lenderRefundCollateral);
@@ -1449,20 +1461,18 @@ contract Agreement is AgreementInterface, Claimable, McdWrapper {
 }
 
 /**
- * @title Base Agreement contract
- * @notice Contract will be deployed only once as logic(implementation), proxy will be deployed for each agreement as storage
- * @dev Should not be deployed. It is being used as an abstract class
+ * @title Agreement contract with mocked refund after liquidation functionality
  */
 contract AgreementLiquidationMock is Agreement {
     /**
-     * @dev Executes all required transfers after liquidation
+     * @notice Executes all required transfers after liquidation
      * @return Operation success
      */
     function _refundAfterCdpLiquidation(uint _borrowerFraDebtDai) internal returns(bool _success) {
     }
 
     /**
-     * @dev recovers remaining ETH from cdp (pays remaining debt if exists)
+     * @notice recovers remaining ETH from cdp (pays remaining debt if exists)
      * @param ilk     collateral type in bytes32 format
      * @param cdp cdp ID
      */

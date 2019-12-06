@@ -122,7 +122,7 @@ contract Ownable is Initializable, Context {
     }
     
     modifier onlyContractOwner() {
-        require(isOwner(), 'Not a contract owner');
+        require(isOwner(), "Not a contract owner");
         _;
     }
 }
@@ -130,12 +130,12 @@ contract Ownable is Initializable, Context {
 contract Claimable is Ownable {
     address public pendingOwner;
     
-    function transferOwnership(address _newOwner) public onlyContractOwner() {
+    function transferOwnership(address _newOwner) public onlyContractOwner {
         pendingOwner = _newOwner;
     }
     
     function claimOwnership() public {
-        require(msg.sender == pendingOwner, 'Not a pending owner');
+        require(msg.sender == pendingOwner, "Not a pending owner");
 
         address previousOwner = owner;
         owner = msg.sender;
@@ -221,11 +221,11 @@ contract Config is Claimable {
     }
 }
 
-// File: contracts/interfaces/ERC20Interface.sol
+// File: contracts/interfaces/IERC20.sol
 
 pragma solidity 0.5.11;
 
-contract ERC20Interface {
+contract IERC20 {
     function totalSupply() public view returns (uint);
     function balanceOf(address tokenOwner) public view returns (uint balance);
     function allowance(address tokenOwner, address spender) public view returns (uint remaining);
@@ -237,7 +237,7 @@ contract ERC20Interface {
     event Approval(address indexed tokenOwner, address indexed spender, uint tokens);
 }
 
-// File: contracts/interfaces/AgreementInterface.sol
+// File: contracts/interfaces/IAgreement.sol
 
 pragma solidity 0.5.11;
 
@@ -245,14 +245,17 @@ pragma solidity 0.5.11;
 /**
  * @title Interface for Agreement contract
  */
-interface AgreementInterface {
+interface IAgreement {
     function initAgreement(address payable _borrower, uint256 _collateralAmount,
         uint256 _debtValue, uint256 _duration, uint256 _interestRate, bytes32 _collateralType, bool _isETH, address _configAddr) external payable;
+    function transferOwnership(address _newOwner) external;
     function approveAgreement() external returns(bool);
     function updateAgreement() external returns(bool);
     function cancelAgreement() external returns(bool);
     function rejectAgreement() external returns(bool);
-    function getInfo() external view returns(address _addr, uint _status, uint _duration, address _borrower, address _lender, bytes32 _collateralType, uint _collateralAmount, uint _debtValue, uint _interestRate);
+    function blockAgreement() external returns(bool);
+    function getInfo() external view returns(address _addr, uint _status, uint _duration, address _borrower, address _lender, bytes32 _collateralType, 
+        uint _collateralAmount, uint _debtValue, uint _interestRate);
     function status() external view returns(uint);
     function lender() external view returns(address);
     function borrower() external view returns(address);
@@ -265,16 +268,16 @@ interface AgreementInterface {
     function isBeforeMatched() external view returns(bool);
     function checkTimeToCancel(uint _approveLimit, uint _matchLimit) external view returns(bool);
     function cdpId() external view returns(uint);
-    function erc20TokenContract(bytes32 ilk) external view returns(ERC20Interface);
+    function erc20TokenContract(bytes32 ilk) external view returns(IERC20);
 
     event AgreementInitiated(address _borrower, uint _collateralValue, uint _debtValue, uint _expireDate, uint _interestRate);
     event AgreementApproved();
     event AgreementMatched(address _lender, uint _expireDate, uint _cdpId, uint _collateralAmount, uint _debtValue, uint _drawnDai);
     event AgreementUpdated(uint _injectionAmount, int _delta, int _deltaCommon, int _savingsDifference, uint _currentDsrAnnual, uint _timeInterval);
-
     event AgreementCanceled(address _user);
     event AgreementTerminated();
     event AgreementLiquidated();
+    event AgreementBlocked();
     event RefundBase(address _lender, uint _lenderRefundDai, address _borrower, uint _cdpId);
     event RefundLiquidated(uint _borrowerFraDebtDai, uint _lenderRefundCollateral, uint _borrowerRefundCollateral);
 }
@@ -481,43 +484,30 @@ pragma solidity 0.5.11;
 
 
 
-// import 'zos-lib/contracts/upgradeability/AdminUpgradeabilityProxy.sol';
 
 /**
- * @title Handler of all agreements
+ * @title Fra Factory
+ * @notice Handler of all agreements
  */
 contract FraFactory is Claimable {
-    mapping(address => address[]) public agreements;
+    mapping(address => bool) public isAgreement;
     address[] public agreementList;
     address payable public agreementImpl;
     address public configAddr;
 
+    /**
+     * @notice Set config and agreement implementation
+     * @param _agreementImpl address of agreement implementation contract
+     * @param _configAddr address of config contract
+     */
     constructor(address payable _agreementImpl, address _configAddr) public {
         super.initialize();
-        configAddr  = _configAddr;
+        setConfigAddr(_configAddr);
         setAgreementImpl(_agreementImpl);
     }
 
     /**
-     * @dev Set the new agreement implememntation adresss
-     * @param _agreementImpl address of agreement implementation contract
-     */
-    function setAgreementImpl(address payable _agreementImpl) public onlyContractOwner() {
-        require(_agreementImpl != address(0), 'FraFactory: agreement impl address should not be zero');
-        agreementImpl = _agreementImpl;
-    }
-
-    /**
-     * @dev Set the new config adresss
-     * @param _configAddr address of config contract
-     */
-    function setConfigAddr(address _configAddr) public onlyContractOwner() {
-        require(_configAddr != address(0), 'FraFactory: agreement impl address should not be zero');
-        configAddr = _configAddr;
-    }
-
-    /**
-     * @dev Requests egreement on ETH collateralType
+     * @notice Requests agreement on ETH collateralType
      * @param _debtValue value of borrower's ETH put into the contract as collateral
      * @param _duration number of minutes which agreement should be terminated after
      * @param _interestRate percent of interest rate, should be passed like RAY
@@ -525,23 +515,21 @@ contract FraFactory is Claimable {
      * @return agreement address
      */
     function initAgreementETH (
-        uint256 _debtValue, 
+        uint256 _debtValue,
         uint256 _duration,
         uint256 _interestRate,
         bytes32 _collateralType
-    ) public payable returns(address _newAgreement) {
-        // address payable agreementProxyAddr = address(new AdminUpgradeabilityProxy(agreementImpl, owner, ""));
+    ) external payable returns(address _newAgreement) {
         address payable agreementProxyAddr = address(new UpgradeabilityProxy(agreementImpl, ""));
-        AgreementInterface(agreementProxyAddr).
+        IAgreement(agreementProxyAddr).
             initAgreement.value(msg.value)(msg.sender, msg.value, _debtValue, _duration, _interestRate, _collateralType, true, configAddr);
         
-        agreements[msg.sender].push(agreementProxyAddr);
         agreementList.push(agreementProxyAddr);
         return agreementProxyAddr; //address(agreement);
     }
 
     /**
-     * @dev Requests agreement on ETH collateralType
+     * @notice Requests agreement on ERC-20 collateralType
      * @param _debtValue value of borrower's collateral
      * @param _duration number of minutes which agreement should be terminated after
      * @param _interestRate percent of interest rate, should be passed like
@@ -554,112 +542,156 @@ contract FraFactory is Claimable {
         uint256 _duration,
         uint256 _interestRate,
         bytes32 _collateralType
-    ) public returns(address _newAgreement) {
+    ) external returns(address _newAgreement) {
         address payable agreementProxyAddr = address(new UpgradeabilityProxy(agreementImpl, ""));
-        AgreementInterface(agreementProxyAddr).
+        IAgreement(agreementProxyAddr).
             initAgreement(msg.sender, _collateralValue, _debtValue, _duration, _interestRate, _collateralType, false, configAddr);
 
-        AgreementInterface(agreementProxyAddr).erc20TokenContract(_collateralType).transferFrom(
+        IAgreement(agreementProxyAddr).erc20TokenContract(_collateralType).transferFrom(
             msg.sender, address(agreementProxyAddr), _collateralValue);
 
-        agreements[msg.sender].push(agreementProxyAddr);
         agreementList.push(agreementProxyAddr);
         return agreementProxyAddr;
     }
-    
+
     /**
-     * @dev Makes the specific agreement valid
-     * @param _address agreement address
-     * @return operation success
+     * @notice Set the new agreement implememntation adresss
+     * @param _agreementImpl address of agreement implementation contract
      */
-    function approveAgreement(address _address) public onlyContractOwner() returns(bool _success) {
-        return AgreementInterface(_address).approveAgreement();
+    function setAgreementImpl(address payable _agreementImpl) public onlyContractOwner() {
+        require(_agreementImpl != address(0), "FraFactory: agreement impl address should not be zero");
+        agreementImpl = _agreementImpl;
     }
 
     /**
-    * @dev Multi approve
+     * @notice Set the new config adresss
+     * @param _configAddr address of config contract
+     */
+    function setConfigAddr(address _configAddr) public onlyContractOwner() {
+        require(_configAddr != address(0), "FraFactory: agreement impl address should not be zero");
+        configAddr = _configAddr;
+    }
+
+    /**
+     * @notice Makes the specific agreement valid
+     * @param _address agreement address
+     * @return operation success
+     */
+    function approveAgreement(address _address) public onlyContractOwner returns(bool _success) {
+        return IAgreement(_address).approveAgreement();
+    }
+
+    /**
+    * @notice Multi approve
     * @param _addresses agreements addresses array
     */
-    function batchApproveAgreements(address[] memory _addresses) public onlyContractOwner() {
+    function batchApproveAgreements(address[] memory _addresses) public onlyContractOwner {
         require(_addresses.length <= 256, "FraMain: batch count is greater than 256");
         for (uint256 i = 0; i < _addresses.length; i++) {
-            if (AgreementInterface(_addresses[i]).isPending()) {
-                AgreementInterface(_addresses[i]).approveAgreement();
+            if (IAgreement(_addresses[i]).isPending()) {
+                IAgreement(_addresses[i]).approveAgreement();
             }
         }
     }
 
     /**
-     * @dev Reject specific agreement
+     * @notice Reject specific agreement
      * @param _address agreement address
      * @return operation success
      */
-    function rejectAgreement(address _address) public onlyContractOwner() returns(bool _success) {
-        return AgreementInterface(_address).rejectAgreement();
+    function rejectAgreement(address _address) public onlyContractOwner returns(bool _success) {
+        return IAgreement(_address).rejectAgreement();
     }
-    
+
     /**
-    * @dev Multi reject
+    * @notice Multi reject
     * @param _addresses agreements addresses array
     */
-    function batchRejectAgreements(address[] memory _addresses) public onlyContractOwner() {
+    function batchRejectAgreements(address[] memory _addresses) public onlyContractOwner {
         require(_addresses.length <= 256, "FraMain: batch count is greater than 256");
         for (uint256 i = 0; i < _addresses.length; i++) {
-            if (AgreementInterface(_addresses[i]).isBeforeMatched()) {
-                AgreementInterface(_addresses[i]).rejectAgreement();
+            if (IAgreement(_addresses[i]).isBeforeMatched()) {
+                IAgreement(_addresses[i]).rejectAgreement();
             }
         }
     }
 
     /**
-     * @dev Function for cron autoreject (close agreements if matchLimit expired)
+     * @notice Function for cron autoreject (close agreements if matchLimit expired)
      */
-    function autoRejectAgreements() public onlyContractOwner() {
+    function autoRejectAgreements() public onlyContractOwner {
         uint _approveLimit = Config(configAddr).approveLimit();
         uint _matchLimit = Config(configAddr).matchLimit();
-        for(uint256 i = 0; i < agreementList.length; i++) {
-            if (AgreementInterface(agreementList[i]).isBeforeMatched() && AgreementInterface(agreementList[i]).checkTimeToCancel(_approveLimit, _matchLimit)) {
-                AgreementInterface(agreementList[i]).rejectAgreement();
+        uint _len = agreementList.length;
+        for (uint256 i = 0; i < _len; i++) {
+            if (IAgreement(agreementList[i]).isBeforeMatched() && IAgreement(agreementList[i]).checkTimeToCancel(_approveLimit, _matchLimit)) {
+                IAgreement(agreementList[i]).rejectAgreement();
             }
         }
     }
 
     /**
-     * @dev Update the state of specific agreement
+     * @notice Update the state of specific agreement
      * @param _address agreement address
      * @return operation success
      */
-    function updateAgreement(address _address) public onlyContractOwner() returns(bool _success) {
-        return AgreementInterface(_address).updateAgreement();
+    function updateAgreement(address _address) public onlyContractOwner returns(bool _success) {
+        return IAgreement(_address).updateAgreement();
     }
 
     /**
-     * @dev Update the states of all agreemnets
+     * @notice Update the states of all agreemnets
      * @return operation success
      */
-    function updateAgreements() public onlyContractOwner() {
-        for(uint256 i = 0; i < agreementList.length; i++) {
-            if (AgreementInterface(agreementList[i]).isActive()) {
-                AgreementInterface(agreementList[i]).updateAgreement();
+    function updateAgreements() public onlyContractOwner {
+        for (uint256 i = 0; i < agreementList.length; i++) {
+            if (IAgreement(agreementList[i]).isActive()) {
+                IAgreement(agreementList[i]).updateAgreement();
             }
         }
     }
 
     /**
-    * @dev Update state of exact agreements
+    * @notice Update state of exact agreements
     * @param _addresses agreements addresses array
     */
     function batchUpdateAgreements(address[] memory _addresses) public onlyContractOwner {
         require(_addresses.length <= 256, "FraMain: batch count is greater than 256");
         for (uint256 i = 0; i < _addresses.length; i++) {
-            if (AgreementInterface(_addresses[i]).isActive()) {
-                AgreementInterface(_addresses[i]).updateAgreement();
+            // check in order to prevent revert
+            if (IAgreement(_addresses[i]).isActive()) {
+                IAgreement(_addresses[i]).updateAgreement();
             }
         }
     }
 
     /**
-     * @dev Returns a full list of existing agreements
+     * @notice Block specific agreement
+     * @param _address agreement address
+     * @return operation success
+     */
+    function blockAgreement(address _address) public onlyContractOwner returns(bool _success) {
+        return IAgreement(_address).blockAgreement();
+    }
+
+    /**
+     * @notice Remove agreement from list,
+     * doesn't affect real agreement contract, just removes handle control
+     */
+    function removeAgreement(uint _ind) public onlyContractOwner {
+        agreementList[_ind] = agreementList[agreementList.length-1];
+        agreementList.length--; // Implicitly recovers gas from last element storage
+    }
+
+    /**
+     * @notice transfer agreement ownership to Fra Factory owner (admin)
+     */
+    function transferAgreementOwnership(address _address) public onlyContractOwner {
+        IAgreement(_address).transferOwnership(owner);
+    }
+    
+    /**
+     * @notice Returns a full list of existing agreements
      */
     function getAgreementList() public view returns(address[] memory _agreementList) {
         return agreementList;

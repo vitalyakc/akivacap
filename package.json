@@ -34,7 +34,8 @@
     "zos": "^2.4.2"
   },
   "devDependencies": {
-    "solhint": "^2.2.0",
-    "eslint": "^6.5.1"
+    "eslint": "^6.5.1",
+    "solhint": "^2.3.0",
+    "truffle-plugin-solhint": "0.0.6"
   }
 }

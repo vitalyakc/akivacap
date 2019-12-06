@@ -1,5 +1,5 @@
 pragma solidity 0.5.11;
-import './interfaces/AgreementInterface.sol';
+import "./interfaces/IAgreement.sol";
 
 contract FraFactoryI {
     mapping(address => address[]) public agreements;
@@ -22,10 +22,10 @@ contract FraQueries {
         
         for(uint256 i = 0; i < agreementList.length; i++) {
             if (
-                ((_status == 0) || (_status > 0) && (AgreementInterface(agreementList[i]).status() == _status)) && 
+                ((_status == 0) || (_status > 0) && (IAgreement(agreementList[i]).status() == _status)) && 
                 ((_user == address(0)) || (
                     _user != address(0)) && 
-                    ((AgreementInterface(agreementList[i]).lender() == _user) || (AgreementInterface(agreementList[i]).borrower() == _user))))
+                    ((IAgreement(agreementList[i]).lender() == _user) || (IAgreement(agreementList[i]).borrower() == _user))))
             {
                 agreementsSorted[cntSorted] = agreementList[i];
                 cntSorted++;
@@ -39,13 +39,13 @@ contract FraQueries {
         address[] memory agreementList = FraFactoryI(_fraFactoryAddr).getAgreementList();
 
         for(uint256 i = 0; i < agreementList.length; i++) {
-            if (AgreementInterface(agreementList[i]).isOpen()) {
+            if (IAgreement(agreementList[i]).isOpen()) {
                 cntOpen++;
             }
-            if (AgreementInterface(agreementList[i]).isActive()) {
+            if (IAgreement(agreementList[i]).isActive()) {
                 cntActive++;
             }
-            if (AgreementInterface(agreementList[i]).isEnded()) {
+            if (IAgreement(agreementList[i]).isEnded()) {
                 cntEnded++;
             }
         }
@@ -57,8 +57,8 @@ contract FraQueries {
         uint cntSorted = 0;
         
         for(uint256 i = 0; i < agreementList.length; i++) {
-            if (AgreementInterface(agreementList[i]).isActive()) {
-                cdpIds[cntSorted] = AgreementInterface(agreementList[i]).cdpId();
+            if (IAgreement(agreementList[i]).isActive()) {
+                cdpIds[cntSorted] = IAgreement(agreementList[i]).cdpId();
                 cntSorted++;
             }
         }
@@ -72,8 +72,8 @@ contract FraQueries {
         uint cntSorted = 0;
         
         for(uint256 i = 0; i < agreementList.length; i++) {
-            if (AgreementInterface(agreementList[i]).isActive() || AgreementInterface(agreementList[i]).isOpen() || AgreementInterface(agreementList[i]).isEnded()) {
-                cdpIds[cntSorted] = AgreementInterface(agreementList[i]).cdpId();
+            if (IAgreement(agreementList[i]).isActive() || IAgreement(agreementList[i]).isOpen() || IAgreement(agreementList[i]).isEnded()) {
+                cdpIds[cntSorted] = IAgreement(agreementList[i]).cdpId();
                 cntSorted++;
             }
         }
@@ -87,8 +87,8 @@ contract FraQueries {
         borrowers = new address[](agreementList.length);
         
         for(uint256 i = 0; i < agreementList.length; i++) {
-            lenders[i] = AgreementInterface(agreementList[i]).lender();
-            borrowers[i] = AgreementInterface(agreementList[i]).borrower();
+            lenders[i] = IAgreement(agreementList[i]).lender();
+            borrowers[i] = IAgreement(agreementList[i]).borrower();
         }
     }
 }

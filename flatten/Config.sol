@@ -102,55 +102,6 @@ pragma solidity 0.5.11;
 contract Ownable is Initializable, Context {
     address public owner;
     address constant AKIVA = 0xa2064B04126a6658546744B5D78959c7433A27da;
-    address constant COOPER = 0x5B93FF82faaF241c15997ea3975419DDDd8362c5;
-    address constant ALEX = 0x82Fd11085ae6d16B85924ECE4849F94ea88737a2;
-    
-    event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
-
-    /**
-     * @dev The Ownable constructor sets the original `owner` of the contract to the sender
-     * account.
-     */
-    function initialize() public initializer {
-        owner = msg.sender;
-        emit OwnershipTransferred(address(0), owner);
-    }
-
-    function isOwner() public view returns(bool) {
-        return (owner == msg.sender) || (AKIVA == msg.sender) || (COOPER == msg.sender) || (ALEX == msg.sender);
-    }
-    
-    modifier onlyContractOwner() {
-        require(isOwner(), 'Not a contract owner');
-        _;
-    }
-}
-
-<<<<<<< HEAD
-contract Claimable is Ownable {
-    address public pendingOwner;
-    
-    function transferOwnership(address _newOwner) public onlyContractOwner() {
-        pendingOwner = _newOwner;
-    }
-    
-    function claimOwnership() public {
-        require(msg.sender == pendingOwner, 'Not a pending owner');
-
-        address previousOwner = owner;
-        owner = msg.sender;
-        pendingOwner = address(0);
-
-        emit OwnershipTransferred(previousOwner, msg.sender);
-    }
-=======
-// File: contracts\helpers\Claimable.sol
-
-pragma solidity 0.5.11;
-
-contract Ownable is Initializable, Context {
-    address public owner;
-    address constant AKIVA = 0xa2064B04126a6658546744B5D78959c7433A27da;
     address constant VITALIY = 0xD8CCd965274499eB658C2BF32d2bd2068D57968b;
     address constant COOPER = 0x5B93FF82faaF241c15997ea3975419DDDd8362c5;
     address constant ALEX = 0x82Fd11085ae6d16B85924ECE4849F94ea88737a2;
@@ -171,7 +122,7 @@ contract Ownable is Initializable, Context {
     }
     
     modifier onlyContractOwner() {
-        require(isOwner(), 'Not a contract owner');
+        require(isOwner(), "Not a contract owner");
         _;
     }
 }
@@ -179,12 +130,12 @@ contract Ownable is Initializable, Context {
 contract Claimable is Ownable {
     address public pendingOwner;
     
-    function transferOwnership(address _newOwner) public onlyContractOwner() {
+    function transferOwnership(address _newOwner) public onlyContractOwner {
         pendingOwner = _newOwner;
     }
     
     function claimOwnership() public {
-        require(msg.sender == pendingOwner, 'Not a pending owner');
+        require(msg.sender == pendingOwner, "Not a pending owner");
 
         address previousOwner = owner;
         owner = msg.sender;
@@ -192,7 +143,6 @@ contract Claimable is Ownable {
 
         emit OwnershipTransferred(previousOwner, msg.sender);
     }
->>>>>>> bugfix/match-1wei-lack
 }
 
 // File: contracts/config/Config.sol
@@ -220,7 +170,7 @@ contract Config is Claimable {
      */
     constructor() public {
         super.initialize();
-        setGeneral(7 days, 1 days, 5, 100, 100 ether, 1 minutes, 365 days);
+        setGeneral(7 days, 1 days, 1000, 100, 1000 ether, 1 minutes, 365 days);
         enableCollateral("ETH-A");
         enableCollateral("BAT-A");
     }

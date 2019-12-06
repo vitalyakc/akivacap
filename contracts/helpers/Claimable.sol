@@ -1,7 +1,7 @@
 pragma solidity 0.5.11;
 
-import './Context.sol';
-import './Initializable.sol';
+import "./Context.sol";
+import "./Initializable.sol";
 
 contract Ownable is Initializable, Context {
     address public owner;
@@ -26,7 +26,7 @@ contract Ownable is Initializable, Context {
     }
     
     modifier onlyContractOwner() {
-        require(isOwner(), 'Not a contract owner');
+        require(isOwner(), "Not a contract owner");
         _;
     }
 }
@@ -34,12 +34,12 @@ contract Ownable is Initializable, Context {
 contract Claimable is Ownable {
     address public pendingOwner;
     
-    function transferOwnership(address _newOwner) public onlyContractOwner() {
+    function transferOwnership(address _newOwner) public onlyContractOwner {
         pendingOwner = _newOwner;
     }
     
     function claimOwnership() public {
-        require(msg.sender == pendingOwner, 'Not a pending owner');
+        require(msg.sender == pendingOwner, "Not a pending owner");
 
         address previousOwner = owner;
         owner = msg.sender;

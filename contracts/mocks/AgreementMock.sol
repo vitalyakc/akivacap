@@ -1,7 +1,7 @@
 pragma solidity 0.5.11;
 
-import '../Agreement.sol';
-import './ConfigMock.sol';
+import "../Agreement.sol";
+import "./ConfigMock.sol";
 
 /*
  * @title Base Agreement Mock contract
@@ -56,7 +56,7 @@ contract AgreementMock is Agreement {
     }
 
     function _transferFromDai(address from, address to, uint amount) internal returns(bool) {
-      ERC20Interface(mcdDaiAddrMock).transferFrom(from, to, amount);
+      IERC20(mcdDaiAddrMock).transferFrom(from, to, amount);
       return true;
     }
     
@@ -64,13 +64,13 @@ contract AgreementMock is Agreement {
       unlockedDai = _amount;
     }
 
-    function _unlockDai(uint256 _amount) internal {}
+    function _unlockDai(uint wad) internal returns(uint unlockedWad) {}
 
     function _unlockAllDai() internal returns(uint) {
         return unlockedDai;
     }
 
-    function _balanceDai(address addr) internal returns(uint) {
+    function _balanceDai(address addr) internal view returns(uint) {
         return unlockedDai;
     }
 
@@ -90,8 +90,8 @@ contract AgreementMock is Agreement {
       erc20Token = _contract;
     }
 
-    function erc20TokenContract(bytes32 ilk) public view returns(ERC20Interface) {
-      return ERC20Interface(erc20Token);
+    function erc20TokenContract(bytes32 ilk) public view returns(IERC20) {
+      return IERC20(erc20Token);
     }
 
     function setStatus(uint256 _status) public {
@@ -106,12 +106,12 @@ contract AgreementMock is Agreement {
       uint256 _interestRatePercent,
       bytes32 _collateralType,
       bool _isETH,
-      address configAddr
+      address _configAddr
     ) public payable {
-      super.initAgreement(_borrower, _collateralAmount, _debtValue, 
-        _duration, _interestRatePercent, _collateralType, _isETH, configAddr);
+      Agreement.initAgreement(_borrower, _collateralAmount, _debtValue, 
+        _duration, _interestRatePercent, _collateralType, _isETH, _configAddr);
       
-      setErc20Token(ConfigMock(configAddr).getErc20collToken());
+      setErc20Token(ConfigMock(_configAddr).getErc20collToken());
     }
 
     function updateAgreementState(bool _lastUpdate) public returns(bool success) {
@@ -133,7 +133,7 @@ contract AgreementMock is Agreement {
     function _transferCdpOwnership(uint256, address) internal {}
 
     function _callTransferFromDai(address from, address to, uint amount) internal returns(bool) {
-      ERC20Interface(mcdDaiAddrMock).transferFrom(from, to, amount);
+      IERC20(mcdDaiAddrMock).transferFrom(from, to, amount);
     }
 }
 

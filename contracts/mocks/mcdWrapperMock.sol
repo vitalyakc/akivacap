@@ -1,6 +1,6 @@
 pragma solidity 0.5.11;
 
-import '../mcd/McdWrapper.sol';
+import "../mcd/McdWrapper.sol";
 
 contract McdWrapperMock is McdWrapper {
   uint256 public cdpId;
@@ -11,10 +11,6 @@ contract McdWrapperMock is McdWrapper {
 
   function setOwnerProxy(address newOwner) public {
     _setOwnerProxy(newOwner);
-  }
-
-  function openCdp(bytes32 ilk) public {
-    cdpId = _openCdp(ilk);
   }
 
   function lockETHAndDraw(bytes32 ilk, uint cdp, uint wadC, uint wadD) public { // send eth here firstly
@@ -50,7 +46,7 @@ contract McdWrapperMock is McdWrapper {
   }
 
   function transferCdpOwnership(uint cdp, address guy) public {
-    _transferCdpOwnership(cdp, guy);
+    _transferCdpOwnershipToProxy(cdp, guy);
   }
 
   function getCollateralAddreses(bytes32 ilk) public view returns(address mcdJoinEthaAddr, address payable wethAddr){
