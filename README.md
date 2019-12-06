@@ -29,6 +29,38 @@ This repository contains the core smart contract code for Forward Rate Agreement
 
 `Agreement.sol` is implementation responsible for main logic of forward rate agreement. Should be deployed only once as logic, and `UpgradeabilityProxy.sol` is deployed every time when new agreement is inited. `UpgradeabilityProxy` acts as storage for each Agreement.
 
+**The main storage variables:**
+- `status` - current status of agreement. Can be:
+    - 1 - STATUS_PENDING // 0001
+    - 2 - STATUS_OPEN // 0010
+    - 3 - STATUS_ACTIVE // 0011
+    - 8 - STATUS_CLOSED // 1000
+    - 9 - STATUS_ENDED // 1001
+    - 10 - STATUS_LIQUIDATED // 1010
+    - 11 - STATUS_BLOCKED // 1011
+    - 12 - STATUS_CANCELED // 1100
+    
+    in all closed statused the forth bit = 1, binary "AND" with STATUS_CLOSED is used to determine whether the agreement is closed
+- `borrower` - borrower's address
+- `lender` - lender's address
+- `collateralType` - type of collateral (ETH-A, BAT-A), should be passed as bytes32 
+- `collateralAmount` - value of borrower's collateral amount put into the contract as collateral or approved to transferFrom
+- `debtValue` - value of debt
+- `interestRate` - percent of interest rate, should be passed like RAY
+- `cdpId` - CDP id (Vault ID) of multi-collateral dai system
+- `duration` - number of seconds which agreement should be terminated after
+
+**Datetime variables:**
+- `initialDate` 
+- `approveDate`
+- `matchDate`
+- `expireDate`
+- `closeDate`
+- `lastCheckTime`
+
+**Forward rate agreement current results**
+- `delta` - signed integer, if < 0 - shows borrowers Fra debt, if > 0 shows dai amount waiting for injection (waiting of excess of injectionThreshold which is set during agrement init (is defined in Config contract)). Every agreement update `delta` is increased or decreased according to difference between current `dsr` from Multi Collateral Dai `Pot.sol` % and fixed `interestRate` %
+
 
 ## McdWrapper
 `McdWrapper.sol` acs as agreement multicollateral dai wrapper for maker dao system interaction
