@@ -1,4 +1,4 @@
-# FRA
+# FRA according to 0.2.17th MCD CDP release
 This repository contains the core smart contract code for Forward Rate Agreement hedging Dai Savings Rate. 
 
 # Core Contracts
