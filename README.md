@@ -76,6 +76,7 @@ This repository contains the core smart contract code for Forward Rate Agreement
 - if agreement CR is less than MCR - it is liquidated
 - during termination\liquidation the dai locked from dsr + borrowersFraDebt if any is refunded to lender, cdp ownership (if borrowersFradebt is zero or settled) is transferred to borrower
 
+## Saving difference
 The **savings difference** (in *rad* units) is calculated according to formula:
 
 `savingsDifference = debtValue * (currentDsrAnnual - interestRate) * timeInterval / YEAR_SECS`
