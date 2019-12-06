@@ -609,7 +609,7 @@ contract McdWrapper is McdAddressesR17, RaySupport {
         (, uint rate, uint spot,,) = VatLike(mcdVatAddr).ilks(ilk);
         (uint ink, uint art) = VatLike(mcdVatAddr).urns(ilk, ManagerLike(cdpManagerAddr).urns(cdpId));
         
-        return !((spot > 0) && (ink.mul(spot) < art.mul(rate)));
+        return ((spot > 0) && (ink.mul(spot) < art.mul(rate)));
     }
 
     /**
@@ -1167,7 +1167,7 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
      * @return Operation success
      */
     function updateAgreement() external onlyContractOwner onlyActive returns(bool _success) {
-        if(!isCDPUnsafe(collateralType, cdpId)) {
+        if(isCDPUnsafe(collateralType, cdpId)) {
             _liquidateAgreement();
         } else {
             if(now > expireDate) {
