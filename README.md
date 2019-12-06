@@ -80,13 +80,11 @@ The **savings difference** (in *rad* units) is calculated according to formula:
 
 `savingsDifference = debtValue * (currentDsrAnnual - interestRate) * timeInterval / YEAR_SECS`
 
-where
+where `currentDsrAnnual` is annual dsr % ans is calculated by formula:
 
 `currentDsrAnnual = (dsr / ONE)  ^ YEAR_SECS`
 
-where
-
-`dsr` is dsr value from `Pot.sol` in mcd cdp system
+where `dsr` is dsr value from `Pot.sol` in mcd cdp system
 
 ### Units
 
