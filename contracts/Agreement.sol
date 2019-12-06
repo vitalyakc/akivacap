@@ -319,17 +319,10 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
     }
 
     /**
-     * @notice check if status is pending
+     * @notice check if status is ended
      */
     function isEnded() public view returns(bool) {
         return (status == STATUS_ENDED);
-    }
-
-    /**
-     * @notice check if status is liquidated
-     */
-    function isLiquidated() public view returns(bool) {
-        return (status == STATUS_LIQUIDATED);
     }
 
     /**
