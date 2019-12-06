@@ -11,7 +11,6 @@ import "zos-lib/contracts/upgradeability/UpgradeabilityProxy.sol";
  * @notice Handler of all agreements
  */
 contract FraFactory is Claimable {
-    mapping(address => bool) public isAgreement;
     address[] public agreementList;
     address payable public agreementImpl;
     address public configAddr;
