@@ -59,8 +59,9 @@ This repository contains the core smart contract code for Forward Rate Agreement
 - `lastCheckTime`
 
 **Forward rate agreement current results**
-- `delta` - signed integer, if < 0 - shows borrowers Fra debt, if > 0 shows dai amount waiting for injection (waiting of excess of injectionThreshold which is set during agrement init (is defined in Config contract)). Every agreement update `delta` is increased or decreased according to difference between current `dsr` from Multi Collateral Dai `Pot.sol` % and fixed `interestRate` %
+- `delta` (*rad* units) - signed integer, if < 0 - shows borrowers Fra debt, if > 0 shows dai amount waiting for injection (waiting of excess of injectionThreshold which is set during agrement init (is defined in Config contract)). Every agreement update `delta` is increased or decreased according to difference between current `dsr` from Multi Collateral Dai `Pot.sol` % and fixed `interestRate` %. After injection `delta` resets to zero
+- `deltaCommon` (*rad* units) - shows common profit for lender (< 0) or borrower (> 0). Every agreement update `delta` is increased or decreased according to difference between current `dsr` from Multi Collateral Dai `Pot.sol` % and fixed `interestRate` %. The difference with `delta` - after injection `deltaCommon` doesn't reset to zero
 
 
 ## McdWrapper
-`McdWrapper.sol` acs as agreement multicollateral dai wrapper for maker dao system interaction
+`McdWrapper.sol` acts as agreement multicollateral dai wrapper for maker dao system interaction
