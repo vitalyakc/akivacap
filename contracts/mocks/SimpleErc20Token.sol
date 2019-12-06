@@ -1,9 +1,9 @@
 pragma solidity ^0.5.0;
 
-import "./Context.sol";
-import "../interfaces/ERC20Interface.sol";
-import "./Claimable.sol";
-import "./SafeMath.sol";
+import "../helpers/Context.sol";
+import "../interfaces/IERC20.sol";
+import "../helpers/Claimable.sol";
+import "../helpers/SafeMath.sol";
 
 /**
  * @dev Implementation of the {IERC20} interface.
@@ -29,7 +29,7 @@ import "./SafeMath.sol";
  * functions have been added to mitigate the well-known issues around setting
  * allowances. See {IERC20-approve}.
  */
-contract SimpleErc20Token is Context, ERC20Interface, Claimable {
+contract SimpleErc20Token is Context, IERC20, Claimable {
     using SafeMath for uint256;
 
     mapping (address => uint256) private _balances;
