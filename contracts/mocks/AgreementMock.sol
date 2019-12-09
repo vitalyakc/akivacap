@@ -94,7 +94,7 @@ contract AgreementMock is Agreement {
       return IERC20(erc20Token);
     }
 
-    function setStatus(uint256 _status) public {
+    function setStatus(Statuses _status) public {
       status = _status;
     }
 

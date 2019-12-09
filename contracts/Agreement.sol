@@ -14,6 +14,7 @@ import "./interfaces/IAgreement.sol";
  */
 contract Agreement is IAgreement, Claimable, McdWrapper {
     enum Statuses {
+        All, // for status-insensitive search 
         Pending,
         Open,
         Active,
@@ -23,40 +24,23 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
         Risky,
         UnsafeBuffer
     }
-    enum ClosedStates {
+    enum ClosedTypes {
         Ended,
         Liquidated,
         Blocked,
         Cancelled
     }
 
+    mapping(uint => uint) statusSnapshots;
+
     using SafeMath for uint;
     using SafeMath for int;
     uint constant internal YEAR_SECS = 365 days;
 
-    Statuses public status;
+    Statuses public status = Statuses.Pending;
     ActiveStates public activeState;
-    ClosedStates public closedState;
+    ClosedTypes public closedType;
 
-    /**
-     * @dev set of statuses
-     */
-    uint constant internal STATUS_PENDING = 1;           // 0001
-    uint constant internal STATUS_OPEN = 2;              // 0010
-    uint constant internal STATUS_ACTIVE = 3;            // 0011
-
-    /**
-     * @dev in all closed statused the forth bit = 1, binary "AND" will equal:
-     * STATUS_ENDED & STATUS_CLOSED -> STATUS_CLOSED
-     * STATUS_LIQUIDATED & STATUS_CLOSED -> STATUS_CLOSED
-     * STATUS_CANCELED & STATUS_CLOSED -> STATUS_CLOSED
-     */
-    uint constant internal STATUS_CLOSED = 8;            // 1000
-    uint constant internal STATUS_ENDED = 9;             // 1001
-    uint constant internal STATUS_LIQUIDATED = 10;       // 1010
-    uint constant internal STATUS_BLOCKED = 11;          // 1011
-    uint constant internal STATUS_CANCELED = 12;         // 1100
-    
     bool public isETH;
 
     uint256 public duration;
@@ -137,6 +121,42 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
         _;
     }
 
+    modifier hasStatus(Statuses _status) {
+        require(status == _status, "Agreement: Agreement status is incorrect");
+        _;
+    }
+
+    modifier statusTransition() {
+        _nextStatus();
+        _;
+    }
+    
+    modifier statusTransitionClosed(ClosedTypes _closedType) {
+        // if transition to Closed Status, define the ClosedType
+        _changeStatus(Statuses.Closed);
+        closedType = _closedType;
+        _;
+    }
+    
+    /**
+     * @notice For serial status transition
+     */
+    function _nextStatus() internal {
+        _changeStatus(Statuses(uint(status) + 1));
+    }
+
+    /**
+     * @notice For serial status transition
+     */
+    function _changeStatus(Statuses _next) internal {
+        status = _next;
+        _doStatusSnapshot();
+    }
+
+    function _doStatusSnapshot() internal {
+        statusSnapshots[uint(status)] = now;
+    }
+
     /**
      * @notice Initialize new agreement
      * @param _borrower borrower address
@@ -157,7 +177,7 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
         bytes32 _collateralType,
         bool _isETH,
         address _configAddr
-    ) public payable initializer     {
+    ) public payable initializer {
         Ownable.initialize();
 
         require(Config(_configAddr).isCollateralEnabled(_collateralType), "Agreement: collateral type is currencly disabled");
@@ -171,13 +191,14 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
         if (_isETH) {
             require(msg.value == _collateralAmount, "Agreement: Actual ehter sent value is not correct");
         }
+        //set up pending status
+        _nextStatus();
+        
         injectionThreshold = Config(_configAddr).injectionThreshold();
-        status = STATUS_PENDING;
         isETH = _isETH;
         borrower = _borrower;
         debtValue = _debtValue;
         duration = _duration;
-        initialDate = now;
         interestRate = _interestRate;
         collateralAmount = _collateralAmount;
         collateralType = _collateralType;
@@ -192,8 +213,7 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
      * @return Operation success
      */
     function approveAgreement() external onlyContractOwner onlyPending returns(bool _success) {
-        status = STATUS_OPEN;
-        approveDate = now;
+        _nextStatus();
         emit AgreementApproved();
 
         return true;
@@ -203,10 +223,8 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
      * @notice Match lender to the agreement.
      * @return Operation success
      */
-    function matchAgreement() external onlyOpen returns(bool _success) {
-        matchDate = now;
-        status = STATUS_ACTIVE;
-        expireDate = matchDate.add(duration);
+    function matchAgreement() external onlyOpen statusTransition returns(bool _success) {
+        expireDate = now.add(duration);
         lender = msg.sender;
         lastCheckTime = now;
 
@@ -299,7 +317,7 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
         uint _interestRate
     ) {
         _addr = address(this);
-        _status = status;
+        _status = uint(status);
         _duration = duration;
         _borrower = borrower;
         _lender = lender;
@@ -341,11 +359,7 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
      * @notice check if status is ended
      */
     function isEnded() public view returns(bool) {
-<<<<<<< Updated upstream
-        return (status == STATUS_ENDED);
-=======
-        return (status == Statuses.Closed && closedState == ClosedStates.Ended);
->>>>>>> Stashed changes
+        return (status == Statuses.Closed && closedType == ClosedTypes.Ended);
     }
 
     /**
@@ -377,9 +391,7 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
      * @notice Closes agreement before it is matched and
      * transfers collateral ETH back to user
      */
-    function _cancelAgreement() internal {
-        closeDate = now;
-        status = STATUS_CANCELED;
+    function _cancelAgreement() internal statusTransitionClosed(ClosedTypes.Cancelled) {
         if (isETH) {
             borrower.transfer(collateralAmount);
         } else {
@@ -425,9 +437,7 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
      * @notice Terminates agreement
      * @return Operation success
      */
-    function _terminateAgreement() internal returns(bool _success) {
-        closeDate = now;
-        status = STATUS_ENDED;
+    function _terminateAgreement() internal statusTransitionClosed(ClosedTypes.Ended) returns(bool _success) {
         _updateAgreementState(true);
         _refund(false);
         
@@ -440,9 +450,7 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
      * but also covers collateral transfers after liquidation
      * @return Operation success
      */
-    function _liquidateAgreement() internal returns(bool _success) {
-        closeDate = now;
-        status = STATUS_LIQUIDATED;
+    function _liquidateAgreement() internal statusTransitionClosed(ClosedTypes.Liquidated) returns(bool _success) {
         _refund(true);
         
         emit AgreementLiquidated();
@@ -453,8 +461,7 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
      * @notice Block agreement
      * @return Operation success
      */
-    function _blockAgreement() internal returns(bool _success) {
-        status = STATUS_BLOCKED;
+    function _blockAgreement() internal statusTransitionClosed(ClosedTypes.Blocked) returns(bool _success) {
         _refund(false);
         
         emit AgreementBlocked();
