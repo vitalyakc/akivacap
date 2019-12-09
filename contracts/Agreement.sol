@@ -14,7 +14,7 @@ import "./interfaces/IAgreement.sol";
  */
 contract Agreement is IAgreement, Claimable, McdWrapper {
     enum Statuses {
-        All, // for status-insensitive search 
+        All, // for status-insensitive search
         Pending,
         Open,
         Active,
@@ -31,7 +31,13 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
         Cancelled
     }
 
+    struct Asset {
+        uint collateral;
+        uint dai;
+    }
+
     mapping(uint => uint) statusSnapshots;
+    mapping(address => Asset) assets;
 
     using SafeMath for uint;
     using SafeMath for int;
@@ -139,18 +145,24 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
     }
     
     /**
-     * @notice For serial status transition
+     * @notice Serial status transition
      */
     function _nextStatus() internal {
-        _changeStatus(Statuses(uint(status) + 1));
+        _switchStatus(Statuses(uint(status) + 1));
     }
 
     /**
-     * @notice For serial status transition
+     * @notice switch to exact status
+     * @param _next status 
      */
-    function _changeStatus(Statuses _next) internal {
+    function _switchStatus(Statuses _next) internal {
         status = _next;
         _doStatusSnapshot();
+    }
+
+    function _closeWithType(ClosedTypes _closedType) internal {
+        _switchStatus(Statuses.Closed);
+        closedType = _closedType;
     }
 
     function _doStatusSnapshot() internal {
@@ -212,8 +224,7 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
      * @notice Approve the agreement. Only for contract owner (FraFactory)
      * @return Operation success
      */
-    function approveAgreement() external onlyContractOwner onlyPending returns(bool _success) {
-        _nextStatus();
+    function approveAgreement() external onlyContractOwner onlyPending statusTransition returns(bool _success) {
         emit AgreementApproved();
 
         return true;
@@ -239,10 +250,7 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
         }
         uint drawnDai = _balanceDai(address(this));
         // due to the lack of preceision in mcd cdp contracts drawn dai can be less by 1 dai wei
-        if (debtValue < drawnDai) { // !!! check for == debtValue-1
-            drawnDai = debtValue;
-        }
-        _transferDai(borrower, drawnDai);
+        _pushDaiAsset(borrower, debtValue < drawnDai ? debtValue : drawnDai);
 
         emit AgreementMatched(lender, expireDate, cdpId, collateralAmount, debtValue, drawnDai);
         return true;
@@ -391,12 +399,10 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
      * @notice Closes agreement before it is matched and
      * transfers collateral ETH back to user
      */
-    function _cancelAgreement() internal statusTransitionClosed(ClosedTypes.Cancelled) {
-        if (isETH) {
-            borrower.transfer(collateralAmount);
-        } else {
-            _transferERC20(collateralType, borrower, collateralAmount);
-        }
+    function _cancelAgreement() internal {
+        _closeWithType(ClosedTypes.Cancelled);
+        _pushCollateralAsset(borrower, collateralAmount);
+        
         emit AgreementCanceled(msg.sender);
     }
 
@@ -423,9 +429,8 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
             injectionAmount = uint(fromRay(delta));
 
             uint unlockedDai = _unlockDai(injectionAmount);
-            if (unlockedDai < injectionAmount) { // !!! check if = injectionAmount - 1
-                injectionAmount = unlockedDai;
-            }
+            // if the unlocked amount less than requested (due to the lack of preceision) take unlocked one
+            injectionAmount = unlockedDai < injectionAmount ? unlockedDai : injectionAmount;
             delta = delta.sub(int(toRay(injectionAmount)));
             _injectToCdp(cdpId, injectionAmount);
         }
@@ -437,7 +442,8 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
      * @notice Terminates agreement
      * @return Operation success
      */
-    function _terminateAgreement() internal statusTransitionClosed(ClosedTypes.Ended) returns(bool _success) {
+    function _terminateAgreement() internal returns(bool _success) {
+        _closeWithType(ClosedTypes.Ended);
         _updateAgreementState(true);
         _refund(false);
         
@@ -450,7 +456,8 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
      * but also covers collateral transfers after liquidation
      * @return Operation success
      */
-    function _liquidateAgreement() internal statusTransitionClosed(ClosedTypes.Liquidated) returns(bool _success) {
+    function _liquidateAgreement() internal returns(bool _success) {
+        _closeWithType(ClosedTypes.Liquidated);
         _refund(true);
         
         emit AgreementLiquidated();
@@ -461,7 +468,8 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
      * @notice Block agreement
      * @return Operation success
      */
-    function _blockAgreement() internal statusTransitionClosed(ClosedTypes.Blocked) returns(bool _success) {
+    function _blockAgreement() internal returns(bool _success) {
+        _closeWithType(ClosedTypes.Blocked);
         _refund(false);
         
         emit AgreementBlocked();
@@ -529,6 +537,14 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
         }
         emit RefundLiquidated(_borrowerFraDebtDai, lenderRefundCollateral, borrowerRefundCollateral);
         return true;
+    }
+
+    function _pushCollateralAsset(address _holder, uint _amount) internal {
+        assets[_holder].collateral = assets[_holder].collateral.add(_amount);
+    }
+
+    function _pushDaiAsset(address _holder, uint _amount) internal {
+        assets[_holder].dai = assets[_holder].dai.add(_amount);
     }
 
     function() external payable {}
