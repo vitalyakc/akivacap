@@ -13,30 +13,11 @@ import "./interfaces/IAgreement.sol";
  * @dev Should not be deployed. It is being used as an abstract class
  */
 contract Agreement is IAgreement, Claimable, McdWrapper {
-    enum Statuses {
-        Pending,
-        Open,
-        Active,
-        Closed
-    }
-    enum ActiveStates {
-        Risky,
-        UnsafeBuffer
-    }
-    enum ClosedStates {
-        Ended,
-        Liquidated,
-        Blocked,
-        Cancelled
-    }
-
     using SafeMath for uint;
     using SafeMath for int;
     uint constant internal YEAR_SECS = 365 days;
 
-    Statuses public status;
-    ActiveStates public activeState;
-    ClosedStates public closedState;
+    uint public status;
 
     /**
      * @dev set of statuses
@@ -313,46 +294,42 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
      * @notice check if agreement is not matched yet
      */
     function isBeforeMatched() public view returns(bool) {
-        return (status < Statuses.Active);
+        return (status < STATUS_ACTIVE);
     }
 
     /**
      * @notice check if status is pending
      */
     function isPending() public view returns(bool) {
-        return (status == Statuses.Pending);
+        return (status == STATUS_PENDING);
     }
 
     /**
      * @notice check if status is open
      */
     function isOpen() public view returns(bool) {
-        return (status == Statuses.Open);
+        return (status == STATUS_OPEN);
     }
 
     /**
      * @notice check if status is active
      */
     function isActive() public view returns(bool) {
-        return (status == Statuses.Active);
+        return (status == STATUS_ACTIVE);
     }
 
     /**
      * @notice check if status is ended
      */
     function isEnded() public view returns(bool) {
-<<<<<<< Updated upstream
         return (status == STATUS_ENDED);
-=======
-        return (status == Statuses.Closed && closedState == ClosedStates.Ended);
->>>>>>> Stashed changes
     }
 
     /**
      * @notice check if status is closed
      */
     function isClosed() public view returns(bool) {
-        return (status == Statuses.Closed);
+        return ((status & STATUS_CLOSED) == STATUS_CLOSED);
     }
 
     /**
