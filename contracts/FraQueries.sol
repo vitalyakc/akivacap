@@ -1,5 +1,6 @@
 pragma solidity 0.5.11;
 import "./interfaces/IAgreement.sol";
+import "./helpers/AgreementStatuses.sol";
 
 contract FraFactoryI {
     mapping(address => address[]) public agreements;
@@ -11,7 +12,7 @@ contract FraFactoryI {
 /**
  * @title Queries for agreements
  */
-contract FraQueries {
+contract FraQueries is AgreementStatuses {
     constructor() public {
     }
 
@@ -22,11 +23,11 @@ contract FraQueries {
         
         for(uint256 i = 0; i < agreementList.length; i++) {
             if (
-                ((_status == 0) || (_status > 0) && (IAgreement(agreementList[i]).status() == _status)) && 
+                (_status == 0 || _status > 0 && IAgreement(agreementList[i]).status() == _status) &&
                 ((_user == address(0)) || (
-                    _user != address(0)) && 
-                    ((IAgreement(agreementList[i]).lender() == _user) || (IAgreement(agreementList[i]).borrower() == _user))))
-            {
+                    _user != address(0)) &&
+                    ((IAgreement(agreementList[i]).lender() == _user) || (IAgreement(agreementList[i]).borrower() == _user)))
+            ) {
                 agreementsSorted[cntSorted] = agreementList[i];
                 cntSorted++;
             }
@@ -39,13 +40,13 @@ contract FraQueries {
         address[] memory agreementList = FraFactoryI(_fraFactoryAddr).getAgreementList();
 
         for(uint256 i = 0; i < agreementList.length; i++) {
-            if (IAgreement(agreementList[i]).isOpen()) {
+            if (IAgreement(agreementList[i]).isStatus(Statuses.Open)) {
                 cntOpen++;
             }
-            if (IAgreement(agreementList[i]).isActive()) {
+            if (IAgreement(agreementList[i]).isStatus(Statuses.Active)) {
                 cntActive++;
             }
-            if (IAgreement(agreementList[i]).isEnded()) {
+            if (IAgreement(agreementList[i]).isStatus(Statuses.Ended)) {
                 cntEnded++;
             }
         }
@@ -57,7 +58,7 @@ contract FraQueries {
         uint cntSorted = 0;
         
         for(uint256 i = 0; i < agreementList.length; i++) {
-            if (IAgreement(agreementList[i]).isActive()) {
+            if (IAgreement(agreementList[i]).isStatus(Statuses.Active)) {
                 cdpIds[cntSorted] = IAgreement(agreementList[i]).cdpId();
                 cntSorted++;
             }
@@ -72,7 +73,9 @@ contract FraQueries {
         uint cntSorted = 0;
         
         for(uint256 i = 0; i < agreementList.length; i++) {
-            if (IAgreement(agreementList[i]).isActive() || IAgreement(agreementList[i]).isOpen() || IAgreement(agreementList[i]).isEnded()) {
+            if ((IAgreement(agreementList[i]).isStatus(Statuses.Active) ||
+                IAgreement(agreementList[i]).isStatus(Statuses.Closed)) && IAgreement(agreementList[i]).cdpId() > 0
+            ) {
                 cdpIds[cntSorted] = IAgreement(agreementList[i]).cdpId();
                 cntSorted++;
             }

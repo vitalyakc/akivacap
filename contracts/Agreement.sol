@@ -1,6 +1,7 @@
 pragma solidity 0.5.11;
 
 import "./config/Config.sol";
+import "./helpers/AgreementStatuses.sol";
 import "./helpers/Claimable.sol";
 import "./helpers/SafeMath.sol";
 import "./mcd/McdWrapper.sol";
@@ -12,50 +13,28 @@ import "./interfaces/IAgreement.sol";
  * @notice Contract will be deployed only once as logic(implementation), proxy will be deployed for each agreement as storage
  * @dev Should not be deployed. It is being used as an abstract class
  */
-contract Agreement is IAgreement, Claimable, McdWrapper {
-    enum Statuses {
-        All, // for status-insensitive search
-        Pending,
-        Open,
-        Active,
-        Closed
-    }
-    enum ActiveStates {
-        Risky,
-        UnsafeBuffer
-    }
-    enum ClosedTypes {
-        Ended,
-        Liquidated,
-        Blocked,
-        Cancelled
-    }
-
+contract Agreement is IAgreement, AgreementStatuses, Claimable, McdWrapper {
     struct Asset {
         uint collateral;
         uint dai;
     }
 
-    mapping(uint => uint) statusSnapshots;
-    mapping(address => Asset) assets;
-
     using SafeMath for uint;
     using SafeMath for int;
+    
+    mapping(uint => uint) public statusSnapshots;
+    mapping(address => Asset) public assets;
+
     uint constant internal YEAR_SECS = 365 days;
 
-    Statuses public status = Statuses.Pending;
-    ActiveStates public activeState;
-    ClosedTypes public closedType;
+    Statuses        public status = Statuses.Pending;
+    ActiveStates    public activeState;
+    ClosedTypes     public closedType;
 
     bool public isETH;
 
     uint256 public duration;
-    uint256 public initialDate;
-    uint256 public approveDate;
-    uint256 public matchDate;
     uint256 public expireDate;
-    uint256 public closeDate;
-
     address payable public borrower;
     address payable public lender;
     bytes32 public collateralType;
@@ -65,10 +44,8 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
 
     uint256 public cdpId;
     uint256 public lastCheckTime;
-
     int public delta;
     int public deltaCommon;
-
     uint public injectionThreshold;
 
     /**
@@ -80,70 +57,34 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
     }
 
     /**
-     * @notice Grants access only if agreement is not closed in any way yet
+     * @notice Grants access only if agreement has appropriate status
+     * @param _status status should be checked with
      */
-    modifier onlyNotClosed() {
-        require(!isClosed(), "Agreement: Agreement should be neither closed nor ended nor liquidated");
-        _;
-    }
-
-    /**
-     * @notice Grants access only if agreement is closed in any way
-     */
-    modifier onlyClosed() {
-        require(isClosed(), "Agreement: Agreement should be closed or ended or liquidated or blocked");
-        _;
-    }
-
-    /**
-     * @notice Grants access only if agreement is not matched yet
-     */
-    modifier onlyBeforeMatched() {
-        require(isBeforeMatched(), "Agreement: Agreement should be pending or open");
-        _;
-    }
-    
-    /**
-     * @notice Grants access only if agreement is active
-     */
-    modifier onlyActive() {
-        require(isActive(), "Agreement: Agreement should be active");
-        _;
-    }
-
-    /**
-     * @notice Grants access only if agreement is pending
-     */
-    modifier onlyPending() {
-        require(isPending(), "Agreement: Agreement should be pending");
-        _;
-    }
-    
-    /**
-     * @notice Grants access only if agreement is open (ready to be matched)
-     */
-    modifier onlyOpen() {
-        require(isOpen(), "Agreement: Agreement should be approved");
-        _;
-    }
-
     modifier hasStatus(Statuses _status) {
         require(status == _status, "Agreement: Agreement status is incorrect");
         _;
     }
 
-    modifier statusTransition() {
-        _nextStatus();
+    /**
+     * @notice Grants access only if agreement has status before requested one
+     * @param _status check before status
+     */
+    modifier beforeStatus(Statuses _status) {
+        require(status < _status, "Agreement: Agreement status is not before requested one");
         _;
     }
-    
-    modifier statusTransitionClosed(ClosedTypes _closedType) {
-        // if transition to Closed Status, define the ClosedType
-        _changeStatus(Statuses.Closed);
-        closedType = _closedType;
+
+    /**
+     * @notice Grants access only if agreement is in the apropriate state
+     * @param _state state should be checked with
+     */
+    modifier hasState(ActiveStates _state) {
+        require(activeState == _state, "Agreement: Agreement state is incorrect");
         _;
     }
+
     
+
     /**
      * @notice Serial status transition
      */
@@ -152,19 +93,33 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
     }
 
     /**
-     * @notice switch to exact status
-     * @param _next status 
-     */
+    * @notice Serial status transition
+    */
+    function _nextStatus() internal {
+        _switchStatus(Statuses(uint(status) + 1));
+    }
+
+    /**
+    * @notice switch to exact status
+    * @param _next status that should be switched to
+    */
     function _switchStatus(Statuses _next) internal {
         status = _next;
         _doStatusSnapshot();
     }
 
+    /**
+    * @notice switch status to closed with exact type
+    * @param _closedType closing type
+    */
     function _closeWithType(ClosedTypes _closedType) internal {
         _switchStatus(Statuses.Closed);
         closedType = _closedType;
     }
 
+    /**
+    * @notice Save timestamp for current status
+    */
     function _doStatusSnapshot() internal {
         statusSnapshots[uint(status)] = now;
     }
@@ -224,7 +179,8 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
      * @notice Approve the agreement. Only for contract owner (FraFactory)
      * @return Operation success
      */
-    function approveAgreement() external onlyContractOwner onlyPending statusTransition returns(bool _success) {
+    function approveAgreement() external onlyContractOwner hasStatus(Statuses.Pending) returns(bool _success) {
+        _nextStatus();
         emit AgreementApproved();
 
         return true;
@@ -234,7 +190,8 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
      * @notice Match lender to the agreement.
      * @return Operation success
      */
-    function matchAgreement() external onlyOpen statusTransition returns(bool _success) {
+    function matchAgreement() external hasStatus(Statuses.Open) returns(bool _success) {
+        _nextStatus();
         expireDate = now.add(duration);
         lender = msg.sender;
         lastCheckTime = now;
@@ -262,7 +219,7 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
      * (terminates or liquidated or updates the agreement)
      * @return Operation success
      */
-    function updateAgreement() external onlyContractOwner onlyActive returns(bool _success) {
+    function updateAgreement() external onlyContractOwner hasStatus(Statuses.Active) returns(bool _success) {
         if(isCDPUnsafe(collateralType, cdpId)) {
             _liquidateAgreement();
         } else {
@@ -279,7 +236,7 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
      * @notice Cancel agreement by borrower before it is matched, change status to the correspondant one, refund
      * @return Operation success
      */
-    function cancelAgreement() external onlyBeforeMatched onlyBorrower returns(bool _success)  {
+    function cancelAgreement() external onlyBorrower beforeStatus(Statuses.Active) returns(bool _success)  {
         _cancelAgreement();
         return true;
     }
@@ -288,7 +245,7 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
      * @notice Reject agreement by admin or cron job before it is matched, change status to the correspondant one, refund
      * @return Operation success
      */
-    function rejectAgreement() external onlyBeforeMatched onlyContractOwner returns(bool _success)  {
+    function rejectAgreement() external onlyContractOwner beforeStatus(Statuses.Active) returns(bool _success)  {
         _cancelAgreement();
         return true;
     }
@@ -297,7 +254,7 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
      * @notice Block active agreement, change status to the correspondant one, refund
      * @return Operation success
      */
-    function blockAgreement() external onlyActive onlyContractOwner returns(bool _success)  {
+    function blockAgreement() external hasStatus(Statuses.Active) onlyContractOwner returns(bool _success)  {
         _blockAgreement();
         return true;
     }
@@ -306,7 +263,7 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
      * @notice Withdraw accidentally locked ether in the contract, can be called only after agreement is closed and all assets are refunded
      * @return Operation success
      */
-    function withdrawEth(address payable _to) external onlyClosed onlyContractOwner {
+    function withdrawEth(address payable _to) external hasStatus(Statuses.Closed) onlyContractOwner {
         _to.transfer(address(this).balance);
     }
 
@@ -336,45 +293,19 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
     }
 
     /**
-     * @notice check if agreement is not matched yet
+     * @notice Check if agreement has appropriate status
+     * @param _status status should be checked with
      */
-    function isBeforeMatched() public view returns(bool) {
-        return (status < Statuses.Active);
+    function isStatus(Statuses _status) public view returns(bool) {
+        return status == _status;
     }
 
     /**
-     * @notice check if status is pending
+     * @notice Check if agreement has status before requested one
+     * @param _status check before status
      */
-    function isPending() public view returns(bool) {
-        return (status == Statuses.Pending);
-    }
-
-    /**
-     * @notice check if status is open
-     */
-    function isOpen() public view returns(bool) {
-        return (status == Statuses.Open);
-    }
-
-    /**
-     * @notice check if status is active
-     */
-    function isActive() public view returns(bool) {
-        return (status == Statuses.Active);
-    }
-
-    /**
-     * @notice check if status is ended
-     */
-    function isEnded() public view returns(bool) {
-        return (status == Statuses.Closed && closedType == ClosedTypes.Ended);
-    }
-
-    /**
-     * @notice check if status is closed
-     */
-    function isClosed() public view returns(bool) {
-        return (status == Statuses.Closed);
+    function isBeforeStatus(Statuses _status) public view returns(bool) {
+        return status < _status;
     }
 
     /**
@@ -388,8 +319,8 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
      * @notice check whether pending or open agreement should be canceled automatically by cron
      */
     function checkTimeToCancel(uint _approveLimit, uint _matchLimit) public view returns(bool){
-        if ((isPending() && (now > initialDate.add(_approveLimit))) ||
-            (isOpen() && (now > approveDate.add(_matchLimit)))
+        if ((isStatus(Statuses.Pending) && now > statusSnapshots[Statuses.Pending].add(_approveLimit)) ||
+            (isStatus(Statuses.Open) && now > statusSnapshots[Statuses.Open].add(_matchLimit))
         ) {
             return true;
         }
