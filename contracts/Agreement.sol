@@ -20,7 +20,7 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
 
     using SafeMath for uint;
     using SafeMath for int;
-    
+
     mapping(uint => uint) public statusSnapshots;
     mapping(address => Asset) public assets;
 
@@ -149,9 +149,6 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
         if (_isETH) {
             require(msg.value == _collateralAmount, "Agreement: Actual ehter sent value is not correct");
         }
-        //set up pending status
-        _nextStatus();
-        
         configAddr = _configAddr;
         isETH = _isETH;
         borrower = _borrower;
@@ -161,6 +158,7 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
         collateralAmount = _collateralAmount;
         collateralType = _collateralType;
         
+        _doStatusSnapshot();
         _initMcdWrapper(collateralType, isETH);
 
         emit AgreementInitiated(borrower, collateralAmount, debtValue, duration, interestRate);
@@ -250,11 +248,32 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
     }
 
     /**
-     * @notice Withdraw accidentally locked ether in the contract, can be called only after agreement is closed and all assets are refunded
-     * @return Operation success
+     * @notice withdraw dai to user's external wallet
+     * @param _amount dai amount for withdrawal
      */
-    function withdrawEth(address payable _to) external hasStatus(Statuses.Closed) onlyContractOwner {
-        _to.transfer(address(this).balance);
+    function withdrawDai(uint _amount) external {
+        _popDaiAsset(msg.sender, _amount);
+        _transferDai(msg.sender, _amount);
+    }
+
+    /**
+     * @notice withdraw collateral to user's (msg.sender) external wallet from internal wallet
+     * @param _amount collateral amount for withdrawal
+     */
+    function withdrawCollateral(uint _amount) external {
+        _popCollateralAsset(msg.sender, _amount);
+        _transferCollateral(msg.sender, _amount);
+    }
+
+    /**
+     * @notice Withdraw accidentally locked ether in the contract, can be called only after agreement is closed and all assets are refunded
+     * @dev Check the current balance is more than users ether assets, and withdraw the remaining ether
+     * @param _to address should be withdrawn to
+     */
+    function withdrawLeftEth(address payable _to) external hasStatus(Statuses.Closed) onlyContractOwner {
+        uint _leftEth = isETH ? address(this).balance.sub(assets[borrower].collateral.add(assets[lender].collateral)) : address(this).balance;
+        require(_leftEth > 0, "Agreement: the remaining balance available for withdrawal is zero");
+        _to.transfer(_leftEth);
     }
 
     /**
@@ -280,6 +299,10 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
         _collateralAmount = collateralAmount;
         _debtValue = debtValue;
         _interestRate = interestRate;
+    }
+
+    function getAssets(address _holder) public view returns(uint,uint) {
+        return (assets[_holder].collateral, assets[_holder].dai);
     }
 
     /**
@@ -339,7 +362,7 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
     function _cancelAgreement() internal {
         _closeWithType(ClosedTypes.Cancelled);
         _pushCollateralAsset(borrower, collateralAmount);
-        
+
         emit AgreementCanceled(msg.sender);
     }
 
@@ -448,9 +471,9 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
     }
 
     /**
-     * @notice add collateral to user's internal wallet
+     * @notice take away collateral from user's internal wallet
      * @param _holder user's address
-     * @param _amount collateral amount to push
+     * @param _amount collateral amount to pop
      */
     function _popCollateralAsset(address _holder, uint _amount) internal {
         assets[_holder].collateral = assets[_holder].collateral.sub(_amount);
@@ -458,13 +481,26 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
     }
 
     /**
-     * @notice  dai to user's internal wallet
+     * @notice take away dai from user's internal wallet
      * @param _holder user's address
-     * @param _amount dai amount to push
+     * @param _amount dai amount to pop
      */
     function _popDaiAsset(address _holder, uint _amount) internal {
         assets[_holder].dai = assets[_holder].dai.sub(_amount);
         emit AssetsDaiPop(_holder, _amount);
+    }
+
+    /**
+     * @notice transfer collateral to user's external wallet
+     * @param _to receiver
+     * @param _amount collateral amount for tranfer
+     */
+    function _transferCollateral(address payable _to, uint _amount) internal {
+        if (isETH) {
+            _to.transfer(_amount);
+        } else {
+            _transferERC20(collateralType, _to, _amount);
+        }
     }
 
     function() external payable {}
