@@ -4,14 +4,13 @@ import "./config/Config.sol";
 import "./interfaces/IERC20.sol";
 import "./interfaces/IAgreement.sol";
 import "./helpers/Claimable.sol";
-import "./helpers/AgreementStatuses.sol";
 import "zos-lib/contracts/upgradeability/UpgradeabilityProxy.sol";
 
 /**
  * @title Fra Factory
  * @notice Handler of all agreements
  */
-contract FraFactory is Claimable, AgreementStatuses {
+contract FraFactory is Claimable {
     address[] public agreementList;
     address payable public agreementImpl;
     address public configAddr;
@@ -109,7 +108,7 @@ contract FraFactory is Claimable, AgreementStatuses {
     function batchApproveAgreements(address[] memory _addresses) public onlyContractOwner {
         require(_addresses.length <= 256, "FraMain: batch count is greater than 256");
         for (uint256 i = 0; i < _addresses.length; i++) {
-            if (IAgreement(_addresses[i]).isStatus(Statuses.Pending)) {
+            if (IAgreement(_addresses[i]).isStatus(IAgreement.Statuses.Pending)) {
                 IAgreement(_addresses[i]).approveAgreement();
             }
         }
@@ -131,7 +130,7 @@ contract FraFactory is Claimable, AgreementStatuses {
     function batchRejectAgreements(address[] memory _addresses) public onlyContractOwner {
         require(_addresses.length <= 256, "FraMain: batch count is greater than 256");
         for (uint256 i = 0; i < _addresses.length; i++) {
-            if (IAgreement(_addresses[i]).isBeforeStatus(Statuses.Active)) {
+            if (IAgreement(_addresses[i]).isBeforeStatus(IAgreement.Statuses.Active)) {
                 IAgreement(_addresses[i]).rejectAgreement();
             }
         }
@@ -145,7 +144,8 @@ contract FraFactory is Claimable, AgreementStatuses {
         uint _matchLimit = Config(configAddr).matchLimit();
         uint _len = agreementList.length;
         for (uint256 i = 0; i < _len; i++) {
-            if (IAgreement(agreementList[i]).isBeforeStatus(Statuses.Active) &&
+            if (
+                IAgreement(agreementList[i]).isBeforeStatus(IAgreement.Statuses.Active) &&
                 IAgreement(agreementList[i]).checkTimeToCancel(_approveLimit, _matchLimit)
             ) {
                 IAgreement(agreementList[i]).rejectAgreement();
@@ -168,7 +168,7 @@ contract FraFactory is Claimable, AgreementStatuses {
      */
     function updateAgreements() public onlyContractOwner {
         for (uint256 i = 0; i < agreementList.length; i++) {
-            if (IAgreement(agreementList[i]).isStatus(Statuses.Active)) {
+            if (IAgreement(agreementList[i]).isStatus(IAgreement.Statuses.Active)) {
                 IAgreement(agreementList[i]).updateAgreement();
             }
         }
@@ -182,7 +182,7 @@ contract FraFactory is Claimable, AgreementStatuses {
         require(_addresses.length <= 256, "FraMain: batch count is greater than 256");
         for (uint256 i = 0; i < _addresses.length; i++) {
             // check in order to prevent revert
-            if (IAgreement(_addresses[i]).isStatus(Statuses.Active)) {
+            if (IAgreement(_addresses[i]).isStatus(IAgreement.Statuses.Active)) {
                 IAgreement(_addresses[i]).updateAgreement();
             }
         }
@@ -211,6 +211,13 @@ contract FraFactory is Claimable, AgreementStatuses {
      */
     function transferAgreementOwnership(address _address) public onlyContractOwner {
         IAgreement(_address).transferOwnership(owner);
+    }
+
+    /**
+     * @notice accept agreement ownership by Fra Factory contract
+     */
+    function claimAgreementOwnership(address _address) public onlyContractOwner {
+        IAgreement(_address).claimOwnership();
     }
     
     /**

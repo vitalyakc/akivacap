@@ -7,7 +7,8 @@ import "./IERC20.sol";
  */
 interface IAgreement {
     enum Statuses {All, Pending, Open, Active, Closed}
-    enum ActiveStates {Risky, UnsafeBuffer}
+    enum States {Risky, UnsafeBuffer}
+    enum ClosedTypes {Ended, Liquidated, Blocked, Cancelled}
 
     function initAgreement(
         address payable _borrower,
@@ -21,6 +22,7 @@ interface IAgreement {
     ) external payable;
 
     function transferOwnership(address _newOwner) external;
+    function claimOwnership() external;
     function approveAgreement() external returns(bool);
     function updateAgreement() external returns(bool);
     function cancelAgreement() external returns(bool);
@@ -32,6 +34,8 @@ interface IAgreement {
     function collateralType() external view returns(bytes32);
     function isStatus(Statuses _status) external view returns(bool);
     function isBeforeStatus(Statuses _status) external view returns(bool);
+    function isState(States _state) external view returns(bool);
+    function isClosedWithType(ClosedTypes _type) external view returns(bool);
     function checkTimeToCancel(uint _approveLimit, uint _matchLimit) external view returns(bool);
     function cdpId() external view returns(uint);
     function erc20TokenContract(bytes32 ilk) external view returns(IERC20);
@@ -54,11 +58,17 @@ interface IAgreement {
     event AgreementInitiated(address _borrower, uint _collateralValue, uint _debtValue, uint _expireDate, uint _interestRate);
     event AgreementApproved();
     event AgreementMatched(address _lender, uint _expireDate, uint _cdpId, uint _collateralAmount, uint _debtValue, uint _drawnDai);
-    event AgreementUpdated(uint _injectionAmount, int _delta, int _deltaCommon, int _savingsDifference, uint _currentDsrAnnual, uint _timeInterval);
+    event AgreementUpdated(int savingsDifference, int delta, uint currentDsrAnnual, uint timeInterval, uint drawnDai, uint injectionAmount);
     event AgreementCanceled(address _user);
     event AgreementTerminated();
     event AgreementLiquidated();
     event AgreementBlocked();
     event RefundBase(address _lender, uint _lenderRefundDai, address _borrower, uint _cdpId);
     event RefundLiquidated(uint _borrowerFraDebtDai, uint _lenderRefundCollateral, uint _borrowerRefundCollateral);
+    event AssetsCollateralPush(address _holder, uint _amount, bytes32 collateralType);
+    event AssetsCollateralPop(address _holder, uint _amount, bytes32 collateralType);
+    event AssetsDaiPush(address _holder, uint _amount);
+    event AssetsDaiPop(address _holder, uint _amount);
+    event CdpOwnershipTransferred(address _borrower, uint _cdpId);
+
 }

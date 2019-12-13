@@ -1,7 +1,6 @@
 pragma solidity 0.5.11;
 
 import "./config/Config.sol";
-import "./helpers/AgreementStatuses.sol";
 import "./helpers/Claimable.sol";
 import "./helpers/SafeMath.sol";
 import "./mcd/McdWrapper.sol";
@@ -13,7 +12,7 @@ import "./interfaces/IAgreement.sol";
  * @notice Contract will be deployed only once as logic(implementation), proxy will be deployed for each agreement as storage
  * @dev Should not be deployed. It is being used as an abstract class
  */
-contract Agreement is IAgreement, AgreementStatuses, Claimable, McdWrapper {
+contract Agreement is IAgreement, Claimable, McdWrapper {
     struct Asset {
         uint collateral;
         uint dai;
@@ -27,10 +26,11 @@ contract Agreement is IAgreement, AgreementStatuses, Claimable, McdWrapper {
 
     uint constant internal YEAR_SECS = 365 days;
 
-    Statuses        public status = Statuses.Pending;
-    ActiveStates    public activeState;
-    ClosedTypes     public closedType;
+    Statuses public status = Statuses.Pending;
+    States public state;
+    ClosedTypes public closedType;
 
+    address public configAddr;
     bool public isETH;
 
     uint256 public duration;
@@ -45,8 +45,8 @@ contract Agreement is IAgreement, AgreementStatuses, Claimable, McdWrapper {
     uint256 public cdpId;
     uint256 public lastCheckTime;
     int public delta;
-    int public deltaCommon;
-    uint public injectionThreshold;
+    uint public drawnTotal;
+    uint public injectedTotal;
 
     /**
      * @notice Grants access only to agreement's borrower
@@ -78,23 +78,14 @@ contract Agreement is IAgreement, AgreementStatuses, Claimable, McdWrapper {
      * @notice Grants access only if agreement is in the apropriate state
      * @param _state state should be checked with
      */
-    modifier hasState(ActiveStates _state) {
-        require(activeState == _state, "Agreement: Agreement state is incorrect");
+    modifier hasState(States _state) {
+        require(isState(_state), "Agreement: Agreement state is incorrect");
         _;
     }
-
-    
 
     /**
      * @notice Serial status transition
      */
-    function _nextStatus() internal {
-        _switchStatus(Statuses(uint(status) + 1));
-    }
-
-    /**
-    * @notice Serial status transition
-    */
     function _nextStatus() internal {
         _switchStatus(Statuses(uint(status) + 1));
     }
@@ -161,7 +152,7 @@ contract Agreement is IAgreement, AgreementStatuses, Claimable, McdWrapper {
         //set up pending status
         _nextStatus();
         
-        injectionThreshold = Config(_configAddr).injectionThreshold();
+        configAddr = _configAddr;
         isETH = _isETH;
         borrower = _borrower;
         debtValue = _debtValue;
@@ -220,14 +211,13 @@ contract Agreement is IAgreement, AgreementStatuses, Claimable, McdWrapper {
      * @return Operation success
      */
     function updateAgreement() external onlyContractOwner hasStatus(Statuses.Active) returns(bool _success) {
-        if(isCDPUnsafe(collateralType, cdpId)) {
-            _liquidateAgreement();
+        if(now > expireDate) {
+            _terminateAgreement();
         } else {
-            if(now > expireDate) {
-                _terminateAgreement();
-            } else {
-                _updateAgreementState(false);
-            }
+            _updateAgreementState(false);
+        }
+        if(isCdpUnsafe(collateralType, cdpId)) {
+            _liquidateAgreement();
         }
         return true;
     }
@@ -309,6 +299,22 @@ contract Agreement is IAgreement, AgreementStatuses, Claimable, McdWrapper {
     }
 
     /**
+     * @notice Check if agreement has appropriate state
+     * @param _state state should be checked with
+     */
+    function isState(States _state) public view returns(bool) {
+        return state == _state;
+    }
+
+    /**
+     * @notice Check if agreement is closed with appropriate type
+     * @param _type type should be checked with
+     */
+    function isClosedWithType(ClosedTypes _type) public view returns(bool) {
+        return isStatus(Statuses.Closed) && (closedType == _type);
+    }
+
+    /**
      * @notice Borrower debt according to FRA
      */
     function borrowerFraDebt() public view returns(uint) {
@@ -319,8 +325,8 @@ contract Agreement is IAgreement, AgreementStatuses, Claimable, McdWrapper {
      * @notice check whether pending or open agreement should be canceled automatically by cron
      */
     function checkTimeToCancel(uint _approveLimit, uint _matchLimit) public view returns(bool){
-        if ((isStatus(Statuses.Pending) && now > statusSnapshots[Statuses.Pending].add(_approveLimit)) ||
-            (isStatus(Statuses.Open) && now > statusSnapshots[Statuses.Open].add(_matchLimit))
+        if ((isStatus(Statuses.Pending) && now > statusSnapshots[uint(Statuses.Pending)].add(_approveLimit)) ||
+            (isStatus(Statuses.Open) && now > statusSnapshots[uint(Statuses.Open)].add(_matchLimit))
         ) {
             return true;
         }
@@ -346,26 +352,30 @@ contract Agreement is IAgreement, AgreementStatuses, Claimable, McdWrapper {
         // if it is last update take the time interval up to expireDate, otherwise up to current time
         uint timeInterval = (_isLastUpdate ? expireDate : now).sub(lastCheckTime);
         uint injectionAmount;
+        uint drawnDai;
         uint currentDsrAnnual = rpow(getDsr(), YEAR_SECS, ONE);
 
         // calculate savings difference between dsr and interest rate during time interval
         int savingsDifference = int(debtValue.mul(timeInterval)).mul((int(currentDsrAnnual)).sub(int(interestRate))).div(int(YEAR_SECS));
-        
         delta = delta.add(savingsDifference);
-        deltaCommon = deltaCommon.add(savingsDifference);
-
         lastCheckTime = now;
 
-        if (fromRay(delta) >= int(_isLastUpdate ? 1 : injectionThreshold)) {
-            injectionAmount = uint(fromRay(delta));
+        uint pendingDebt = uint(fromRay(delta));
 
-            uint unlockedDai = _unlockDai(injectionAmount);
-            // if the unlocked amount less than requested (due to the lack of preceision) take unlocked one
-            injectionAmount = unlockedDai < injectionAmount ? unlockedDai : injectionAmount;
-            delta = delta.sub(int(toRay(injectionAmount)));
-            _injectToCdp(cdpId, injectionAmount);
+        if (pendingDebt >= (_isLastUpdate ? 1 : Config(configAddr).injectionThreshold())) {
+            if (delta < 0) {
+                drawnDai = _drawDaiToCdp(collateralType, cdpId, pendingDebt);
+                delta = delta.add(int(toRay(drawnDai)));
+                drawnTotal = drawnTotal.add(drawnDai);
+                _pushDaiAsset(lender, drawnDai);
+            } else {
+                 injectionAmount = _unlockDai(pendingDebt);
+                delta = delta.sub(int(toRay(injectionAmount)));
+                _injectToCdp(cdpId, injectionAmount);
+                injectedTotal = injectedTotal.add(injectionAmount);
+            }
         }
-        emit AgreementUpdated(injectionAmount, delta, deltaCommon, savingsDifference, currentDsrAnnual, timeInterval);
+        emit AgreementUpdated(savingsDifference, delta, currentDsrAnnual, timeInterval, drawnDai, injectionAmount);
         return true;
     }
 
@@ -376,7 +386,7 @@ contract Agreement is IAgreement, AgreementStatuses, Claimable, McdWrapper {
     function _terminateAgreement() internal returns(bool _success) {
         _closeWithType(ClosedTypes.Ended);
         _updateAgreementState(true);
-        _refund(false);
+        _refund();
         
         emit AgreementTerminated();
         return true;
@@ -389,7 +399,7 @@ contract Agreement is IAgreement, AgreementStatuses, Claimable, McdWrapper {
      */
     function _liquidateAgreement() internal returns(bool _success) {
         _closeWithType(ClosedTypes.Liquidated);
-        _refund(true);
+        _refund();
         
         emit AgreementLiquidated();
         return true;
@@ -401,7 +411,7 @@ contract Agreement is IAgreement, AgreementStatuses, Claimable, McdWrapper {
      */
     function _blockAgreement() internal returns(bool _success) {
         _closeWithType(ClosedTypes.Blocked);
-        _refund(false);
+        _refund();
         
         emit AgreementBlocked();
         return true;
@@ -411,92 +421,51 @@ contract Agreement is IAgreement, AgreementStatuses, Claimable, McdWrapper {
      * @notice Refund agreement, transfer dai to lender, cdp ownership to borrower if debt is payed
      * @return Operation success
      */
-    function _refund(bool _isCdpLiquidated) internal {
-        uint lenderRefundDai = _unlockAllDai();
-        uint borrowerFraDebtDai = borrowerFraDebt();
-        
-        if (borrowerFraDebtDai > 0) {
-            if (_isCdpLiquidated) {
-                _refundAfterCdpLiquidation(borrowerFraDebtDai);
-            } else {
-                if (_callTransferFromDai(borrower, address(this), borrowerFraDebtDai)) {
-                    lenderRefundDai = lenderRefundDai.add(borrowerFraDebtDai);
-                } else {
-                    _freeETH(collateralType, cdpId);
-                    _refundAfterCdpLiquidation(borrowerFraDebtDai);
-                }
-            }
-        }
-        _transferDai(lender, lenderRefundDai);
+    function _refund() internal {
+        _pushDaiAsset(lender, _unlockAllDai());
         _transferCdpOwnershipToProxy(cdpId, borrower);
-        emit RefundBase(lender, lenderRefundDai, borrower, cdpId);
+        emit CdpOwnershipTransferred(borrower, cdpId);
     }
-    /*
-    function _refund(bool _isCdpLiquidated) internal {
-        uint lenderRefundDai = _unlockAllDai();
-        uint borrowerFraDebtDai = borrowerFraDebt();
-        address cdpOwnershipTo;
-
-        if (borrowerFraDebtDai > 0) {
-            if (_callTransferFromDai(borrower, address(this), borrowerFraDebtDai)) {
-                lenderRefundDai = lenderRefundDai.add(borrowerFraDebtDai);
-                cdpOwnershipTo = borrower;
-            } else {
-                emit FraDebtPaybackFailed(borrower, borrowerFraDebtDai);
-            }
-        }
-        _transferDai(lender, lenderRefundDai);
-        _transferCdpOwnership(cdpId, cdpOwnershipTo);
-        emit RefundBase(lender, lenderRefundDai, cdpOwnershipTo, cdpId);
-    }*/
 
     /**
-     * @notice Executes all required transfers after liquidation
-     * @return Operation success
+     * @notice add collateral to user's internal wallet
+     * @param _holder user's address
+     * @param _amount collateral amount to push
      */
-    function _refundAfterCdpLiquidation(uint _borrowerFraDebtDai) internal returns(bool _success) {
-        uint256 lenderRefundCollateral = getCollateralEquivalent(collateralType, _borrowerFraDebtDai);
-        uint borrowerRefundCollateral;
-        if (isETH) {
-            borrowerRefundCollateral = address(this).balance;
-            lender.transfer(lenderRefundCollateral);
-            borrower.transfer(borrowerRefundCollateral);
-        } else {
-            _transferERC20(collateralType, lender, lenderRefundCollateral);
-            borrowerRefundCollateral = erc20TokenContract(collateralType).balanceOf(address(this));
-            _transferERC20(collateralType, borrower, borrowerRefundCollateral);
-        }
-        emit RefundLiquidated(_borrowerFraDebtDai, lenderRefundCollateral, borrowerRefundCollateral);
-        return true;
-    }
-
     function _pushCollateralAsset(address _holder, uint _amount) internal {
         assets[_holder].collateral = assets[_holder].collateral.add(_amount);
+        emit AssetsCollateralPush(_holder, _amount, collateralType);
     }
 
+    /**
+     * @notice add dai to user's internal wallet
+     * @param _holder user's address
+     * @param _amount dai amount to push
+     */
     function _pushDaiAsset(address _holder, uint _amount) internal {
         assets[_holder].dai = assets[_holder].dai.add(_amount);
+        emit AssetsDaiPush(_holder, _amount);
+    }
+
+    /**
+     * @notice add collateral to user's internal wallet
+     * @param _holder user's address
+     * @param _amount collateral amount to push
+     */
+    function _popCollateralAsset(address _holder, uint _amount) internal {
+        assets[_holder].collateral = assets[_holder].collateral.sub(_amount);
+        emit AssetsCollateralPop(_holder, _amount, collateralType);
+    }
+
+    /**
+     * @notice  dai to user's internal wallet
+     * @param _holder user's address
+     * @param _amount dai amount to push
+     */
+    function _popDaiAsset(address _holder, uint _amount) internal {
+        assets[_holder].dai = assets[_holder].dai.sub(_amount);
+        emit AssetsDaiPop(_holder, _amount);
     }
 
     function() external payable {}
-}
-
-/**
- * @title Agreement contract with mocked refund after liquidation functionality
- */
-contract AgreementLiquidationMock is Agreement {
-    /**
-     * @notice Executes all required transfers after liquidation
-     * @return Operation success
-     */
-    function _refundAfterCdpLiquidation(uint _borrowerFraDebtDai) internal returns(bool _success) {
-    }
-
-    /**
-     * @notice recovers remaining ETH from cdp (pays remaining debt if exists)
-     * @param ilk     collateral type in bytes32 format
-     * @param cdp cdp ID
-     */
-    function _freeETH(bytes32 ilk, uint cdp) internal {
-    }
 }

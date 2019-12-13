@@ -122,8 +122,8 @@ contract AgreementMock is Agreement {
       lastCheckTime = _value;
     }
 
-    function refund(bool _isLiquidated) public {
-      _refund(_isLiquidated);
+    function refund() public {
+      _refund();
     }
 
     function terminateAgreement() public returns(bool _success) {

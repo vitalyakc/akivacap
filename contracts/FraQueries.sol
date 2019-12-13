@@ -1,6 +1,5 @@
 pragma solidity 0.5.11;
 import "./interfaces/IAgreement.sol";
-import "./helpers/AgreementStatuses.sol";
 
 contract FraFactoryI {
     mapping(address => address[]) public agreements;
@@ -12,7 +11,7 @@ contract FraFactoryI {
 /**
  * @title Queries for agreements
  */
-contract FraQueries is AgreementStatuses {
+contract FraQueries {
     constructor() public {
     }
 
@@ -40,13 +39,13 @@ contract FraQueries is AgreementStatuses {
         address[] memory agreementList = FraFactoryI(_fraFactoryAddr).getAgreementList();
 
         for(uint256 i = 0; i < agreementList.length; i++) {
-            if (IAgreement(agreementList[i]).isStatus(Statuses.Open)) {
+            if (IAgreement(agreementList[i]).isStatus(IAgreement.Statuses.Open)) {
                 cntOpen++;
             }
-            if (IAgreement(agreementList[i]).isStatus(Statuses.Active)) {
+            if (IAgreement(agreementList[i]).isStatus(IAgreement.Statuses.Active)) {
                 cntActive++;
             }
-            if (IAgreement(agreementList[i]).isStatus(Statuses.Ended)) {
+            if (IAgreement(agreementList[i]).isClosedWithType(IAgreement.ClosedTypes.Ended)) {
                 cntEnded++;
             }
         }
@@ -58,7 +57,7 @@ contract FraQueries is AgreementStatuses {
         uint cntSorted = 0;
         
         for(uint256 i = 0; i < agreementList.length; i++) {
-            if (IAgreement(agreementList[i]).isStatus(Statuses.Active)) {
+            if (IAgreement(agreementList[i]).isStatus(IAgreement.Statuses.Active)) {
                 cdpIds[cntSorted] = IAgreement(agreementList[i]).cdpId();
                 cntSorted++;
             }
@@ -73,8 +72,8 @@ contract FraQueries is AgreementStatuses {
         uint cntSorted = 0;
         
         for(uint256 i = 0; i < agreementList.length; i++) {
-            if ((IAgreement(agreementList[i]).isStatus(Statuses.Active) ||
-                IAgreement(agreementList[i]).isStatus(Statuses.Closed)) && IAgreement(agreementList[i]).cdpId() > 0
+            if ((IAgreement(agreementList[i]).isStatus(IAgreement.Statuses.Active) ||
+                IAgreement(agreementList[i]).isStatus(IAgreement.Statuses.Closed)) && IAgreement(agreementList[i]).cdpId() > 0
             ) {
                 cdpIds[cntSorted] = IAgreement(agreementList[i]).cdpId();
                 cntSorted++;
