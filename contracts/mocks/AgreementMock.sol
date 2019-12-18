@@ -131,18 +131,10 @@ contract AgreementMock is Agreement {
     }
 
     function _transferCdpOwnership(uint256, address) internal {}
-
-    function _callTransferFromDai(address from, address to, uint amount) internal returns(bool) {
-      IERC20(mcdDaiAddrMock).transferFrom(from, to, amount);
-    }
 }
 
 contract AgreementDeepMock is AgreementMock {
   function _transferFromDai(address from, address to, uint amount) internal returns(bool) {
       return true;
-  }
-  
-  function _callTransferFromDai(address from, address to, uint amount) internal returns(bool) {
-    return true;
   }
 }

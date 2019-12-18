@@ -26,12 +26,12 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
 
     uint constant internal YEAR_SECS = 365 days;
 
-    Statuses public status = Statuses.Pending;
-    States public state;
+    Statuses public status;
     ClosedTypes public closedType;
 
     address public configAddr;
     bool public isETH;
+    bool public isRisky;
 
     uint256 public duration;
     uint256 public expireDate;
@@ -71,15 +71,6 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
      */
     modifier beforeStatus(Statuses _status) {
         require(status < _status, "Agreement: Agreement status is not before requested one");
-        _;
-    }
-
-    /**
-     * @notice Grants access only if agreement is in the apropriate state
-     * @param _state state should be checked with
-     */
-    modifier hasState(States _state) {
-        require(isState(_state), "Agreement: Agreement state is incorrect");
         _;
     }
 
@@ -158,7 +149,7 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
         collateralAmount = _collateralAmount;
         collateralType = _collateralType;
         
-        _doStatusSnapshot();
+        _nextStatus();
         _initMcdWrapper(collateralType, isETH);
 
         emit AgreementInitiated(borrower, collateralAmount, debtValue, duration, interestRate);
@@ -270,10 +261,10 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
      * @dev Check the current balance is more than users ether assets, and withdraw the remaining ether
      * @param _to address should be withdrawn to
      */
-    function withdrawLeftEth(address payable _to) external hasStatus(Statuses.Closed) onlyContractOwner {
-        uint _leftEth = isETH ? address(this).balance.sub(assets[borrower].collateral.add(assets[lender].collateral)) : address(this).balance;
-        require(_leftEth > 0, "Agreement: the remaining balance available for withdrawal is zero");
-        _to.transfer(_leftEth);
+    function withdrawRemainingEth(address payable _to) external hasStatus(Statuses.Closed) onlyContractOwner {
+        uint _remainingEth = isETH ? address(this).balance.sub(assets[borrower].collateral.add(assets[lender].collateral)) : address(this).balance;
+        require(_remainingEth > 0, "Agreement: the remaining balance available for withdrawal is zero");
+        _to.transfer(_remainingEth);
     }
 
     /**
@@ -282,16 +273,19 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
     function getInfo() external view returns(
         address _addr,
         uint _status,
+        uint _closedType,
         uint _duration,
         address _borrower,
         address _lender,
         bytes32 _collateralType,
         uint _collateralAmount,
         uint _debtValue,
-        uint _interestRate
+        uint _interestRate,
+        bool _isRisky
     ) {
         _addr = address(this);
         _status = uint(status);
+        _closedType = uint(closedType);
         _duration = duration;
         _borrower = borrower;
         _lender = lender;
@@ -299,6 +293,7 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
         _collateralAmount = collateralAmount;
         _debtValue = debtValue;
         _interestRate = interestRate;
+        _isRisky = isRisky;
     }
 
     function getAssets(address _holder) public view returns(uint,uint) {
@@ -319,14 +314,6 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
      */
     function isBeforeStatus(Statuses _status) public view returns(bool) {
         return status < _status;
-    }
-
-    /**
-     * @notice Check if agreement has appropriate state
-     * @param _state state should be checked with
-     */
-    function isState(States _state) public view returns(bool) {
-        return state == _state;
     }
 
     /**
@@ -383,8 +370,8 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
         delta = delta.add(savingsDifference);
         lastCheckTime = now;
 
-        uint pendingDebt = uint(fromRay(delta));
-
+        uint pendingDebt = (delta < 0) ? uint(fromRay(-delta)) : fromRay(delta);
+;
         if (pendingDebt >= (_isLastUpdate ? 1 : Config(configAddr).injectionThreshold())) {
             if (delta < 0) {
                 drawnDai = _drawDaiToCdp(collateralType, cdpId, pendingDebt);
@@ -398,7 +385,7 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
                 injectedTotal = injectedTotal.add(injectionAmount);
             }
         }
-        emit AgreementUpdated(savingsDifference, delta, currentDsrAnnual, timeInterval, drawnDai, injectionAmount);
+        emit AgreementUpdated(savingsDifference, pendingDebt, delta, currentDsrAnnual, timeInterval, drawnDai, injectionAmount, -15);
         return true;
     }
 

@@ -119,8 +119,7 @@ contract McdWrapper is McdAddressesR17, RaySupport {
     function getDaiAvailable(bytes32 ilk, uint cdpId) public view returns(uint) {
         (, uint rate, uint spot,,) = VatLike(mcdVatAddr).ilks(ilk);
         (uint ink, uint art) = VatLike(mcdVatAddr).urns(ilk, ManagerLike(cdpManagerAddr).urns(cdpId));
-        
-        return (ink.mul(spot) > art.mul(rate)) ? ink.mul(spot).sub(art.mul(rate)) : 0;
+        return (ink.mul(spot) > art.mul(rate)) ? fromRay(ink.mul(spot).sub(art.mul(rate))) : 0;
     }
 
     /**
@@ -263,12 +262,12 @@ contract McdWrapper is McdAddressesR17, RaySupport {
      */
     function _drawDaiToCdp(bytes32 ilk, uint cdp, uint wad) internal returns (uint drawnDai) {
         uint maxToDraw = getDaiAvailable(ilk, cdp);
-        drawnDai = wad > maxToDraw ? wad : maxToDraw;
-        proxy().execute(
-            proxyLib,
-            abi.encodeWithSignature(
-                "draw(address,address,address,uint256,uint256)",
-                cdpManagerAddr, mcdJugAddr, mcdJoinDaiAddr, cdp, drawnDai));
+        drawnDai = wad > maxToDraw ? maxToDraw : wad;
+        // proxy().execute(
+        //     proxyLib,
+        //     abi.encodeWithSignature(
+        //         "draw(address,address,address,uint256,uint256)",
+        //         cdpManagerAddr, mcdJugAddr, mcdJoinDaiAddr, cdp, drawnDai));
     }
 
     /**
