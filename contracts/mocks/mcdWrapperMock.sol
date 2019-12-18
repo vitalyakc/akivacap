@@ -13,13 +13,13 @@ contract McdWrapperMock is McdWrapper {
     _setOwnerProxy(newOwner);
   }
 
-  function lockETHAndDraw(bytes32 ilk, uint cdp, uint wadC, uint wadD) public { // send eth here firstly
-    _lockETHAndDraw(ilk, cdp, wadC, wadD);
-  }
+  // function lockETHAndDraw(bytes32 ilk, uint cdp, uint wadC, uint wadD) public { // send eth here firstly
+  //   _lockETHAndDraw(ilk, cdp, wadC, wadD);
+  // }
 
-  function lockERC20AndDraw(bytes32 ilk, uint cdp, uint wadD, uint wadC, bool transferFrom) public { // send real erc20 firstly 
-    _lockERC20AndDraw(ilk, cdp, wadD, wadC, transferFrom);
-  }
+  // function lockERC20AndDraw(bytes32 ilk, uint cdp, uint wadD, uint wadC, bool transferFrom) public { // send real erc20 firstly 
+  //   _lockERC20AndDraw(ilk, cdp, wadD, wadC, transferFrom);
+  // }
 
   function openLockETHAndDraw(bytes32 ilk, uint wadD, uint wadC) public { // send eth here firstly
     _openLockETHAndDraw(ilk, wadD, wadC);

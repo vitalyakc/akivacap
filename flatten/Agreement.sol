@@ -649,38 +649,35 @@ contract McdWrapper is McdAddressesR17, RaySupport {
     }
 
     /**
-     * @notice  Lock ether collateral and draw dai
+     * @notice  Lock additional ether as collateral
      * @param   ilk     collateral type in bytes32 format
      * @param   cdp     cdp id
      * @param   wadC    collateral amount to be locked in cdp contract
-     * @param   wadD    dai amount to be drawn
      */
-    function _lockETHAndDraw(bytes32 ilk, uint cdp, uint wadC, uint wadD) internal {
+    function _lockETH(bytes32 ilk, uint cdp, uint wadC) internal {
         bytes memory data;
         (address collateralJoinAddr,) = _getCollateralAddreses(ilk);
         data = abi.encodeWithSignature(
-            "lockETHAndDraw(address,address,address,address,uint256,uint256)",
-            cdpManagerAddr, mcdJugAddr, collateralJoinAddr, mcdJoinDaiAddr, cdp, wadD);
+            "lockETHAndDraw(address,address,uint256)",
+            cdpManagerAddr, collateralJoinAddr, cdp);
         (bool success,) = proxyAddress.call.value(wadC)(abi.encodeWithSignature("execute(address,bytes)", proxyLib, data));
         require(success);
     }
 
     /**
-     * @notice  Create new cdp with ERC-20 tokens as collateral, lock collateral and draw dai
-     * @dev     build new Proxy for a caller before cdp creation and approve transferFrom collateral token from Agrrement by Proxy
+     * @notice  Lock additional erc-20 tokens as collateral
      * @param   ilk     collateral type in bytes32 format
      * @param   cdp     cdp id
      * @param   wadC    collateral amount to be locked in cdp contract
-     * @param   wadD    dai amount to be drawn
      * @param   transferFrom   collateral tokens should be transfered from caller
      */
-    function _lockERC20AndDraw(bytes32 ilk, uint cdp, uint wadC, uint wadD, bool transferFrom) internal {
+    function _lockERC20(bytes32 ilk, uint cdp, uint wadC, bool transferFrom) internal {
         (address collateralJoinAddr,) = _getCollateralAddreses(ilk);
         proxy().execute(
             proxyLib,
             abi.encodeWithSignature(
-                "lockGemAndDraw(address,address,address,address,uint256,uint256,uint256,bool)",
-                cdpManagerAddr, mcdJugAddr, collateralJoinAddr, mcdJoinDaiAddr, cdp, wadC, wadD, transferFrom));
+                "lockGem(address,address,uint256,uint256,bool)",
+                cdpManagerAddr, collateralJoinAddr, cdp, wadC, transferFrom));
     }
 
     /**
@@ -1009,7 +1006,7 @@ interface IAgreement {
     event AssetsDaiPush(address _holder, uint _amount);
     event AssetsDaiPop(address _holder, uint _amount);
     event CdpOwnershipTransferred(address _borrower, uint _cdpId);
-
+    event AdditionalCollateralLocked(uint _amount);
 }
 
 // File: contracts/Agreement.sol
@@ -1254,6 +1251,24 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
     }
 
     /**
+     * @notice Lock additional ether as collateral to agreement cdp contract
+     * @return Operation success
+     */
+    function lockAdditionalCollateral(uint _amount) external payable onlyBorrower beforeStatus(Statuses.Closed) returns(bool _success)  {
+        if (isStatus(Statuses.Active)) {
+            if (isETH) {
+                require(msg.value == _amount, "Agreement: ether sent doesn't coinside with required");
+                _lockETH(collateralType, cdpId, msg.value);
+            } else {
+                _lockERC20(collateralType, cdpId, _amount, true);
+            }
+        }
+        collateralAmount = collateralAmount.add(_amount);
+        emit AdditionalCollateralLocked(_amount);
+        return true;
+    }
+
+    /**
      * @notice withdraw dai to user's external wallet
      * @param _amount dai amount for withdrawal
      */
@@ -1268,7 +1283,11 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
      */
     function withdrawCollateral(uint _amount) external {
         _popCollateralAsset(msg.sender, _amount);
-        _transferCollateral(msg.sender, _amount);
+        if (isETH) {
+            msg.sender.transfer(_amount);
+        } else {
+            _transferERC20(collateralType, msg.sender, _amount);
+        }
     }
 
     /**
@@ -1491,19 +1510,6 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
     function _popDaiAsset(address _holder, uint _amount) internal {
         assets[_holder].dai = assets[_holder].dai.sub(_amount);
         emit AssetsDaiPop(_holder, _amount);
-    }
-
-    /**
-     * @notice transfer collateral to user's external wallet
-     * @param _to receiver
-     * @param _amount collateral amount for tranfer
-     */
-    function _transferCollateral(address payable _to, uint _amount) internal {
-        if (isETH) {
-            _to.transfer(_amount);
-        } else {
-            _transferERC20(collateralType, _to, _amount);
-        }
     }
 
     function() external payable {}

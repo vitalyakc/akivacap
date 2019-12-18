@@ -239,6 +239,24 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
     }
 
     /**
+     * @notice Lock additional ether as collateral to agreement cdp contract
+     * @return Operation success
+     */
+    function lockAdditionalCollateral(uint _amount) external payable onlyBorrower beforeStatus(Statuses.Closed) returns(bool _success)  {
+        if (isStatus(Statuses.Active)) {
+            if (isETH) {
+                require(msg.value == _amount, "Agreement: ether sent doesn't coinside with required");
+                _lockETH(collateralType, cdpId, msg.value);
+            } else {
+                _lockERC20(collateralType, cdpId, _amount, true);
+            }
+        }
+        collateralAmount = collateralAmount.add(_amount);
+        emit AdditionalCollateralLocked(_amount);
+        return true;
+    }
+
+    /**
      * @notice withdraw dai to user's external wallet
      * @param _amount dai amount for withdrawal
      */
@@ -253,7 +271,11 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
      */
     function withdrawCollateral(uint _amount) external {
         _popCollateralAsset(msg.sender, _amount);
-        _transferCollateral(msg.sender, _amount);
+        if (isETH) {
+            msg.sender.transfer(_amount);
+        } else {
+            _transferERC20(collateralType, msg.sender, _amount);
+        }
     }
 
     /**
@@ -476,19 +498,6 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
     function _popDaiAsset(address _holder, uint _amount) internal {
         assets[_holder].dai = assets[_holder].dai.sub(_amount);
         emit AssetsDaiPop(_holder, _amount);
-    }
-
-    /**
-     * @notice transfer collateral to user's external wallet
-     * @param _to receiver
-     * @param _amount collateral amount for tranfer
-     */
-    function _transferCollateral(address payable _to, uint _amount) internal {
-        if (isETH) {
-            _to.transfer(_amount);
-        } else {
-            _transferERC20(collateralType, _to, _amount);
-        }
     }
 
     function() external payable {}

@@ -68,5 +68,5 @@ interface IAgreement {
     event AssetsDaiPush(address _holder, uint _amount);
     event AssetsDaiPop(address _holder, uint _amount);
     event CdpOwnershipTransferred(address _borrower, uint _cdpId);
-
+    event AdditionalCollateralLocked(uint _amount);
 }
