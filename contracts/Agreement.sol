@@ -205,7 +205,7 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
         } else {
             _updateAgreementState(false);
         }
-        if(isCdpUnsafe(collateralType, cdpId)) {
+        if(!isCdpSafe(collateralType, cdpId)) {
             _liquidateAgreement();
         }
         return true;
@@ -370,22 +370,23 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
         delta = delta.add(savingsDifference);
         lastCheckTime = now;
 
-        uint pendingDebt = (delta < 0) ? uint(fromRay(-delta)) : fromRay(delta);
-;
-        if (pendingDebt >= (_isLastUpdate ? 1 : Config(configAddr).injectionThreshold())) {
+        uint currentDebt = uint(fromRay(delta < 0 ? -delta : delta));
+
+        if (currentDebt >= (_isLastUpdate ? 1 : Config(configAddr).injectionThreshold())) {
             if (delta < 0) {
-                drawnDai = _drawDaiToCdp(collateralType, cdpId, pendingDebt);
+                // if delta < 0 - currentDebt is borrower's debt to lender
+                drawnDai = _drawDaiToCdp(collateralType, cdpId, currentDebt);
                 delta = delta.add(int(toRay(drawnDai)));
                 drawnTotal = drawnTotal.add(drawnDai);
                 _pushDaiAsset(lender, drawnDai);
             } else {
-                 injectionAmount = _unlockDai(pendingDebt);
+                // delta > 0 - currentDebt is lender's debt to borrower
+                injectionAmount = _injectToCdpFromDsr(cdpId, currentDebt);
                 delta = delta.sub(int(toRay(injectionAmount)));
-                _injectToCdp(cdpId, injectionAmount);
                 injectedTotal = injectedTotal.add(injectionAmount);
             }
         }
-        emit AgreementUpdated(savingsDifference, pendingDebt, delta, currentDsrAnnual, timeInterval, drawnDai, injectionAmount, -15);
+        emit AgreementUpdated(savingsDifference, currentDebt, delta, currentDsrAnnual, timeInterval, drawnDai, injectionAmount);
         return true;
     }
 
@@ -397,7 +398,7 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
         _closeWithType(ClosedTypes.Ended);
         _updateAgreementState(true);
         _refund();
-        
+
         emit AgreementTerminated();
         return true;
     }
@@ -410,7 +411,7 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
     function _liquidateAgreement() internal returns(bool _success) {
         _closeWithType(ClosedTypes.Liquidated);
         _refund();
-        
+
         emit AgreementLiquidated();
         return true;
     }
@@ -422,7 +423,7 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
     function _blockAgreement() internal returns(bool _success) {
         _closeWithType(ClosedTypes.Blocked);
         _refund();
-        
+
         emit AgreementBlocked();
         return true;
     }

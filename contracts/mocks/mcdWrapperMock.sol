@@ -29,8 +29,8 @@ contract McdWrapperMock is McdWrapper {
     _openLockERC20AndDraw(ilk, wadD, wadC, transferFrom);
   }
 
-  function injectToCdp(uint cdp, uint wad) public { // send dai here
-    _injectToCdp(cdp, wad);
+  function injectToCdpFromDsr(uint cdp, uint wad) public { // send dai here
+    _injectToCdpFromDsr(cdp, wad);
   }
 
   function lockDai(uint wad) public { //send dai here

@@ -1,5 +1,5 @@
 
-// File: contracts\helpers\Context.sol
+// File: contracts/helpers/Context.sol
 
 pragma solidity ^0.5.0;
 
@@ -29,7 +29,7 @@ contract Context {
     }
 }
 
-// File: contracts\helpers\Initializable.sol
+// File: contracts/helpers/Initializable.sol
 
 pragma solidity >=0.4.24 <0.6.0;
 
@@ -93,9 +93,11 @@ contract Initializable {
   uint256[50] private ______gap;
 }
 
-// File: contracts\helpers\Claimable.sol
+// File: contracts/helpers/Claimable.sol
 
-pragma solidity 0.5.11;
+pragma solidity 0.5.11;
+
+
 
 contract Ownable is Initializable, Context {
     address public owner;
@@ -143,9 +145,10 @@ contract Claimable is Ownable {
     }
 }
 
-// File: contracts\config\Config.sol
+// File: contracts/config/Config.sol
 
-pragma solidity 0.5.11;
+pragma solidity 0.5.11;
+
 
 /**
  * @title Config for Agreement contract
@@ -218,7 +221,7 @@ contract Config is Claimable {
     }
 }
 
-// File: contracts\helpers\SafeMath.sol
+// File: contracts/helpers/SafeMath.sol
 
 pragma solidity >=0.5.0 <0.6.0;
 
@@ -314,7 +317,7 @@ library SafeMath {
     }
 }
 
-// File: contracts\mcd\McdAddressesR17.sol
+// File: contracts/mcd/McdAddressesR17.sol
 
 pragma solidity 0.5.11;
 /**
@@ -344,7 +347,7 @@ contract McdAddressesR17 {
     address payable constant batAddr = 0x9f8cFB61D3B2aF62864408DD703F9C3BEB55dff7;
 }
 
-// File: contracts\interfaces\IMcd.sol
+// File: contracts/interfaces/IMcd.sol
 
 pragma solidity 0.5.11;
 
@@ -404,7 +407,7 @@ contract DSProxyLike {
     function setOwner(address owner_) public;
 }
 
-// File: contracts\interfaces\IERC20.sol
+// File: contracts/interfaces/IERC20.sol
 
 pragma solidity 0.5.11;
 
@@ -420,9 +423,10 @@ contract IERC20 {
     event Approval(address indexed tokenOwner, address indexed spender, uint tokens);
 }
 
-// File: contracts\helpers\RaySupport.sol
+// File: contracts/helpers/RaySupport.sol
 
-pragma solidity 0.5.11;
+pragma solidity 0.5.11;
+
 
 contract RaySupport {
     using SafeMath for uint256;
@@ -491,9 +495,13 @@ contract RaySupport {
     // }
 }
 
-// File: contracts\mcd\McdWrapper.sol
+// File: contracts/mcd/McdWrapper.sol
 
-pragma solidity 0.5.11;
+pragma solidity 0.5.11;
+
+
+
+
 
 /**
  * @title Agreement multicollateral dai wrapper for maker dao system interaction.
@@ -596,7 +604,7 @@ contract McdWrapper is McdAddressesR17, RaySupport {
      * @param   cdpId   cdp ID
      * @return  true if unsafe
      */
-    function isCdpUnsafe(bytes32 ilk, uint cdpId) public view returns(bool) {
+    function isCdpSafe(bytes32 ilk, uint cdpId) public view returns(bool) {
         return getDaiAvailable(ilk, cdpId) > 0;
     }
 
@@ -735,12 +743,13 @@ contract McdWrapper is McdAddressesR17, RaySupport {
      * @param   cdp   cdp ID
      * @param   wad   amount of dai tokens
      */
-    function _injectToCdp(uint cdp, uint wad) internal {
+    function _injectToCdpFromDsr(uint cdp, uint wad) internal returns(uint injectionWad) {
+        injectionWad = _unlockDai(wad);
         proxy().execute(
             proxyLib,
             abi.encodeWithSignature(
                 "wipe(address,address,uint256,uint256)",
-                cdpManagerAddr, mcdJoinDaiAddr, cdp, wad));
+                cdpManagerAddr, mcdJoinDaiAddr, cdp, injectionWad));
     }
 
     /**
@@ -753,11 +762,11 @@ contract McdWrapper is McdAddressesR17, RaySupport {
     function _drawDaiToCdp(bytes32 ilk, uint cdp, uint wad) internal returns (uint drawnDai) {
         uint maxToDraw = getDaiAvailable(ilk, cdp);
         drawnDai = wad > maxToDraw ? maxToDraw : wad;
-        // proxy().execute(
-        //     proxyLib,
-        //     abi.encodeWithSignature(
-        //         "draw(address,address,address,uint256,uint256)",
-        //         cdpManagerAddr, mcdJugAddr, mcdJoinDaiAddr, cdp, drawnDai));
+        proxy().execute(
+            proxyLib,
+            abi.encodeWithSignature(
+                "draw(address,address,address,uint256,uint256)",
+                cdpManagerAddr, mcdJugAddr, mcdJoinDaiAddr, cdp, drawnDai));
     }
 
     /**
@@ -929,9 +938,10 @@ contract McdWrapper is McdAddressesR17, RaySupport {
     }
 }
 
-// File: contracts\interfaces\IAgreement.sol
+// File: contracts/interfaces/IAgreement.sol
 
-pragma solidity 0.5.11;
+pragma solidity 0.5.11;
+
 
 /**
  * @title Interface for Agreement contract
@@ -989,7 +999,7 @@ interface IAgreement {
     event AgreementInitiated(address _borrower, uint _collateralValue, uint _debtValue, uint _expireDate, uint _interestRate);
     event AgreementApproved();
     event AgreementMatched(address _lender, uint _expireDate, uint _cdpId, uint _collateralAmount, uint _debtValue, uint _drawnDai);
-    event AgreementUpdated(int savingsDifference, uint pendingDebt, int delta, uint currentDsrAnnual, uint timeInterval, uint drawnDai, uint injectionAmount, int ttt);
+    event AgreementUpdated(int savingsDifference, uint currentDebt, int delta, uint currentDsrAnnual, uint timeInterval, uint drawnDai, uint injectionAmount);
     event AgreementCanceled(address _user);
     event AgreementTerminated();
     event AgreementLiquidated();
@@ -1002,9 +1012,15 @@ interface IAgreement {
 
 }
 
-// File: contracts\Agreement.sol
+// File: contracts/Agreement.sol
 
-pragma solidity 0.5.11;
+pragma solidity 0.5.11;
+
+
+
+
+
+
 
 /**
  * @title Base Agreement contract
@@ -1204,7 +1220,7 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
         } else {
             _updateAgreementState(false);
         }
-        if(isCdpUnsafe(collateralType, cdpId)) {
+        if(!isCdpSafe(collateralType, cdpId)) {
             _liquidateAgreement();
         }
         return true;
@@ -1369,22 +1385,23 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
         delta = delta.add(savingsDifference);
         lastCheckTime = now;
 
-        uint pendingDebt = uint(fromRay(delta));
+        uint currentDebt = uint(fromRay(delta < 0 ? -delta : delta));
 
-        if (pendingDebt >= (_isLastUpdate ? 1 : Config(configAddr).injectionThreshold())) {
+        if (currentDebt >= (_isLastUpdate ? 1 : Config(configAddr).injectionThreshold())) {
             if (delta < 0) {
-                drawnDai = _drawDaiToCdp(collateralType, cdpId, pendingDebt);
+                // if delta < 0 - currentDebt is borrower's debt to lender
+                drawnDai = _drawDaiToCdp(collateralType, cdpId, currentDebt);
                 delta = delta.add(int(toRay(drawnDai)));
-                // drawnTotal = drawnTotal.add(drawnDai);
-                // _pushDaiAsset(lender, drawnDai);
+                drawnTotal = drawnTotal.add(drawnDai);
+                _pushDaiAsset(lender, drawnDai);
             } else {
-                 injectionAmount = _unlockDai(pendingDebt);
+                // delta > 0 - currentDebt is lender's debt to borrower
+                injectionAmount = _injectToCdpFromDsr(cdpId, currentDebt);
                 delta = delta.sub(int(toRay(injectionAmount)));
-                _injectToCdp(cdpId, injectionAmount);
                 injectedTotal = injectedTotal.add(injectionAmount);
             }
         }
-        emit AgreementUpdated(savingsDifference, pendingDebt, delta, currentDsrAnnual, timeInterval, drawnDai, injectionAmount, -15);
+        emit AgreementUpdated(savingsDifference, currentDebt, delta, currentDsrAnnual, timeInterval, drawnDai, injectionAmount);
         return true;
     }
 
@@ -1396,7 +1413,7 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
         _closeWithType(ClosedTypes.Ended);
         _updateAgreementState(true);
         _refund();
-        
+
         emit AgreementTerminated();
         return true;
     }
@@ -1409,7 +1426,7 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
     function _liquidateAgreement() internal returns(bool _success) {
         _closeWithType(ClosedTypes.Liquidated);
         _refund();
-        
+
         emit AgreementLiquidated();
         return true;
     }
@@ -1421,7 +1438,7 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
     function _blockAgreement() internal returns(bool _success) {
         _closeWithType(ClosedTypes.Blocked);
         _refund();
-        
+
         emit AgreementBlocked();
         return true;
     }

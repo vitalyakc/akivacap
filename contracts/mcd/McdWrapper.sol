@@ -106,7 +106,7 @@ contract McdWrapper is McdAddressesR17, RaySupport {
      * @param   cdpId   cdp ID
      * @return  true if unsafe
      */
-    function isCdpUnsafe(bytes32 ilk, uint cdpId) public view returns(bool) {
+    function isCdpSafe(bytes32 ilk, uint cdpId) public view returns(bool) {
         return getDaiAvailable(ilk, cdpId) > 0;
     }
 
@@ -245,12 +245,13 @@ contract McdWrapper is McdAddressesR17, RaySupport {
      * @param   cdp   cdp ID
      * @param   wad   amount of dai tokens
      */
-    function _injectToCdp(uint cdp, uint wad) internal {
+    function _injectToCdpFromDsr(uint cdp, uint wad) internal returns(uint injectionWad) {
+        injectionWad = _unlockDai(wad);
         proxy().execute(
             proxyLib,
             abi.encodeWithSignature(
                 "wipe(address,address,uint256,uint256)",
-                cdpManagerAddr, mcdJoinDaiAddr, cdp, wad));
+                cdpManagerAddr, mcdJoinDaiAddr, cdp, injectionWad));
     }
 
     /**
@@ -263,11 +264,11 @@ contract McdWrapper is McdAddressesR17, RaySupport {
     function _drawDaiToCdp(bytes32 ilk, uint cdp, uint wad) internal returns (uint drawnDai) {
         uint maxToDraw = getDaiAvailable(ilk, cdp);
         drawnDai = wad > maxToDraw ? maxToDraw : wad;
-        // proxy().execute(
-        //     proxyLib,
-        //     abi.encodeWithSignature(
-        //         "draw(address,address,address,uint256,uint256)",
-        //         cdpManagerAddr, mcdJugAddr, mcdJoinDaiAddr, cdp, drawnDai));
+        proxy().execute(
+            proxyLib,
+            abi.encodeWithSignature(
+                "draw(address,address,address,uint256,uint256)",
+                cdpManagerAddr, mcdJugAddr, mcdJoinDaiAddr, cdp, drawnDai));
     }
 
     /**
