@@ -323,17 +323,15 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
      * @return Operation success
      */
     function lockAdditionalCollateral(uint _amount) external payable onlyBorrower beforeStatus(Statuses.Closed) returns(bool _success)  {
+        if (!isETH) {
+            erc20TokenContract(collateralType).transferFrom(msg.sender, address(this), _amount);
+        }
         if (isStatus(Statuses.Active)) {
             if (isETH) {
                 require(msg.value == _amount, "Agreement: ether sent doesn't coinside with required");
                 _lockETH(collateralType, cdpId, msg.value);
             } else {
                 _lockERC20(collateralType, cdpId, _amount, true);
-            }
-        }
-        if(isBeforeStatus(Statuses.Active)){
-            if (!isETH) {
-                erc20TokenContract(collateralType).transferFrom(msg.sender, address(this), _amount);
             }
         }
         collateralAmount = collateralAmount.add(_amount);
@@ -457,7 +455,7 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
         _switchStatusClosedWithType(ClosedTypes.Cancelled);
         _pushCollateralAsset(borrower, collateralAmount);
 
-        emit AgreementClosed(ClosedTypes.Cancelled, msg.sender);
+        emit AgreementClosed(uint(ClosedTypes.Cancelled), msg.sender);
     }
 
     /**
@@ -469,7 +467,7 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
         _switchStatusClosedWithType(_closedType);
         _refund();
 
-        emit AgreementClosed(_closedType, msg.sender);
+        emit AgreementClosed(uint(_closedType), msg.sender);
         return true;
     }
 
