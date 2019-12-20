@@ -94,7 +94,7 @@ contract AgreementMock is Agreement {
       return IERC20(erc20Token);
     }
 
-    function setStatus(uint256 _status) public {
+    function setStatus(Statuses _status) public {
       status = _status;
     }
 
@@ -122,27 +122,19 @@ contract AgreementMock is Agreement {
       lastCheckTime = _value;
     }
 
-    function refund(bool _isLiquidated) public {
-      _refund(_isLiquidated);
+    function refund() public {
+      _refund();
     }
 
     function terminateAgreement() public returns(bool _success) {
-      return _terminateAgreement();
+    //   return _terminateAgreement();
     }
 
     function _transferCdpOwnership(uint256, address) internal {}
-
-    function _callTransferFromDai(address from, address to, uint amount) internal returns(bool) {
-      IERC20(mcdDaiAddrMock).transferFrom(from, to, amount);
-    }
 }
 
 contract AgreementDeepMock is AgreementMock {
   function _transferFromDai(address from, address to, uint amount) internal returns(bool) {
       return true;
-  }
-  
-  function _callTransferFromDai(address from, address to, uint amount) internal returns(bool) {
-    return true;
   }
 }

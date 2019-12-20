@@ -48,7 +48,6 @@ contract ProxyRegistryLike {
     mapping(address => DSProxyLike) public proxies;
     function build() public returns (address payable proxy);
     function build(address owner) public returns (address payable proxy);
-    
 }
 
 contract DSProxyLike {
