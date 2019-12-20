@@ -1,5 +1,5 @@
 
-// File: contracts\helpers\Context.sol
+// File: contracts/helpers/Context.sol
 
 pragma solidity ^0.5.0;
 
@@ -29,7 +29,7 @@ contract Context {
     }
 }
 
-// File: contracts\helpers\Initializable.sol
+// File: contracts/helpers/Initializable.sol
 
 pragma solidity >=0.4.24 <0.6.0;
 
@@ -93,9 +93,11 @@ contract Initializable {
   uint256[50] private ______gap;
 }
 
-// File: contracts\helpers\Claimable.sol
+// File: contracts/helpers/Claimable.sol
 
-pragma solidity 0.5.11;
+pragma solidity 0.5.11;
+
+
 
 contract Ownable is Initializable, Context {
     address public owner;
@@ -143,9 +145,10 @@ contract Claimable is Ownable {
     }
 }
 
-// File: contracts\config\Config.sol
+// File: contracts/config/Config.sol
 
-pragma solidity 0.5.11;
+pragma solidity 0.5.11;
+
 
 /**
  * @title Config for Agreement contract
@@ -218,7 +221,7 @@ contract Config is Claimable {
     }
 }
 
-// File: contracts\interfaces\IERC20.sol
+// File: contracts/interfaces/IERC20.sol
 
 pragma solidity 0.5.11;
 
@@ -234,9 +237,10 @@ contract IERC20 {
     event Approval(address indexed tokenOwner, address indexed spender, uint tokens);
 }
 
-// File: contracts\interfaces\IAgreement.sol
+// File: contracts/interfaces/IAgreement.sol
 
-pragma solidity 0.5.11;
+pragma solidity 0.5.11;
+
 
 /**
  * @title Interface for Agreement contract
@@ -295,10 +299,7 @@ interface IAgreement {
     event AgreementApproved();
     event AgreementMatched(address _lender, uint _expireDate, uint _cdpId, uint _collateralAmount, uint _debtValue, uint _drawnDai);
     event AgreementUpdated(int savingsDifference, int delta, uint currentDsrAnnual, uint timeInterval, uint drawnDai, uint injectionAmount);
-    event AgreementCanceled(address _user);
-    event AgreementTerminated();
-    event AgreementLiquidated();
-    event AgreementBlocked();
+    event AgreementClosed(ClosedTypes _closedType, address _user);
     event AssetsCollateralPush(address _holder, uint _amount, bytes32 collateralType);
     event AssetsCollateralPop(address _holder, uint _amount, bytes32 collateralType);
     event AssetsDaiPush(address _holder, uint _amount);
@@ -307,7 +308,7 @@ interface IAgreement {
     event AdditionalCollateralLocked(uint _amount);
 }
 
-// File: node_modules\zos-lib\contracts\upgradeability\Proxy.sol
+// File: zos-lib/contracts/upgradeability/Proxy.sol
 
 pragma solidity ^0.5.0;
 
@@ -377,7 +378,7 @@ contract Proxy {
   }
 }
 
-// File: node_modules\zos-lib\contracts\utils\Address.sol
+// File: zos-lib/contracts/utils/Address.sol
 
 pragma solidity ^0.5.0;
 
@@ -411,7 +412,7 @@ library ZOSLibAddress {
     }
 }
 
-// File: node_modules\zos-lib\contracts\upgradeability\BaseUpgradeabilityProxy.sol
+// File: zos-lib/contracts/upgradeability/BaseUpgradeabilityProxy.sol
 
 pragma solidity ^0.5.0;
 
@@ -472,7 +473,7 @@ contract BaseUpgradeabilityProxy is Proxy {
   }
 }
 
-// File: zos-lib\contracts\upgradeability\UpgradeabilityProxy.sol
+// File: zos-lib/contracts/upgradeability/UpgradeabilityProxy.sol
 
 pragma solidity ^0.5.0;
 
@@ -501,9 +502,14 @@ contract UpgradeabilityProxy is BaseUpgradeabilityProxy {
   }  
 }
 
-// File: contracts\FraFactory.sol
+// File: contracts/FraFactory.sol
 
-pragma solidity 0.5.11;
+pragma solidity 0.5.11;
+
+
+
+
+
 
 /**
  * @title Fra Factory

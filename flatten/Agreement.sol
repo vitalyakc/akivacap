@@ -1,5 +1,5 @@
 
-// File: contracts\helpers\Context.sol
+// File: contracts/helpers/Context.sol
 
 pragma solidity ^0.5.0;
 
@@ -29,7 +29,7 @@ contract Context {
     }
 }
 
-// File: contracts\helpers\Initializable.sol
+// File: contracts/helpers/Initializable.sol
 
 pragma solidity >=0.4.24 <0.6.0;
 
@@ -93,9 +93,11 @@ contract Initializable {
   uint256[50] private ______gap;
 }
 
-// File: contracts\helpers\Claimable.sol
+// File: contracts/helpers/Claimable.sol
 
-pragma solidity 0.5.11;
+pragma solidity 0.5.11;
+
+
 
 contract Ownable is Initializable, Context {
     address public owner;
@@ -143,9 +145,10 @@ contract Claimable is Ownable {
     }
 }
 
-// File: contracts\config\Config.sol
+// File: contracts/config/Config.sol
 
-pragma solidity 0.5.11;
+pragma solidity 0.5.11;
+
 
 /**
  * @title Config for Agreement contract
@@ -218,7 +221,7 @@ contract Config is Claimable {
     }
 }
 
-// File: contracts\helpers\SafeMath.sol
+// File: contracts/helpers/SafeMath.sol
 
 pragma solidity >=0.5.0 <0.6.0;
 
@@ -314,7 +317,7 @@ library SafeMath {
     }
 }
 
-// File: contracts\mcd\McdAddressesR17.sol
+// File: contracts/mcd/McdAddressesR17.sol
 
 pragma solidity 0.5.11;
 /**
@@ -344,7 +347,7 @@ contract McdAddressesR17 {
     address payable constant batAddr = 0x9f8cFB61D3B2aF62864408DD703F9C3BEB55dff7;
 }
 
-// File: contracts\interfaces\IMcd.sol
+// File: contracts/interfaces/IMcd.sol
 
 pragma solidity 0.5.11;
 
@@ -404,7 +407,7 @@ contract DSProxyLike {
     function setOwner(address owner_) public;
 }
 
-// File: contracts\interfaces\IERC20.sol
+// File: contracts/interfaces/IERC20.sol
 
 pragma solidity 0.5.11;
 
@@ -420,9 +423,10 @@ contract IERC20 {
     event Approval(address indexed tokenOwner, address indexed spender, uint tokens);
 }
 
-// File: contracts\helpers\RaySupport.sol
+// File: contracts/helpers/RaySupport.sol
 
-pragma solidity 0.5.11;
+pragma solidity 0.5.11;
+
 
 contract RaySupport {
     using SafeMath for uint256;
@@ -491,9 +495,13 @@ contract RaySupport {
     // }
 }
 
-// File: contracts\mcd\McdWrapper.sol
+// File: contracts/mcd/McdWrapper.sol
 
-pragma solidity 0.5.11;
+pragma solidity 0.5.11;
+
+
+
+
 
 /**
  * @title Agreement multicollateral dai wrapper for maker dao system interaction.
@@ -927,9 +935,10 @@ contract McdWrapper is McdAddressesR17, RaySupport {
     }
 }
 
-// File: contracts\interfaces\IAgreement.sol
+// File: contracts/interfaces/IAgreement.sol
 
-pragma solidity 0.5.11;
+pragma solidity 0.5.11;
+
 
 /**
  * @title Interface for Agreement contract
@@ -988,10 +997,7 @@ interface IAgreement {
     event AgreementApproved();
     event AgreementMatched(address _lender, uint _expireDate, uint _cdpId, uint _collateralAmount, uint _debtValue, uint _drawnDai);
     event AgreementUpdated(int savingsDifference, int delta, uint currentDsrAnnual, uint timeInterval, uint drawnDai, uint injectionAmount);
-    event AgreementCanceled(address _user);
-    event AgreementTerminated();
-    event AgreementLiquidated();
-    event AgreementBlocked();
+    event AgreementClosed(ClosedTypes _closedType, address _user);
     event AssetsCollateralPush(address _holder, uint _amount, bytes32 collateralType);
     event AssetsCollateralPop(address _holder, uint _amount, bytes32 collateralType);
     event AssetsDaiPush(address _holder, uint _amount);
@@ -1000,9 +1006,15 @@ interface IAgreement {
     event AdditionalCollateralLocked(uint _amount);
 }
 
-// File: contracts\Agreement.sol
+// File: contracts/Agreement.sol
 
-pragma solidity 0.5.11;
+pragma solidity 0.5.11;
+
+
+
+
+
+
 
 /**
  * @title Base Agreement contract
@@ -1168,7 +1180,7 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
     * @notice switch status to closed with exact type
     * @param _closedType closing type
     */
-    function _closeWithType(ClosedTypes _closedType) internal {
+    function _switchStatusClosedWithType(ClosedTypes _closedType) internal {
         _switchStatus(Statuses.Closed);
         closedType = _closedType;
     }
@@ -1274,14 +1286,17 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
      * @return Operation success
      */
     function updateAgreement() external onlyContractOwner hasStatus(Statuses.Active) returns(bool _success) {
-        if(now > expireDate) {
-            _terminateAgreement();
-        } else {
-            _updateAgreementState(false);
+        if (now > expireDate) {
+            _closeAgreement(ClosedTypes.Ended);
+            _updateAgreementState(true);
+            return true;
         }
-        if(!isCdpSafe(collateralType, cdpId)) {
-            _liquidateAgreement();
+        if (!isCdpSafe(collateralType, cdpId)) {
+            _closeAgreement(ClosedTypes.Liquidated);
+            _updateAgreementState(true);
+            return true;
         }
+        _updateAgreementState(false);
         return true;
     }
 
@@ -1308,7 +1323,7 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
      * @return Operation success
      */
     function blockAgreement() external hasStatus(Statuses.Active) onlyContractOwner returns(bool _success)  {
-        _blockAgreement();
+        _closeAgreement(ClosedTypes.Blocked);
         return true;
     }
 
@@ -1323,6 +1338,11 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
                 _lockETH(collateralType, cdpId, msg.value);
             } else {
                 _lockERC20(collateralType, cdpId, _amount, true);
+            }
+        }
+        if(isBeforeStatus(Statuses.Active)){
+            if (!isETH) {
+                erc20TokenContract(collateralType).transferFrom(msg.sender, address(this), _amount);
             }
         }
         collateralAmount = collateralAmount.add(_amount);
@@ -1443,10 +1463,23 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
      * transfers collateral ETH back to user
      */
     function _cancelAgreement() internal {
-        _closeWithType(ClosedTypes.Cancelled);
+        _switchStatusClosedWithType(ClosedTypes.Cancelled);
         _pushCollateralAsset(borrower, collateralAmount);
 
-        emit AgreementCanceled(msg.sender);
+        emit AgreementClosed(ClosedTypes.Cancelled, msg.sender);
+    }
+
+    /**
+     * @notice Close agreement
+     * @param   _closedType closing type
+     * @return Operation success
+     */
+    function _closeAgreement(ClosedTypes _closedType) internal returns(bool _success) {
+        _switchStatusClosedWithType(_closedType);
+        _refund();
+
+        emit AgreementClosed(_closedType, msg.sender);
+        return true;
     }
 
     /**
@@ -1485,44 +1518,6 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
         emit AgreementUpdated(savingsDifference, delta, currentDsrAnnual, timeInterval, drawnDai, injectionAmount);
         if (drawnDai > 0)
             _pushDaiAsset(lender, drawnDai);
-        return true;
-    }
-
-    /**
-     * @notice Terminates agreement
-     * @return Operation success
-     */
-    function _terminateAgreement() internal returns(bool _success) {
-        _closeWithType(ClosedTypes.Ended);
-        _updateAgreementState(true);
-        _refund();
-
-        emit AgreementTerminated();
-        return true;
-    }
-
-    /**
-     * @dev Liquidates agreement, mostly the same as terminate
-     * but also covers collateral transfers after liquidation
-     * @return Operation success
-     */
-    function _liquidateAgreement() internal returns(bool _success) {
-        _closeWithType(ClosedTypes.Liquidated);
-        _refund();
-
-        emit AgreementLiquidated();
-        return true;
-    }
-
-    /**
-     * @notice Block agreement
-     * @return Operation success
-     */
-    function _blockAgreement() internal returns(bool _success) {
-        _closeWithType(ClosedTypes.Blocked);
-        _refund();
-
-        emit AgreementBlocked();
         return true;
     }
 

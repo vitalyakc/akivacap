@@ -331,6 +331,11 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
                 _lockERC20(collateralType, cdpId, _amount, true);
             }
         }
+        if(isBeforeStatus(Statuses.Active)){
+            if (!isETH) {
+                erc20TokenContract(collateralType).transferFrom(msg.sender, address(this), _amount);
+            }
+        }
         collateralAmount = collateralAmount.add(_amount);
         emit AdditionalCollateralLocked(_amount);
         return true;
