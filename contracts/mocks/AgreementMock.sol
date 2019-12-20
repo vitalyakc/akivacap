@@ -127,7 +127,7 @@ contract AgreementMock is Agreement {
     }
 
     function terminateAgreement() public returns(bool _success) {
-      return _terminateAgreement();
+    //   return _terminateAgreement();
     }
 
     function _transferCdpOwnership(uint256, address) internal {}

@@ -13,41 +13,118 @@ import "./interfaces/IAgreement.sol";
  * @dev Should not be deployed. It is being used as an abstract class
  */
 contract Agreement is IAgreement, Claimable, McdWrapper {
+    using SafeMath for uint;
+    using SafeMath for int;
+    
     struct Asset {
         uint collateral;
         uint dai;
     }
-
-    using SafeMath for uint;
-    using SafeMath for int;
-
-    mapping(uint => uint) public statusSnapshots;
-    mapping(address => Asset) public assets;
-
+    
     uint constant internal YEAR_SECS = 365 days;
 
+    /**
+     * Agreement status timestamp snapshots
+     */
+    mapping(uint => uint) public statusSnapshots;
+
+    /**
+     * Agreement participants assets
+     */
+    mapping(address => Asset) public assets;
+
+    /**
+     * Agreement status
+     */
     Statuses public status;
+
+    /**
+     * Type the agreement is closed by 
+     */
     ClosedTypes public closedType;
 
+    /**
+     * Config contract address
+     */
     address public configAddr;
+
+    /**
+     * True if agreement collateral is ether
+     */
     bool public isETH;
+
+    /**
+     * Agreement risky marker
+     */
     bool public isRisky;
 
+    /**
+     * Aggreement duration in seconds
+     */
     uint256 public duration;
+
+    /**
+     * Agreement expiration date. Is calculated during match
+     */
     uint256 public expireDate;
+
+    /**
+     * Borrower address
+     */
     address payable public borrower;
+
+    /**
+     * Lender address
+     */
     address payable public lender;
+
+    /**
+     * Bytes32 representation of collateral type like ETH-A
+     */
     bytes32 public collateralType;
+
+    /**
+     * Collateral amount
+     */
     uint256 public collateralAmount;
+
+    /**
+     * Dai debt amount
+     */
     uint256 public debtValue;
+
+    /**
+     * Fixed intereast rate %
+     */
     uint256 public interestRate;
 
+    /**
+     * Vault (CDP) id in maker dao contracts
+     */
     uint256 public cdpId;
+
+    /**
+     * Last time the agreement was updated
+     */
     uint256 public lastCheckTime;
-    int public delta;
+
+    /**
+     * Total amount drawn to cdp while paying off borrower's agreement debt
+     */
     uint public drawnTotal;
+
+    /**
+     * Total amount injected to cdp during paying off lender's agreement debt
+     */
     uint public injectedTotal;
 
+    /**
+     * delta shows user's debt
+     * if delta < 0 - it is borrower's debt to lender
+     * if delta > 0 - it is lender's debt to borrower
+     */
+    int public delta;
+    
     /**
      * @notice Grants access only to agreement's borrower
      */
@@ -94,7 +171,7 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
     * @notice switch status to closed with exact type
     * @param _closedType closing type
     */
-    function _closeWithType(ClosedTypes _closedType) internal {
+    function _switchStatusClosedWithType(ClosedTypes _closedType) internal {
         _switchStatus(Statuses.Closed);
         closedType = _closedType;
     }
@@ -200,14 +277,17 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
      * @return Operation success
      */
     function updateAgreement() external onlyContractOwner hasStatus(Statuses.Active) returns(bool _success) {
-        if(now > expireDate) {
-            _terminateAgreement();
-        } else {
-            _updateAgreementState(false);
+        if (now > expireDate) {
+            _closeAgreement(ClosedTypes.Ended);
+            _updateAgreementState(true);
+            return true;
         }
-        if(!isCdpSafe(collateralType, cdpId)) {
-            _liquidateAgreement();
+        if (!isCdpSafe(collateralType, cdpId)) {
+            _closeAgreement(ClosedTypes.Liquidated);
+            _updateAgreementState(true);
+            return true;
         }
+        _updateAgreementState(false);
         return true;
     }
 
@@ -234,7 +314,7 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
      * @return Operation success
      */
     function blockAgreement() external hasStatus(Statuses.Active) onlyContractOwner returns(bool _success)  {
-        _blockAgreement();
+        _closeAgreement(ClosedTypes.Blocked);
         return true;
     }
 
@@ -369,10 +449,23 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
      * transfers collateral ETH back to user
      */
     function _cancelAgreement() internal {
-        _closeWithType(ClosedTypes.Cancelled);
+        _switchStatusClosedWithType(ClosedTypes.Cancelled);
         _pushCollateralAsset(borrower, collateralAmount);
 
-        emit AgreementCanceled(msg.sender);
+        emit AgreementClosed(ClosedTypes.Cancelled, msg.sender);
+    }
+
+    /**
+     * @notice Close agreement
+     * @param   _closedType closing type
+     * @return Operation success
+     */
+    function _closeAgreement(ClosedTypes _closedType) internal returns(bool _success) {
+        _switchStatusClosedWithType(_closedType);
+        _refund();
+
+        emit AgreementClosed(_closedType, msg.sender);
+        return true;
     }
 
     /**
@@ -394,13 +487,13 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
 
         uint currentDebt = uint(fromRay(delta < 0 ? -delta : delta));
 
+        // check the current debt is above threshold
         if (currentDebt >= (_isLastUpdate ? 1 : Config(configAddr).injectionThreshold())) {
             if (delta < 0) {
                 // if delta < 0 - currentDebt is borrower's debt to lender
                 drawnDai = _drawDaiToCdp(collateralType, cdpId, currentDebt);
                 delta = delta.add(int(toRay(drawnDai)));
                 drawnTotal = drawnTotal.add(drawnDai);
-                _pushDaiAsset(lender, drawnDai);
             } else {
                 // delta > 0 - currentDebt is lender's debt to borrower
                 injectionAmount = _injectToCdpFromDsr(cdpId, currentDebt);
@@ -408,50 +501,14 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
                 injectedTotal = injectedTotal.add(injectionAmount);
             }
         }
-        emit AgreementUpdated(savingsDifference, currentDebt, delta, currentDsrAnnual, timeInterval, drawnDai, injectionAmount);
+        emit AgreementUpdated(savingsDifference, delta, currentDsrAnnual, timeInterval, drawnDai, injectionAmount);
+        if (drawnDai > 0)
+            _pushDaiAsset(lender, drawnDai);
         return true;
     }
 
     /**
-     * @notice Terminates agreement
-     * @return Operation success
-     */
-    function _terminateAgreement() internal returns(bool _success) {
-        _closeWithType(ClosedTypes.Ended);
-        _updateAgreementState(true);
-        _refund();
-
-        emit AgreementTerminated();
-        return true;
-    }
-
-    /**
-     * @dev Liquidates agreement, mostly the sam as terminate
-     * but also covers collateral transfers after liquidation
-     * @return Operation success
-     */
-    function _liquidateAgreement() internal returns(bool _success) {
-        _closeWithType(ClosedTypes.Liquidated);
-        _refund();
-
-        emit AgreementLiquidated();
-        return true;
-    }
-
-    /**
-     * @notice Block agreement
-     * @return Operation success
-     */
-    function _blockAgreement() internal returns(bool _success) {
-        _closeWithType(ClosedTypes.Blocked);
-        _refund();
-
-        emit AgreementBlocked();
-        return true;
-    }
-
-    /**
-     * @notice Refund agreement, transfer dai to lender, cdp ownership to borrower if debt is payed
+     * @notice Refund agreement, push dai to lender assets, transfer cdp ownership to borrower if debt is payed
      * @return Operation success
      */
     function _refund() internal {
@@ -461,7 +518,7 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
     }
 
     /**
-     * @notice add collateral to user's internal wallet
+     * @notice Add collateral to user's internal wallet
      * @param _holder user's address
      * @param _amount collateral amount to push
      */
@@ -471,7 +528,7 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
     }
 
     /**
-     * @notice add dai to user's internal wallet
+     * @notice Add dai to user's internal wallet
      * @param _holder user's address
      * @param _amount dai amount to push
      */
@@ -481,7 +538,7 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
     }
 
     /**
-     * @notice take away collateral from user's internal wallet
+     * @notice Take away collateral from user's internal wallet
      * @param _holder user's address
      * @param _amount collateral amount to pop
      */
@@ -491,7 +548,7 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
     }
 
     /**
-     * @notice take away dai from user's internal wallet
+     * @notice Take away dai from user's internal wallet
      * @param _holder user's address
      * @param _amount dai amount to pop
      */

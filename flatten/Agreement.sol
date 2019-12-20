@@ -1,5 +1,5 @@
 
-// File: contracts/helpers/Context.sol
+// File: contracts\helpers\Context.sol
 
 pragma solidity ^0.5.0;
 
@@ -29,7 +29,7 @@ contract Context {
     }
 }
 
-// File: contracts/helpers/Initializable.sol
+// File: contracts\helpers\Initializable.sol
 
 pragma solidity >=0.4.24 <0.6.0;
 
@@ -93,11 +93,9 @@ contract Initializable {
   uint256[50] private ______gap;
 }
 
-// File: contracts/helpers/Claimable.sol
+// File: contracts\helpers\Claimable.sol
 
-pragma solidity 0.5.11;
-
-
+pragma solidity 0.5.11;
 
 contract Ownable is Initializable, Context {
     address public owner;
@@ -145,10 +143,9 @@ contract Claimable is Ownable {
     }
 }
 
-// File: contracts/config/Config.sol
+// File: contracts\config\Config.sol
 
-pragma solidity 0.5.11;
-
+pragma solidity 0.5.11;
 
 /**
  * @title Config for Agreement contract
@@ -221,7 +218,7 @@ contract Config is Claimable {
     }
 }
 
-// File: contracts/helpers/SafeMath.sol
+// File: contracts\helpers\SafeMath.sol
 
 pragma solidity >=0.5.0 <0.6.0;
 
@@ -317,7 +314,7 @@ library SafeMath {
     }
 }
 
-// File: contracts/mcd/McdAddressesR17.sol
+// File: contracts\mcd\McdAddressesR17.sol
 
 pragma solidity 0.5.11;
 /**
@@ -347,7 +344,7 @@ contract McdAddressesR17 {
     address payable constant batAddr = 0x9f8cFB61D3B2aF62864408DD703F9C3BEB55dff7;
 }
 
-// File: contracts/interfaces/IMcd.sol
+// File: contracts\interfaces\IMcd.sol
 
 pragma solidity 0.5.11;
 
@@ -407,7 +404,7 @@ contract DSProxyLike {
     function setOwner(address owner_) public;
 }
 
-// File: contracts/interfaces/IERC20.sol
+// File: contracts\interfaces\IERC20.sol
 
 pragma solidity 0.5.11;
 
@@ -423,10 +420,9 @@ contract IERC20 {
     event Approval(address indexed tokenOwner, address indexed spender, uint tokens);
 }
 
-// File: contracts/helpers/RaySupport.sol
+// File: contracts\helpers\RaySupport.sol
 
-pragma solidity 0.5.11;
-
+pragma solidity 0.5.11;
 
 contract RaySupport {
     using SafeMath for uint256;
@@ -495,13 +491,9 @@ contract RaySupport {
     // }
 }
 
-// File: contracts/mcd/McdWrapper.sol
+// File: contracts\mcd\McdWrapper.sol
 
-pragma solidity 0.5.11;
-
-
-
-
+pragma solidity 0.5.11;
 
 /**
  * @title Agreement multicollateral dai wrapper for maker dao system interaction.
@@ -658,7 +650,7 @@ contract McdWrapper is McdAddressesR17, RaySupport {
         bytes memory data;
         (address collateralJoinAddr,) = _getCollateralAddreses(ilk);
         data = abi.encodeWithSignature(
-            "lockETHAndDraw(address,address,uint256)",
+            "lockETH(address,address,uint256)",
             cdpManagerAddr, collateralJoinAddr, cdp);
         (bool success,) = proxyAddress.call.value(wadC)(abi.encodeWithSignature("execute(address,bytes)", proxyLib, data));
         require(success);
@@ -935,10 +927,9 @@ contract McdWrapper is McdAddressesR17, RaySupport {
     }
 }
 
-// File: contracts/interfaces/IAgreement.sol
+// File: contracts\interfaces\IAgreement.sol
 
-pragma solidity 0.5.11;
-
+pragma solidity 0.5.11;
 
 /**
  * @title Interface for Agreement contract
@@ -996,7 +987,7 @@ interface IAgreement {
     event AgreementInitiated(address _borrower, uint _collateralValue, uint _debtValue, uint _expireDate, uint _interestRate);
     event AgreementApproved();
     event AgreementMatched(address _lender, uint _expireDate, uint _cdpId, uint _collateralAmount, uint _debtValue, uint _drawnDai);
-    event AgreementUpdated(int savingsDifference, uint currentDebt, int delta, uint currentDsrAnnual, uint timeInterval, uint drawnDai, uint injectionAmount);
+    event AgreementUpdated(int savingsDifference, int delta, uint currentDsrAnnual, uint timeInterval, uint drawnDai, uint injectionAmount);
     event AgreementCanceled(address _user);
     event AgreementTerminated();
     event AgreementLiquidated();
@@ -1009,15 +1000,9 @@ interface IAgreement {
     event AdditionalCollateralLocked(uint _amount);
 }
 
-// File: contracts/Agreement.sol
+// File: contracts\Agreement.sol
 
-pragma solidity 0.5.11;
-
-
-
-
-
-
+pragma solidity 0.5.11;
 
 /**
  * @title Base Agreement contract
@@ -1025,41 +1010,118 @@ pragma solidity 0.5.11;
  * @dev Should not be deployed. It is being used as an abstract class
  */
 contract Agreement is IAgreement, Claimable, McdWrapper {
+    using SafeMath for uint;
+    using SafeMath for int;
+    
     struct Asset {
         uint collateral;
         uint dai;
     }
-
-    using SafeMath for uint;
-    using SafeMath for int;
-
-    mapping(uint => uint) public statusSnapshots;
-    mapping(address => Asset) public assets;
-
+    
     uint constant internal YEAR_SECS = 365 days;
 
+    /**
+     * Agreement status timestamp snapshots
+     */
+    mapping(uint => uint) public statusSnapshots;
+
+    /**
+     * Agreement participants assets
+     */
+    mapping(address => Asset) public assets;
+
+    /**
+     * Agreement status
+     */
     Statuses public status;
+
+    /**
+     * Type the agreement is closed by 
+     */
     ClosedTypes public closedType;
 
+    /**
+     * Config contract address
+     */
     address public configAddr;
+
+    /**
+     * True if agreement collateral is ether
+     */
     bool public isETH;
+
+    /**
+     * Agreement risky marker
+     */
     bool public isRisky;
 
+    /**
+     * Aggreement duration in seconds
+     */
     uint256 public duration;
+
+    /**
+     * Agreement expiration date. Is calculated during match
+     */
     uint256 public expireDate;
+
+    /**
+     * Borrower address
+     */
     address payable public borrower;
+
+    /**
+     * Lender address
+     */
     address payable public lender;
+
+    /**
+     * Bytes32 representation of collateral type like ETH-A
+     */
     bytes32 public collateralType;
+
+    /**
+     * Collateral amount
+     */
     uint256 public collateralAmount;
+
+    /**
+     * Dai debt amount
+     */
     uint256 public debtValue;
+
+    /**
+     * Fixed intereast rate %
+     */
     uint256 public interestRate;
 
+    /**
+     * Vault (CDP) id in maker dao contracts
+     */
     uint256 public cdpId;
+
+    /**
+     * Last time the agreement was updated
+     */
     uint256 public lastCheckTime;
-    int public delta;
+
+    /**
+     * Total amount drawn to cdp while paying off borrower's agreement debt
+     */
     uint public drawnTotal;
+
+    /**
+     * Total amount injected to cdp during paying off lender's agreement debt
+     */
     uint public injectedTotal;
 
+    /**
+     * delta shows user's debt
+     * if delta < 0 - it is borrower's debt to lender
+     * if delta > 0 - it is lender's debt to borrower
+     */
+    int public delta;
+    
     /**
      * @notice Grants access only to agreement's borrower
      */
@@ -1406,13 +1468,13 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
 
         uint currentDebt = uint(fromRay(delta < 0 ? -delta : delta));
 
+        // check the current debt is above threshold
         if (currentDebt >= (_isLastUpdate ? 1 : Config(configAddr).injectionThreshold())) {
             if (delta < 0) {
                 // if delta < 0 - currentDebt is borrower's debt to lender
                 drawnDai = _drawDaiToCdp(collateralType, cdpId, currentDebt);
                 delta = delta.add(int(toRay(drawnDai)));
                 drawnTotal = drawnTotal.add(drawnDai);
-                _pushDaiAsset(lender, drawnDai);
             } else {
                 // delta > 0 - currentDebt is lender's debt to borrower
                 injectionAmount = _injectToCdpFromDsr(cdpId, currentDebt);
@@ -1420,7 +1482,9 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
                 injectedTotal = injectedTotal.add(injectionAmount);
             }
         }
-        emit AgreementUpdated(savingsDifference, currentDebt, delta, currentDsrAnnual, timeInterval, drawnDai, injectionAmount);
+        emit AgreementUpdated(savingsDifference, delta, currentDsrAnnual, timeInterval, drawnDai, injectionAmount);
+        if (drawnDai > 0)
+            _pushDaiAsset(lender, drawnDai);
         return true;
     }
 
@@ -1438,7 +1502,7 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
     }
 
     /**
-     * @dev Liquidates agreement, mostly the sam as terminate
+     * @dev Liquidates agreement, mostly the same as terminate
      * but also covers collateral transfers after liquidation
      * @return Operation success
      */
@@ -1463,7 +1527,7 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
     }
 
     /**
-     * @notice Refund agreement, transfer dai to lender, cdp ownership to borrower if debt is payed
+     * @notice Refund agreement, push dai to lender assets, transfer cdp ownership to borrower if debt is payed
      * @return Operation success
      */
     function _refund() internal {
@@ -1473,7 +1537,7 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
     }
 
     /**
-     * @notice add collateral to user's internal wallet
+     * @notice Add collateral to user's internal wallet
      * @param _holder user's address
      * @param _amount collateral amount to push
      */
@@ -1483,7 +1547,7 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
     }
 
     /**
-     * @notice add dai to user's internal wallet
+     * @notice Add dai to user's internal wallet
      * @param _holder user's address
      * @param _amount dai amount to push
      */
@@ -1493,7 +1557,7 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
     }
 
     /**
-     * @notice take away collateral from user's internal wallet
+     * @notice Take away collateral from user's internal wallet
      * @param _holder user's address
      * @param _amount collateral amount to pop
      */
@@ -1503,7 +1567,7 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
     }
 
     /**
-     * @notice take away dai from user's internal wallet
+     * @notice Take away dai from user's internal wallet
      * @param _holder user's address
      * @param _amount dai amount to pop
      */
