@@ -1631,7 +1631,7 @@ contract('Agreement', async (accounts) => {
       assert.equal(await agreement.isRisky(), true);
 
       assert.equal(result.logs.length, 1);
-      assert.equal(result.logs[0].event, 'riskyToggled');
+      assert.equal(result.logs[0].event, 'RiskyToggled');
       assert.equal(result.logs[0].args._isRisky, true);
     });
 
@@ -1645,7 +1645,7 @@ contract('Agreement', async (accounts) => {
       assert.equal(await agreement.isRisky(), false);
 
       assert.equal(result.logs.length, 1);
-      assert.equal(result.logs[0].event, 'riskyToggled');
+      assert.equal(result.logs[0].event, 'RiskyToggled');
       assert.equal(result.logs[0].args._isRisky, false);
     });
   });
