@@ -152,31 +152,6 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
     }
 
     /**
-     * @notice Serial status transition
-     */
-    function _nextStatus() internal {
-        _switchStatus(Statuses(uint(status) + 1));
-    }
-
-    /**
-    * @notice switch to exact status
-    * @param _next status that should be switched to
-    */
-    function _switchStatus(Statuses _next) internal {
-        status = _next;
-        _doStatusSnapshot();
-    }
-
-    /**
-    * @notice switch status to closed with exact type
-    * @param _closedType closing type
-    */
-    function _switchStatusClosedWithType(ClosedTypes _closedType) internal {
-        _switchStatus(Statuses.Closed);
-        closedType = _closedType;
-    }
-
-    /**
     * @notice Save timestamp for current status
     */
     function _doStatusSnapshot() internal {
@@ -228,7 +203,7 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
         
         _nextStatus();
         _initMcdWrapper(collateralType, isETH);
-
+        _monitorRisky();
         emit AgreementInitiated(borrower, collateralAmount, debtValue, duration, interestRate);
     }
     
@@ -296,7 +271,9 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
      * @return Operation success
      */
     function cancelAgreement() external onlyBorrower beforeStatus(Statuses.Active) returns(bool _success)  {
-        _cancelAgreement();
+        _closeAgreement(ClosedTypes.Cancelled);
+        //push to lenders internal wallet collateral locked in agreement
+        _pushCollateralAsset(borrower, collateralAmount);
         return true;
     }
 
@@ -305,7 +282,9 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
      * @return Operation success
      */
     function rejectAgreement() external onlyContractOwner beforeStatus(Statuses.Active) returns(bool _success)  {
-        _cancelAgreement();
+        _closeAgreement(ClosedTypes.Cancelled);
+        //push to lenders internal wallet collateral locked in agreement
+        _pushCollateralAsset(borrower, collateralAmount);
         return true;
     }
 
@@ -315,6 +294,7 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
      */
     function blockAgreement() external hasStatus(Statuses.Active) onlyContractOwner returns(bool _success)  {
         _closeAgreement(ClosedTypes.Blocked);
+        _refund();
         return true;
     }
 
@@ -336,6 +316,7 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
         }
         collateralAmount = collateralAmount.add(_amount);
         emit AdditionalCollateralLocked(_amount);
+        _monitorRisky();
         return true;
     }
 
@@ -447,15 +428,11 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
         }
     }
 
-    /**
-     * @notice Closes agreement before it is matched and
-     * transfers collateral ETH back to user
-     */
-    function _cancelAgreement() internal {
-        _switchStatusClosedWithType(ClosedTypes.Cancelled);
-        _pushCollateralAsset(borrower, collateralAmount);
-
-        emit AgreementClosed(uint(ClosedTypes.Cancelled), msg.sender);
+    function getCR() public view returns(uint) {
+        return cdpId > 0 ? getCdpCR(collateralType, cdpId) : collateralAmount.mul(getPrice(collateralType)).div(debtValue);
+    }
+    function getCRBuffer() public view returns(uint) {
+        return getCR().sub(getMCR(collateralType)).mul(100).div(ONE);
     }
 
     /**
@@ -465,7 +442,6 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
      */
     function _closeAgreement(ClosedTypes _closedType) internal returns(bool _success) {
         _switchStatusClosedWithType(_closedType);
-        _refund();
 
         emit AgreementClosed(uint(_closedType), msg.sender);
         return true;
@@ -476,7 +452,7 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
      * @param _isLastUpdate true if the agreement is going to be terminated, false otherwise
      * @return Operation success
      */
-    function _updateAgreementState(bool _isLastUpdate) internal returns(bool _success) {
+    function _updateAgreementState(bool _isLastUpdate) public returns(bool _success) {
         // if it is last update take the time interval up to expireDate, otherwise up to current time
         uint timeInterval = (_isLastUpdate ? expireDate : now).sub(lastCheckTime);
         uint injectionAmount;
@@ -504,10 +480,30 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
                 injectedTotal = injectedTotal.add(injectionAmount);
             }
         }
+        
         emit AgreementUpdated(savingsDifference, delta, currentDsrAnnual, timeInterval, drawnDai, injectionAmount);
         if (drawnDai > 0)
             _pushDaiAsset(lender, drawnDai);
+        _monitorRisky();
+        if (_isLastUpdate)
+            _refund();
         return true;
+    }
+
+    /**
+     * @notice Monitor and set up or set down risky marker
+     */
+    function _monitorRisky() internal {
+        bool _isRisky;
+        if (getCRBuffer() <= Config(configAddr).riskyMargin()) {
+            _isRisky = true;
+        } else {
+            _isRisky = false;
+        }
+        if (isRisky != _isRisky) {
+            isRisky = _isRisky;
+            emit riskyToggled(_isRisky);
+        }
     }
 
     /**
@@ -518,6 +514,31 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
         _pushDaiAsset(lender, _unlockAllDai());
         _transferCdpOwnershipToProxy(cdpId, borrower);
         emit CdpOwnershipTransferred(borrower, cdpId);
+    }
+
+    /**
+     * @notice Serial status transition
+     */
+    function _nextStatus() internal {
+        _switchStatus(Statuses(uint(status) + 1));
+    }
+
+    /**
+    * @notice switch to exact status
+    * @param _next status that should be switched to
+    */
+    function _switchStatus(Statuses _next) internal {
+        status = _next;
+        _doStatusSnapshot();
+    }
+
+    /**
+    * @notice switch status to closed with exact type
+    * @param _closedType closing type
+    */
+    function _switchStatusClosedWithType(ClosedTypes _closedType) internal {
+        _switchStatus(Statuses.Closed);
+        closedType = _closedType;
     }
 
     /**

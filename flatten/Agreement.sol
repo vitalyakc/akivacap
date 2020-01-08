@@ -1,5 +1,5 @@
 
-// File: contracts/helpers/Context.sol
+// File: contracts\helpers\Context.sol
 
 pragma solidity ^0.5.0;
 
@@ -29,7 +29,7 @@ contract Context {
     }
 }
 
-// File: contracts/helpers/Initializable.sol
+// File: contracts\helpers\Initializable.sol
 
 pragma solidity >=0.4.24 <0.6.0;
 
@@ -93,11 +93,9 @@ contract Initializable {
   uint256[50] private ______gap;
 }
 
-// File: contracts/helpers/Claimable.sol
+// File: contracts\helpers\Claimable.sol
 
-pragma solidity 0.5.11;
-
-
+pragma solidity 0.5.11;
 
 contract Ownable is Initializable, Context {
     address public owner;
@@ -145,10 +143,9 @@ contract Claimable is Ownable {
     }
 }
 
-// File: contracts/config/Config.sol
+// File: contracts\config\Config.sol
 
-pragma solidity 0.5.11;
-
+pragma solidity 0.5.11;
 
 /**
  * @title Config for Agreement contract
@@ -163,6 +160,7 @@ contract Config is Claimable {
     uint public maxCollateralAmount;
     uint public minDuration;
     uint public maxDuration;
+    uint public riskyMargin;
     
 
     /**
@@ -221,7 +219,7 @@ contract Config is Claimable {
     }
 }
 
-// File: contracts/helpers/SafeMath.sol
+// File: contracts\helpers\SafeMath.sol
 
 pragma solidity >=0.5.0 <0.6.0;
 
@@ -317,7 +315,7 @@ library SafeMath {
     }
 }
 
-// File: contracts/mcd/McdAddressesR17.sol
+// File: contracts\mcd\McdAddressesR17.sol
 
 pragma solidity 0.5.11;
 /**
@@ -347,7 +345,7 @@ contract McdAddressesR17 {
     address payable constant batAddr = 0x9f8cFB61D3B2aF62864408DD703F9C3BEB55dff7;
 }
 
-// File: contracts/interfaces/IMcd.sol
+// File: contracts\interfaces\IMcd.sol
 
 pragma solidity 0.5.11;
 
@@ -407,7 +405,7 @@ contract DSProxyLike {
     function setOwner(address owner_) public;
 }
 
-// File: contracts/interfaces/IERC20.sol
+// File: contracts\interfaces\IERC20.sol
 
 pragma solidity 0.5.11;
 
@@ -423,10 +421,9 @@ contract IERC20 {
     event Approval(address indexed tokenOwner, address indexed spender, uint tokens);
 }
 
-// File: contracts/helpers/RaySupport.sol
+// File: contracts\helpers\RaySupport.sol
 
-pragma solidity 0.5.11;
-
+pragma solidity 0.5.11;
 
 contract RaySupport {
     using SafeMath for uint256;
@@ -495,13 +492,9 @@ contract RaySupport {
     // }
 }
 
-// File: contracts/mcd/McdWrapper.sol
+// File: contracts\mcd\McdWrapper.sol
 
-pragma solidity 0.5.11;
-
-
-
-
+pragma solidity 0.5.11;
 
 /**
  * @title Agreement multicollateral dai wrapper for maker dao system interaction.
@@ -618,6 +611,23 @@ contract McdWrapper is McdAddressesR17, RaySupport {
         (, uint rate, uint spot,,) = VatLike(mcdVatAddr).ilks(ilk);
         (uint ink, uint art) = VatLike(mcdVatAddr).urns(ilk, ManagerLike(cdpManagerAddr).urns(cdpId));
         return (ink.mul(spot) > art.mul(rate)) ? fromRay(ink.mul(spot).sub(art.mul(rate))) : 0;
+    }
+
+    function getCdpCR(bytes32 ilk, uint cdpId) public view returns(uint) {
+        (, uint rate, uint spot,,) = VatLike(mcdVatAddr).ilks(ilk);
+        (uint ink, uint art) = VatLike(mcdVatAddr).urns(ilk, ManagerLike(cdpManagerAddr).urns(cdpId));
+        (,uint mat) = SpotterLike(mcdSpotAddr).ilks(ilk);
+        return ink.mul(spot).mul(mat).div(art.mul(rate));
+    }
+
+    function getCdpCRBuffer(bytes32 ilk, uint cdpId) public view returns(uint) {
+        (,uint mat) = SpotterLike(mcdSpotAddr).ilks(ilk);
+        return getCdpCR(ilk, cdpId).sub(getMCR(ilk)).mul(100).div(ONE);
+    }
+
+    function getMCR(bytes32 ilk) public view returns(uint) {
+        (,uint mat) = SpotterLike(mcdSpotAddr).ilks(ilk);
+        return mat;
     }
 
     /**
@@ -935,10 +945,9 @@ contract McdWrapper is McdAddressesR17, RaySupport {
     }
 }
 
-// File: contracts/interfaces/IAgreement.sol
+// File: contracts\interfaces\IAgreement.sol
 
-pragma solidity 0.5.11;
-
+pragma solidity 0.5.11;
 
 /**
  * @title Interface for Agreement contract
@@ -1004,17 +1013,12 @@ interface IAgreement {
     event AssetsDaiPop(address _holder, uint _amount);
     event CdpOwnershipTransferred(address _borrower, uint _cdpId);
     event AdditionalCollateralLocked(uint _amount);
+    event riskyToggled(bool _isRisky);
 }
 
-// File: contracts/Agreement.sol
+// File: contracts\Agreement.sol
 
-pragma solidity 0.5.11;
-
-
-
-
-
-
+pragma solidity 0.5.11;
 
 /**
  * @title Base Agreement contract
@@ -1305,7 +1309,9 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
      * @return Operation success
      */
     function cancelAgreement() external onlyBorrower beforeStatus(Statuses.Active) returns(bool _success)  {
-        _cancelAgreement();
+        _closeAgreement(ClosedTypes.Cancelled);
+        //push to lenders internal wallet collateral locked in agreement
+        _pushCollateralAsset(borrower, collateralAmount);
         return true;
     }
 
@@ -1314,7 +1320,9 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
      * @return Operation success
      */
     function rejectAgreement() external onlyContractOwner beforeStatus(Statuses.Active) returns(bool _success)  {
-        _cancelAgreement();
+        _closeAgreement(ClosedTypes.Cancelled);
+        //push to lenders internal wallet collateral locked in agreement
+        _pushCollateralAsset(borrower, collateralAmount);
         return true;
     }
 
@@ -1324,6 +1332,7 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
      */
     function blockAgreement() external hasStatus(Statuses.Active) onlyContractOwner returns(bool _success)  {
         _closeAgreement(ClosedTypes.Blocked);
+        _refund();
         return true;
     }
 
@@ -1345,6 +1354,7 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
         }
         collateralAmount = collateralAmount.add(_amount);
         emit AdditionalCollateralLocked(_amount);
+        _monitorRisky();
         return true;
     }
 
@@ -1457,24 +1467,12 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
     }
 
     /**
-     * @notice Closes agreement before it is matched and
-     * transfers collateral ETH back to user
-     */
-    function _cancelAgreement() internal {
-        _switchStatusClosedWithType(ClosedTypes.Cancelled);
-        _pushCollateralAsset(borrower, collateralAmount);
-
-        emit AgreementClosed(uint(ClosedTypes.Cancelled), msg.sender);
-    }
-
-    /**
      * @notice Close agreement
      * @param   _closedType closing type
      * @return Operation success
      */
     function _closeAgreement(ClosedTypes _closedType) internal returns(bool _success) {
         _switchStatusClosedWithType(_closedType);
-        _refund();
 
         emit AgreementClosed(uint(_closedType), msg.sender);
         return true;
@@ -1485,7 +1483,7 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
      * @param _isLastUpdate true if the agreement is going to be terminated, false otherwise
      * @return Operation success
      */
-    function _updateAgreementState(bool _isLastUpdate) internal returns(bool _success) {
+    function _updateAgreementState(bool _isLastUpdate) public returns(bool _success) {
         // if it is last update take the time interval up to expireDate, otherwise up to current time
         uint timeInterval = (_isLastUpdate ? expireDate : now).sub(lastCheckTime);
         uint injectionAmount;
@@ -1513,10 +1511,33 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
                 injectedTotal = injectedTotal.add(injectionAmount);
             }
         }
+        _monitorRisky();
         emit AgreementUpdated(savingsDifference, delta, currentDsrAnnual, timeInterval, drawnDai, injectionAmount);
         if (drawnDai > 0)
             _pushDaiAsset(lender, drawnDai);
+        if (_isLastUpdate)
+            _refund();
         return true;
+    }
+
+    function _monitorRisky() internal {
+        bool _isRisky;
+        if (getCRBuffer() <= Config(configAddr).riskyMargin()) {
+            _isRisky = true;
+        } else {
+            _isRisky = false;
+        }
+        if (isRisky != _isRisky) {
+            isRisky = _isRisky;
+            emit riskyToggled(_isRisky);
+        }
+    }
+
+    function getCR() public view returns(uint) {
+        return cdpId > 0 ? getCdpCR(collateralType, cdpId) : collateralAmount.mul(getSafePrice(collateralType)).div(debtValue.mul(ONE));
+    }
+    function getCRBuffer() public view returns(uint) {
+        return getCR().sub(getMCR(collateralType)).mul(100).div(ONE);
     }
 
     /**

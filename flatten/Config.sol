@@ -1,5 +1,5 @@
 
-// File: contracts/helpers/Context.sol
+// File: contracts\helpers\Context.sol
 
 pragma solidity ^0.5.0;
 
@@ -29,7 +29,7 @@ contract Context {
     }
 }
 
-// File: contracts/helpers/Initializable.sol
+// File: contracts\helpers\Initializable.sol
 
 pragma solidity >=0.4.24 <0.6.0;
 
@@ -93,11 +93,9 @@ contract Initializable {
   uint256[50] private ______gap;
 }
 
-// File: contracts/helpers/Claimable.sol
+// File: contracts\helpers\Claimable.sol
 
-pragma solidity 0.5.11;
-
-
+pragma solidity 0.5.11;
 
 contract Ownable is Initializable, Context {
     address public owner;
@@ -145,10 +143,9 @@ contract Claimable is Ownable {
     }
 }
 
-// File: contracts/config/Config.sol
+// File: contracts\config\Config.sol
 
-pragma solidity 0.5.11;
-
+pragma solidity 0.5.11;
 
 /**
  * @title Config for Agreement contract
@@ -163,6 +160,7 @@ contract Config is Claimable {
     uint public maxCollateralAmount;
     uint public minDuration;
     uint public maxDuration;
+    uint public riskyMargin = 20;
     
 
     /**
