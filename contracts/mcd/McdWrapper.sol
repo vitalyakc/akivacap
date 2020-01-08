@@ -122,6 +122,12 @@ contract McdWrapper is McdAddressesR17, RaySupport {
         return (ink.mul(spot) > art.mul(rate)) ? fromRay(ink.mul(spot).sub(art.mul(rate))) : 0;
     }
 
+    /**
+     * @notice  Calculate current cdp collateralization ratio
+     * @param   ilk     collateral type in bytes32 format
+     * @param   cdpId   cdp ID
+     * @return  collateralization ratio
+     */
     function getCdpCR(bytes32 ilk, uint cdpId) public view returns(uint) {
         (, uint rate, uint spot,,) = VatLike(mcdVatAddr).ilks(ilk);
         (uint ink, uint art) = VatLike(mcdVatAddr).urns(ilk, ManagerLike(cdpManagerAddr).urns(cdpId));
@@ -129,6 +135,11 @@ contract McdWrapper is McdAddressesR17, RaySupport {
         return ink.mul(spot).mul(mat).div(art.mul(rate));
     }
 
+    /**
+     * @notice  Get minimal collateralization ratio for collateral type
+     * @param   ilk     collateral type in bytes32 format
+     * @return  minimal collateralization ratio
+     */
     function getMCR(bytes32 ilk) public view returns(uint) {
         (,uint mat) = SpotterLike(mcdSpotAddr).ilks(ilk);
         return mat;
