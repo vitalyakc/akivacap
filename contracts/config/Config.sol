@@ -15,6 +15,7 @@ contract Config is Claimable {
     uint public maxCollateralAmount;
     uint public minDuration;
     uint public maxDuration;
+    uint public riskyMargin = 20;
     
 
     /**
