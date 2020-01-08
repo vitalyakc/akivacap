@@ -1,7 +1,7 @@
 pragma solidity 0.5.11;
 
-import "../Agreement.sol";
-import "./ConfigMock.sol";
+import '../Agreement.sol';
+import './ConfigMock.sol';
 
 /*
  * @title Base Agreement Mock contract
@@ -13,6 +13,10 @@ contract AgreementMock is Agreement {
     uint256 public unlockedDai;
     address erc20Token;
     address public mcdDaiAddrMock;
+    uint256 drawnCdp;
+    uint256 injectionWad;
+    uint256 CR;
+    uint256 price;
 
     /**
      * @notice should be removed after testing!!!
@@ -33,19 +37,9 @@ contract AgreementMock is Agreement {
       currentTime = _time;
     }
 
-    function getCurrentTime() public view returns(uint256) {
-      return currentTime;
-    }
-
-    function _openCdp(bytes32 ilk) internal returns (uint cdp) {
-        return 0;
-    }
-
     function _lockDai(uint wad) internal {}
 
-    function _lockETHAndDraw(bytes32 ilk, uint cdp, uint wadC, uint wadD) internal {}
-
-    function _lockERC20AndDraw(bytes32 ilk, uint cdp, uint wadD, uint wadC, bool transferFrom) internal {}
+    function _lockETH(bytes32 ilk, uint cdp, uint wadC) internal {}
 
     function setMcdDaiAddrMock(address _addr) public {
       mcdDaiAddrMock = _addr;
@@ -64,8 +58,6 @@ contract AgreementMock is Agreement {
       unlockedDai = _amount;
     }
 
-    function _unlockDai(uint wad) internal returns(uint unlockedWad) {}
-
     function _unlockAllDai() internal returns(uint) {
         return unlockedDai;
     }
@@ -74,17 +66,7 @@ contract AgreementMock is Agreement {
         return unlockedDai;
     }
 
-    function _injectToCdp(uint cdp, uint wad) internal {}
-
-    function _forceLiquidateCdp(bytes32 ilk, uint cdpId) internal view returns(uint) {
-      return 0;
-    }
-
-    function getCollateralEquivalent(bytes32 ilk, uint daiAmount) public view returns(uint) {
-      return daiAmount * 200;
-    }
-
-    function _initMcdWrapper() internal {}
+    function _initMcdWrapper(bytes32 ilk, bool isEther) internal {}
 
     function setErc20Token(address _contract) public {
       erc20Token = _contract;
@@ -92,10 +74,6 @@ contract AgreementMock is Agreement {
 
     function erc20TokenContract(bytes32 ilk) public view returns(IERC20) {
       return IERC20(erc20Token);
-    }
-
-    function setStatus(Statuses _status) public {
-      status = _status;
     }
 
     function initAgreement(
@@ -108,7 +86,7 @@ contract AgreementMock is Agreement {
       bool _isETH,
       address _configAddr
     ) public payable {
-      Agreement.initAgreement(_borrower, _collateralAmount, _debtValue, 
+      Agreement.initAgreement(_borrower, _collateralAmount, _debtValue,
         _duration, _interestRatePercent, _collateralType, _isETH, _configAddr);
       
       setErc20Token(ConfigMock(_configAddr).getErc20collToken());
@@ -122,15 +100,79 @@ contract AgreementMock is Agreement {
       lastCheckTime = _value;
     }
 
+    function setStatus(uint256 _status) public {
+      status = Statuses(_status);
+    }
+
     function refund() public {
       _refund();
     }
 
-    function terminateAgreement() public returns(bool _success) {
-    //   return _terminateAgreement();
+    function _transferCdpOwnershipToProxy(uint256, address) internal {}
+
+    function setDrawnCdp(uint256 _drawnCdp) public {
+        drawnCdp = _drawnCdp;
     }
 
-    function _transferCdpOwnership(uint256, address) internal {}
+    function _drawDaiToCdp(bytes32 ilk, uint cdp, uint wad) internal returns (uint) {
+      return drawnCdp;
+    }
+
+    function _injectToCdpFromDsr(uint cdp, uint wad) internal returns(uint) {
+      return injectionWad;
+    }
+
+    function setInjectionWad(uint256 _injectionWad) public {
+      injectionWad = _injectionWad;
+    }
+
+    function nextStatus() public {
+      _nextStatus();
+    }
+
+    function switchStatus(Statuses _next) public {
+        _switchStatus(_next);
+    }
+
+    function switchStatusClosedWithType(ClosedTypes _closedType) public {
+        _switchStatusClosedWithType(_closedType);
+    }
+
+    function doStatusSnapshot() public {
+        _doStatusSnapshot();
+    }
+
+    function pushCollateralAsset(address _holder, uint _amount) public {
+        _pushCollateralAsset(_holder, _amount);
+    }
+
+    function pushDaiAsset(address _holder, uint _amount) public {
+        _pushDaiAsset(_holder, _amount);
+    }
+
+    function popCollateralAsset(address _holder, uint _amount) public {
+        _popCollateralAsset(_holder, _amount);
+    }
+
+    function popDaiAsset(address _holder, uint _amount) public {
+        _popDaiAsset(_holder, _amount);
+    }
+
+    function isCdpSafe(bytes32 ilk, uint cdpId) public view returns(bool) {
+        return now < 200000;
+    }
+
+    function setCRBuffer(uint256 _CR) public {
+        CR = _CR;
+    }
+
+    function getCRBuffer() public view returns(uint256) {
+        return CR;
+    }
+
+    function monitorRisky() public {
+        _monitorRisky();
+    }
 }
 
 contract AgreementDeepMock is AgreementMock {
