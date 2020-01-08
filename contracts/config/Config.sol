@@ -46,7 +46,8 @@ contract Config is Claimable {
         uint _minCollateralAmount,
         uint _maxCollateralAmount,
         uint _minDuration,
-        uint _maxDuration
+        uint _maxDuration,
+        uint _riskyMargin
     ) public onlyContractOwner {
         approveLimit = _approveLimit;
         matchLimit = _matchLimit;
