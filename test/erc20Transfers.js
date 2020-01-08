@@ -40,6 +40,8 @@ contract('erc20 Transfers', async (accounts) => {
 
     erc20 = await ERC20Token.new();
     await configContract.setErc20collToken(erc20.address);
+    await configContract
+    .setGeneral(1440, 60, 2, 100, toBN(100).times(toBN(10).pow(toBN(18))), 86400, 31536000, 10);
 
     await reverter.snapshot();
   });
@@ -54,11 +56,9 @@ contract('erc20 Transfers', async (accounts) => {
       await fraFactory.initAgreementERC20(2000, 1000, 90000, fromPercentToRey(3),
         ETH_A, {from: BORROWER});
 
-      assert.equal(await fraFactory.agreements.call(BORROWER, 0),
-        await fraFactory.agreementList.call(0));
-      assert.notEqual(await fraFactory.agreements.call(BORROWER, 0), ADDRESS_NULL);
+      assert.notEqual(await fraFactory.agreementList.call(0), ADDRESS_NULL);
 
-      const localAgreement = await Agreement.at(await fraFactory.agreements.call(BORROWER, 0));
+      const localAgreement = await Agreement.at(await fraFactory.agreementList.call(0));
 
       assert.equal(await localAgreement.borrower.call({from: NOBODY}), BORROWER);
       assert.equal(await localAgreement.collateralAmount.call({from: NOBODY}), 2000);
@@ -71,11 +71,9 @@ contract('erc20 Transfers', async (accounts) => {
       await fraFactory.initAgreementERC20(2000, 1000, 90000, fromPercentToRey(3),
         ETH_A, {from: BORROWER});
 
-      assert.equal(await fraFactory.agreements.call(BORROWER, 0),
-        await fraFactory.agreementList.call(0));
-      assert.notEqual(await fraFactory.agreements.call(BORROWER, 0), ADDRESS_NULL);
+      assert.notEqual(await fraFactory.agreementList.call(0), ADDRESS_NULL);
 
-      const localAgreement = await Agreement.at(await fraFactory.agreements.call(BORROWER, 0));
+      const localAgreement = await Agreement.at(await fraFactory.agreementList.call(0));
 
       assert.equal(await localAgreement.borrower.call({from: NOBODY}), BORROWER);
       assert.equal(await localAgreement.collateralAmount.call({from: NOBODY}), 2000);
@@ -98,25 +96,26 @@ contract('erc20 Transfers', async (accounts) => {
   });
 
   describe('checking erc20 collateral transfering matchAgreement()', async () => {
-    it('dai tokens should be taken from lender balance and added to agreement with valid allowance', async () => {
-      await daiErc20.mint(LENDER, 150);
+    // Share with Tanya
+    // it('dai tokens should be taken from lender balance and added to agreement with valid allowance', async () => {
+    //   await daiErc20.mint(LENDER, 150);
 
-      await erc20.mint(BORROWER, 150);
-      await erc20.approve(fraFactory.address, 150, {from: BORROWER});
+    //   await erc20.mint(BORROWER, 150);
+    //   await erc20.approve(fraFactory.address, 150, {from: BORROWER});
 
-      await fraFactory.initAgreementERC20(150, 150, 90000, fromPercentToRey(3),
-        ETH_A, {from: BORROWER});
+    //   await fraFactory.initAgreementERC20(150, 150, 90000, fromPercentToRey(3),
+    //     ETH_A, {from: BORROWER});
 
-      const localAgreement = await Agreement.at(await fraFactory.agreements.call(BORROWER, 0));
-      await localAgreement.setMcdDaiAddrMock(daiErc20.address);
-      await daiErc20.approve(localAgreement.address, 150, {from: LENDER});
+    //   const localAgreement = await Agreement.at(await fraFactory.agreementList.call(0));
+    //   await localAgreement.setMcdDaiAddrMock(daiErc20.address);
+    //   await daiErc20.approve(localAgreement.address, 150, {from: LENDER});
 
-      await fraFactory.approveAgreement(localAgreement.address);
-      await localAgreement.matchAgreement({from: LENDER});
+    //   await fraFactory.approveAgreement(localAgreement.address);
+    //   await localAgreement.matchAgreement({from: LENDER});
 
-      assert.equal((await daiErc20.balanceOf.call(LENDER)).toNumber(), 0);
-      assert.equal((await daiErc20.balanceOf.call(localAgreement.address)).toNumber(), 150);
-    });
+    //   assert.equal((await daiErc20.balanceOf.call(LENDER)).toNumber(), 0);
+    //   assert.equal((await daiErc20.balanceOf.call(localAgreement.address)).toNumber(), 150);
+    // });
 
     it('dai tokens should be taken from lender balance and added to agreement with valid allowance', async () => {
       await daiErc20.mint(LENDER, 2000);
@@ -124,7 +123,7 @@ contract('erc20 Transfers', async (accounts) => {
       await fraFactory.initAgreementETH(1005, 90000, fromPercentToRey(3),
         ETH_A, {from: BORROWER, value: 2000});
 
-      const localAgreement = await Agreement.at(await fraFactory.agreements.call(BORROWER, 0));
+      const localAgreement = await Agreement.at(await fraFactory.agreementList.call(0));
       await localAgreement.setMcdDaiAddrMock(daiErc20.address);
       await daiErc20.approve(localAgreement.address, 2000, {from: LENDER});
 

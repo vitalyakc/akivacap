@@ -1,9 +1,9 @@
 pragma solidity ^0.5.0;
 
-import "../helpers/Context.sol";
-import "../interfaces/IERC20.sol";
-import "../helpers/Claimable.sol";
-import "../helpers/SafeMath.sol";
+import '../helpers/Context.sol';
+import '../interfaces/IERC20.sol';
+import '../helpers/Claimable.sol';
+import '../helpers/SafeMath.sol';
 
 /**
  * @dev Implementation of the {IERC20} interface.
@@ -157,8 +157,8 @@ contract SimpleErc20Token is Context, IERC20, Claimable {
      * - `sender` must have a balance of at least `amount`.
      */
     function _transfer(address sender, address recipient, uint256 amount) internal {
-        require(sender != address(0), "ERC20: transfer from the zero address");
-        require(recipient != address(0), "ERC20: transfer to the zero address");
+        require(sender != address(0), 'ERC20: transfer from the zero address');
+        require(recipient != address(0), 'ERC20: transfer to the zero address');
 
         _balances[sender] = _balances[sender].sub(amount);
         _balances[recipient] = _balances[recipient].add(amount);
@@ -180,7 +180,7 @@ contract SimpleErc20Token is Context, IERC20, Claimable {
     }
 
     function _mint(address account, uint256 amount) internal {
-        require(account != address(0), "ERC20: mint to the zero address");
+        require(account != address(0), 'ERC20: mint to the zero address');
 
         _totalSupply = _totalSupply.add(amount);
         _balances[account] = _balances[account].add(amount);
@@ -199,7 +199,7 @@ contract SimpleErc20Token is Context, IERC20, Claimable {
      * - `account` must have at least `amount` tokens.
      */
     function _burn(address account, uint256 amount) internal {
-        require(account != address(0), "ERC20: burn from the zero address");
+        require(account != address(0), 'ERC20: burn from the zero address');
 
         _balances[account] = _balances[account].sub(amount);
         _totalSupply = _totalSupply.sub(amount);
@@ -220,8 +220,8 @@ contract SimpleErc20Token is Context, IERC20, Claimable {
      * - `spender` cannot be the zero address.
      */
     function _approve(address owner, address spender, uint256 amount) internal {
-        require(owner != address(0), "ERC20: approve from the zero address");
-        require(spender != address(0), "ERC20: approve to the zero address");
+        require(owner != address(0), 'ERC20: approve from the zero address');
+        require(spender != address(0), 'ERC20: approve to the zero address');
 
         _allowances[owner][spender] = amount;
         emit Approval(owner, spender, amount);
