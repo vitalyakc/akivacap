@@ -66,5 +66,5 @@ interface IAgreement {
     event AssetsDaiPop(address _holder, uint _amount);
     event CdpOwnershipTransferred(address _borrower, uint _cdpId);
     event AdditionalCollateralLocked(uint _amount);
-    event riskyToggled(bool _isRisky);
+    event RiskyToggled(bool _isRisky);
 }
