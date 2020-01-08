@@ -1,5 +1,5 @@
 
-// File: contracts\helpers\Context.sol
+// File: contracts/helpers/Context.sol
 
 pragma solidity ^0.5.0;
 
@@ -29,7 +29,7 @@ contract Context {
     }
 }
 
-// File: contracts\helpers\Initializable.sol
+// File: contracts/helpers/Initializable.sol
 
 pragma solidity >=0.4.24 <0.6.0;
 
@@ -93,9 +93,11 @@ contract Initializable {
   uint256[50] private ______gap;
 }
 
-// File: contracts\helpers\Claimable.sol
+// File: contracts/helpers/Claimable.sol
 
-pragma solidity 0.5.11;
+pragma solidity 0.5.11;
+
+
 
 contract Ownable is Initializable, Context {
     address public owner;
@@ -143,9 +145,10 @@ contract Claimable is Ownable {
     }
 }
 
-// File: contracts\config\Config.sol
+// File: contracts/config/Config.sol
 
-pragma solidity 0.5.11;
+pragma solidity 0.5.11;
+
 
 /**
  * @title Config for Agreement contract
@@ -168,7 +171,7 @@ contract Config is Claimable {
      */
     constructor() public {
         super.initialize();
-        setGeneral(7 days, 1 days, 1000, 100, 1000 ether, 1 minutes, 365 days);
+        setGeneral(7 days, 1 days, 1000, 100, 1000 ether, 1 minutes, 365 days, 20);
         enableCollateral("ETH-A");
         enableCollateral("BAT-A");
     }
@@ -182,6 +185,7 @@ contract Config is Claimable {
      * @param   _maxCollateralAmount    max amount
      * @param   _minDuration        min agreement length
      * @param   _maxDuration        max agreement length
+     * @param   _riskyMargin        risky Margin %
      */
     function setGeneral(
         uint _approveLimit,
@@ -190,36 +194,81 @@ contract Config is Claimable {
         uint _minCollateralAmount,
         uint _maxCollateralAmount,
         uint _minDuration,
-        uint _maxDuration
+        uint _maxDuration,
+        uint _riskyMargin
     ) public onlyContractOwner {
         approveLimit = _approveLimit;
         matchLimit = _matchLimit;
         
         injectionThreshold = _injectionThreshold;
+        
         minCollateralAmount = _minCollateralAmount;
         maxCollateralAmount = _maxCollateralAmount;
 
         minDuration = _minDuration;
         maxDuration = _maxDuration;
+
+        riskyMargin = _riskyMargin;
     }
 
+    /**
+     * @dev     set config parameter
+     * @param   _riskyMargin        risky Margin %
+     */
+    function setRiskyMargin(uint _riskyMargin) public onlyContractOwner {
+        riskyMargin = _riskyMargin;
+    }
 
+    /**
+     * @dev     set config parameter
+     * @param   _approveLimit        max duration available for approve after creation, if expires - agreement should be closed
+     */
+    function setApproveLimit(uint _approveLimit) public onlyContractOwner {
+        approveLimit = _approveLimit;
+    }
+
+    /**
+     * @dev     set config parameter
+     * @param   _matchLimit        max duration available for match after approve, if expires - agreement should be closed
+     */
+    function setMatchLimit(uint _matchLimit) public onlyContractOwner {
+        matchLimit = _matchLimit;
+    }
+
+    /**
+     * @dev     set config parameter
+     * @param   _injectionThreshold     minimal threshold permitted for injection
+     */
+    function setInjectionThreshold(uint _injectionThreshold) public onlyContractOwner {
+        injectionThreshold = _injectionThreshold;
+    }
+
+    /**
+     * @dev     enable colateral type
+     * @param   _ilk     bytes32 collateral type
+     */
     function enableCollateral(bytes32 _ilk) public onlyContractOwner {
         collateralsEnabled[_ilk] = true;
-
     }
 
+    /**
+     * @dev     disable colateral type
+     * @param   _ilk     bytes32 collateral type
+     */
     function disableCollateral(bytes32 _ilk) public onlyContractOwner {
         collateralsEnabled[_ilk] = false;
-
     }
 
+    /**
+     * @dev     check if colateral is enabled
+     * @param   _ilk     bytes32 collateral type
+     */
     function isCollateralEnabled(bytes32 _ilk) public view returns(bool) {
         return collateralsEnabled[_ilk];
     }
 }
 
-// File: contracts\helpers\SafeMath.sol
+// File: contracts/helpers/SafeMath.sol
 
 pragma solidity >=0.5.0 <0.6.0;
 
@@ -315,7 +364,7 @@ library SafeMath {
     }
 }
 
-// File: contracts\mcd\McdAddressesR17.sol
+// File: contracts/mcd/McdAddressesR17.sol
 
 pragma solidity 0.5.11;
 /**
@@ -345,7 +394,7 @@ contract McdAddressesR17 {
     address payable constant batAddr = 0x9f8cFB61D3B2aF62864408DD703F9C3BEB55dff7;
 }
 
-// File: contracts\interfaces\IMcd.sol
+// File: contracts/interfaces/IMcd.sol
 
 pragma solidity 0.5.11;
 
@@ -405,7 +454,7 @@ contract DSProxyLike {
     function setOwner(address owner_) public;
 }
 
-// File: contracts\interfaces\IERC20.sol
+// File: contracts/interfaces/IERC20.sol
 
 pragma solidity 0.5.11;
 
@@ -421,9 +470,10 @@ contract IERC20 {
     event Approval(address indexed tokenOwner, address indexed spender, uint tokens);
 }
 
-// File: contracts\helpers\RaySupport.sol
+// File: contracts/helpers/RaySupport.sol
 
-pragma solidity 0.5.11;
+pragma solidity 0.5.11;
+
 
 contract RaySupport {
     using SafeMath for uint256;
@@ -492,9 +542,13 @@ contract RaySupport {
     // }
 }
 
-// File: contracts\mcd\McdWrapper.sol
+// File: contracts/mcd/McdWrapper.sol
 
-pragma solidity 0.5.11;
+pragma solidity 0.5.11;
+
+
+
+
 
 /**
  * @title Agreement multicollateral dai wrapper for maker dao system interaction.
@@ -613,6 +667,12 @@ contract McdWrapper is McdAddressesR17, RaySupport {
         return (ink.mul(spot) > art.mul(rate)) ? fromRay(ink.mul(spot).sub(art.mul(rate))) : 0;
     }
 
+    /**
+     * @notice  Calculate current cdp collateralization ratio
+     * @param   ilk     collateral type in bytes32 format
+     * @param   cdpId   cdp ID
+     * @return  collateralization ratio
+     */
     function getCdpCR(bytes32 ilk, uint cdpId) public view returns(uint) {
         (, uint rate, uint spot,,) = VatLike(mcdVatAddr).ilks(ilk);
         (uint ink, uint art) = VatLike(mcdVatAddr).urns(ilk, ManagerLike(cdpManagerAddr).urns(cdpId));
@@ -620,11 +680,11 @@ contract McdWrapper is McdAddressesR17, RaySupport {
         return ink.mul(spot).mul(mat).div(art.mul(rate));
     }
 
-    function getCdpCRBuffer(bytes32 ilk, uint cdpId) public view returns(uint) {
-        (,uint mat) = SpotterLike(mcdSpotAddr).ilks(ilk);
-        return getCdpCR(ilk, cdpId).sub(getMCR(ilk)).mul(100).div(ONE);
-    }
-
+    /**
+     * @notice  Get minimal collateralization ratio for collateral type
+     * @param   ilk     collateral type in bytes32 format
+     * @return  minimal collateralization ratio
+     */
     function getMCR(bytes32 ilk) public view returns(uint) {
         (,uint mat) = SpotterLike(mcdSpotAddr).ilks(ilk);
         return mat;
@@ -945,9 +1005,10 @@ contract McdWrapper is McdAddressesR17, RaySupport {
     }
 }
 
-// File: contracts\interfaces\IAgreement.sol
+// File: contracts/interfaces/IAgreement.sol
 
-pragma solidity 0.5.11;
+pragma solidity 0.5.11;
+
 
 /**
  * @title Interface for Agreement contract
@@ -1016,9 +1077,15 @@ interface IAgreement {
     event riskyToggled(bool _isRisky);
 }
 
-// File: contracts\Agreement.sol
+// File: contracts/Agreement.sol
 
-pragma solidity 0.5.11;
+pragma solidity 0.5.11;
+
+
+
+
+
+
 
 /**
  * @title Base Agreement contract
@@ -1165,31 +1232,6 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
     }
 
     /**
-     * @notice Serial status transition
-     */
-    function _nextStatus() internal {
-        _switchStatus(Statuses(uint(status) + 1));
-    }
-
-    /**
-    * @notice switch to exact status
-    * @param _next status that should be switched to
-    */
-    function _switchStatus(Statuses _next) internal {
-        status = _next;
-        _doStatusSnapshot();
-    }
-
-    /**
-    * @notice switch status to closed with exact type
-    * @param _closedType closing type
-    */
-    function _switchStatusClosedWithType(ClosedTypes _closedType) internal {
-        _switchStatus(Statuses.Closed);
-        closedType = _closedType;
-    }
-
-    /**
     * @notice Save timestamp for current status
     */
     function _doStatusSnapshot() internal {
@@ -1241,7 +1283,7 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
         
         _nextStatus();
         _initMcdWrapper(collateralType, isETH);
-
+        _monitorRisky();
         emit AgreementInitiated(borrower, collateralAmount, debtValue, duration, interestRate);
     }
     
@@ -1466,6 +1508,13 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
         }
     }
 
+    function getCR() public view returns(uint) {
+        return cdpId > 0 ? getCdpCR(collateralType, cdpId) : collateralAmount.mul(getPrice(collateralType)).div(debtValue);
+    }
+    function getCRBuffer() public view returns(uint) {
+        return getCR().sub(getMCR(collateralType)).mul(100).div(ONE);
+    }
+
     /**
      * @notice Close agreement
      * @param   _closedType closing type
@@ -1511,15 +1560,19 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
                 injectedTotal = injectedTotal.add(injectionAmount);
             }
         }
-        _monitorRisky();
+        
         emit AgreementUpdated(savingsDifference, delta, currentDsrAnnual, timeInterval, drawnDai, injectionAmount);
         if (drawnDai > 0)
             _pushDaiAsset(lender, drawnDai);
+        _monitorRisky();
         if (_isLastUpdate)
             _refund();
         return true;
     }
 
+    /**
+     * @notice Monitor and set up or set down risky marker
+     */
     function _monitorRisky() internal {
         bool _isRisky;
         if (getCRBuffer() <= Config(configAddr).riskyMargin()) {
@@ -1533,13 +1586,6 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
         }
     }
 
-    function getCR() public view returns(uint) {
-        return cdpId > 0 ? getCdpCR(collateralType, cdpId) : collateralAmount.mul(getSafePrice(collateralType)).div(debtValue.mul(ONE));
-    }
-    function getCRBuffer() public view returns(uint) {
-        return getCR().sub(getMCR(collateralType)).mul(100).div(ONE);
-    }
-
     /**
      * @notice Refund agreement, push dai to lender assets, transfer cdp ownership to borrower if debt is payed
      * @return Operation success
@@ -1548,6 +1594,31 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
         _pushDaiAsset(lender, _unlockAllDai());
         _transferCdpOwnershipToProxy(cdpId, borrower);
         emit CdpOwnershipTransferred(borrower, cdpId);
+    }
+
+    /**
+     * @notice Serial status transition
+     */
+    function _nextStatus() internal {
+        _switchStatus(Statuses(uint(status) + 1));
+    }
+
+    /**
+    * @notice switch to exact status
+    * @param _next status that should be switched to
+    */
+    function _switchStatus(Statuses _next) internal {
+        status = _next;
+        _doStatusSnapshot();
+    }
+
+    /**
+    * @notice switch status to closed with exact type
+    * @param _closedType closing type
+    */
+    function _switchStatusClosedWithType(ClosedTypes _closedType) internal {
+        _switchStatus(Statuses.Closed);
+        closedType = _closedType;
     }
 
     /**

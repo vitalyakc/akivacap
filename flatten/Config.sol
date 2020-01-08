@@ -1,5 +1,5 @@
 
-// File: contracts\helpers\Context.sol
+// File: contracts/helpers/Context.sol
 
 pragma solidity ^0.5.0;
 
@@ -29,7 +29,7 @@ contract Context {
     }
 }
 
-// File: contracts\helpers\Initializable.sol
+// File: contracts/helpers/Initializable.sol
 
 pragma solidity >=0.4.24 <0.6.0;
 
@@ -93,9 +93,11 @@ contract Initializable {
   uint256[50] private ______gap;
 }
 
-// File: contracts\helpers\Claimable.sol
+// File: contracts/helpers/Claimable.sol
 
-pragma solidity 0.5.11;
+pragma solidity 0.5.11;
+
+
 
 contract Ownable is Initializable, Context {
     address public owner;
@@ -143,9 +145,10 @@ contract Claimable is Ownable {
     }
 }
 
-// File: contracts\config\Config.sol
+// File: contracts/config/Config.sol
 
-pragma solidity 0.5.11;
+pragma solidity 0.5.11;
+
 
 /**
  * @title Config for Agreement contract
@@ -160,7 +163,7 @@ contract Config is Claimable {
     uint public maxCollateralAmount;
     uint public minDuration;
     uint public maxDuration;
-    uint public riskyMargin = 20;
+    uint public riskyMargin;
     
 
     /**
@@ -168,7 +171,7 @@ contract Config is Claimable {
      */
     constructor() public {
         super.initialize();
-        setGeneral(7 days, 1 days, 1000, 100, 1000 ether, 1 minutes, 365 days);
+        setGeneral(7 days, 1 days, 1000, 100, 1000 ether, 1 minutes, 365 days, 20);
         enableCollateral("ETH-A");
         enableCollateral("BAT-A");
     }
@@ -182,6 +185,7 @@ contract Config is Claimable {
      * @param   _maxCollateralAmount    max amount
      * @param   _minDuration        min agreement length
      * @param   _maxDuration        max agreement length
+     * @param   _riskyMargin        risky Margin %
      */
     function setGeneral(
         uint _approveLimit,
@@ -190,30 +194,75 @@ contract Config is Claimable {
         uint _minCollateralAmount,
         uint _maxCollateralAmount,
         uint _minDuration,
-        uint _maxDuration
+        uint _maxDuration,
+        uint _riskyMargin
     ) public onlyContractOwner {
         approveLimit = _approveLimit;
         matchLimit = _matchLimit;
         
         injectionThreshold = _injectionThreshold;
+        
         minCollateralAmount = _minCollateralAmount;
         maxCollateralAmount = _maxCollateralAmount;
 
         minDuration = _minDuration;
         maxDuration = _maxDuration;
+
+        riskyMargin = _riskyMargin;
     }
 
+    /**
+     * @dev     set config parameter
+     * @param   _riskyMargin        risky Margin %
+     */
+    function setRiskyMargin(uint _riskyMargin) public onlyContractOwner {
+        riskyMargin = _riskyMargin;
+    }
 
+    /**
+     * @dev     set config parameter
+     * @param   _approveLimit        max duration available for approve after creation, if expires - agreement should be closed
+     */
+    function setApproveLimit(uint _approveLimit) public onlyContractOwner {
+        approveLimit = _approveLimit;
+    }
+
+    /**
+     * @dev     set config parameter
+     * @param   _matchLimit        max duration available for match after approve, if expires - agreement should be closed
+     */
+    function setMatchLimit(uint _matchLimit) public onlyContractOwner {
+        matchLimit = _matchLimit;
+    }
+
+    /**
+     * @dev     set config parameter
+     * @param   _injectionThreshold     minimal threshold permitted for injection
+     */
+    function setInjectionThreshold(uint _injectionThreshold) public onlyContractOwner {
+        injectionThreshold = _injectionThreshold;
+    }
+
+    /**
+     * @dev     enable colateral type
+     * @param   _ilk     bytes32 collateral type
+     */
     function enableCollateral(bytes32 _ilk) public onlyContractOwner {
         collateralsEnabled[_ilk] = true;
-
     }
 
+    /**
+     * @dev     disable colateral type
+     * @param   _ilk     bytes32 collateral type
+     */
     function disableCollateral(bytes32 _ilk) public onlyContractOwner {
         collateralsEnabled[_ilk] = false;
-
     }
 
+    /**
+     * @dev     check if colateral is enabled
+     * @param   _ilk     bytes32 collateral type
+     */
     function isCollateralEnabled(bytes32 _ilk) public view returns(bool) {
         return collateralsEnabled[_ilk];
     }
