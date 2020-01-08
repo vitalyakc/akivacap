@@ -494,12 +494,7 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
      * @notice Monitor and set up or set down risky marker
      */
     function _monitorRisky() internal {
-        bool _isRisky;
-        if (getCRBuffer() <= Config(configAddr).riskyMargin()) {
-            _isRisky = true;
-        } else {
-            _isRisky = false;
-        }
+        bool _isRisky = getCRBuffer() <= Config(configAddr).riskyMargin();
         if (isRisky != _isRisky) {
             isRisky = _isRisky;
             emit riskyToggled(_isRisky);

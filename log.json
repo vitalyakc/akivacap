@@ -1,0 +1,27 @@
+{
+    "batch": {
+        "timestamp": "datetime",
+        "transactionHash": "hash value",
+        "status": "confirmed|error",
+        "agreements": [{
+            "address": "agreement address",
+            "events": [
+                {
+                    "eventName": "AgreementInitiated",
+                    "params": [array of params key=>value]    
+                },{
+                    "eventName": "AgreementUpdated",
+                    "params": [array of params key=>value]    
+                },
+                ...
+            ]
+        }]
+    },
+    "estimationError": {
+        "timestamp": "datetime",
+        "agreement": {
+            "address": "agreement address",
+            "errorMess": "error message"
+        }
+    }
+}
