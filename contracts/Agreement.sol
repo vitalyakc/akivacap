@@ -497,7 +497,7 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
         bool _isRisky = getCRBuffer() <= Config(configAddr).riskyMargin();
         if (isRisky != _isRisky) {
             isRisky = _isRisky;
-            emit riskyToggled(_isRisky);
+            emit RiskyToggled(_isRisky);
         }
     }
 
