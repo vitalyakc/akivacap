@@ -9,8 +9,7 @@ import "./interfaces/IAgreement.sol";
 
 /**
  * @title Base Agreement contract
- * @notice Contract will be deployed only once as logic(implementation), proxy will be deployed for each agreement as storage
- * @dev Should not be deployed. It is being used as an abstract class
+ * @notice Contract will be deployed only once as logic(implementation), proxy will be deployed by FraFactory for each agreement as storage
  */
 contract Agreement is IAgreement, Claimable, McdWrapper {
     using SafeMath for uint;
