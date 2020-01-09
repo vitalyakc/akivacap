@@ -82,15 +82,24 @@ module.exports = {
     },
 
     kovan: {
-      provider: () => new HDWalletProvider(
-        [process.env.PRIVATEKEY1, process.env.PRIVATEKEY2, process.env.PRIVATEKEY3],
-        'https://kovan.infura.io/v3/' + process.env.INFURA_API_KEY, 0, 3),
-      network_id: 42,
-      // gas: 8000000,
-      // gasLimit: 8000000, // <-- Use this high gas value
+        provider: () => new HDWalletProvider(process.env.MNENOMIC, 'https://kovan.infura.io/v3/' + process.env.INFURA_API_KEY),
+        network_id: 42,
+        // gas: 8000000,
+        // gasLimit: 8000000, // <-- Use this high gas value
+  
+        gasPrice: 10000000000,
+      },
 
-      gasPrice: 1000000000,
-    },
+    // kovan: {
+    //   provider: () => new HDWalletProvider(
+    //     [process.env.PRIVATEKEY1],//, process.env.PRIVATEKEY2, process.env.PRIVATEKEY3
+    //     'https://kovan.infura.io/v3/' + process.env.INFURA_API_KEY, 0, 3),
+    //   network_id: 42,
+    //   // gas: 8000000,
+    //   // gasLimit: 8000000, // <-- Use this high gas value
+
+    //   gasPrice: 1000000000,
+    // },
 
     main: {
       provider: () => new HDWalletProvider(process.env.MNENOMIC, 'https://mainnet.infura.io/v3/' + process.env.INFURA_API_KEY),
