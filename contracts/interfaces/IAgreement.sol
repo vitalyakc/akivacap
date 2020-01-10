@@ -43,6 +43,7 @@ interface IAgreement {
     function erc20TokenContract(bytes32 ilk) external view returns(IERC20);
     function getAssets(address _holder) external view returns(uint,uint);
     function withdrawDai(uint _amount) external;
+    function getDaiAddress() external view returns(address);
 
     function getInfo()
         external
