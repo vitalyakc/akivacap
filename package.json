@@ -12,7 +12,7 @@
     "test-mcdWrapper": "truffle test --network kovan test/mcdWrapperTest/*.js",
     "test-integration": "truffle test --network kovan test/integration/*.js",
     "compile": "truffle compile",
-    "validate-tests": "eslint *.js test/*.js test/helpers/*.js test/mcdWrapperTest --fix",
+    "validate-tests": "eslint *.js test/*.js test/helpers/*.js test/mcdWrapperTest test/integration/*.js --fix",
     "validate-sol": "solium --dir contracts --fix"
   },
   "repository": {
