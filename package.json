@@ -29,7 +29,7 @@
     "ganache-cli": "^6.7.0",
     "solidity-coverage": "^0.6.7",
     "solium": "^1.2.5",
-    "truffle": "^5.0.40",
+    "truffle": "^5.1.8",
     "truffle-flattener": "^1.4.2",
     "truffle-hdwallet-provider": "^1.0.17",
     "web3": "^1.2.1",

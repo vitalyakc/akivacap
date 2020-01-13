@@ -1,4 +1,4 @@
-pragma solidity ^0.5.0;
+pragma solidity 0.5.12;
 
 import '../helpers/Context.sol';
 import '../interfaces/IERC20.sol';
