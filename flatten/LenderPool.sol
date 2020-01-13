@@ -1,7 +1,7 @@
 
-// File: contracts\helpers\SafeMath.sol
+// File: contracts/helpers/SafeMath.sol
 
-pragma solidity >=0.5.0 <0.6.0;
+pragma solidity 0.5.12;
 
 /**
  * @title SafeMath
@@ -95,25 +95,26 @@ library SafeMath {
     }
 }
 
-// File: contracts\interfaces\IERC20.sol
+// File: contracts/interfaces/IERC20.sol
 
-pragma solidity 0.5.11;
+pragma solidity 0.5.12;
 
-contract IERC20 {
-    function totalSupply() public view returns (uint);
-    function balanceOf(address tokenOwner) public view returns (uint balance);
-    function allowance(address tokenOwner, address spender) public view returns (uint remaining);
-    function transfer(address to, uint tokens) public returns (bool success);
-    function approve(address spender, uint tokens) public returns (bool success);
-    function transferFrom(address from, address to, uint tokens) public returns (bool success);
+interface IERC20 {
+    function totalSupply() external view returns (uint);
+    function balanceOf(address tokenOwner) external view returns (uint balance);
+    function allowance(address tokenOwner, address spender) external view returns (uint remaining);
+    function transfer(address to, uint tokens) external returns (bool success);
+    function approve(address spender, uint tokens) external returns (bool success);
+    function transferFrom(address from, address to, uint tokens) external returns (bool success);
 
     event Transfer(address indexed from, address indexed to, uint tokens);
     event Approval(address indexed tokenOwner, address indexed spender, uint tokens);
 }
 
-// File: contracts\interfaces\IAgreement.sol
+// File: contracts/interfaces/IAgreement.sol
 
-pragma solidity 0.5.11;
+pragma solidity 0.5.12;
+
 
 /**
  * @title Interface for Agreement contract
@@ -189,9 +190,12 @@ interface IAgreement {
     event RiskyToggled(bool _isRisky);
 }
 
-// File: contracts\pool\LenderPool.sol
+// File: contracts/pool/LenderPool.sol
 
-pragma solidity 0.5.11;
+pragma solidity 0.5.12;
+
+
+
 
 /**
  * @title Admin ownable
@@ -199,17 +203,31 @@ pragma solidity 0.5.11;
 contract Adminable {
     address public admin;
 
-    constructor() public {
+    event AdminOwnershipTransferred(address indexed previousAdmin, address indexed newAdmin);
+
+    /**
+     * @dev Initializes the contract setting the deployer as the initial admin.
+     */
+    constructor() internal {
         admin = msg.sender;
     }
 
+    /**
+     * @notice  Grants access only for admin
+     */
     modifier onlyAdmin() {
         require (msg.sender == admin, "Adminable: caller is not admin");
         _;
     }
 
-    function transferAdminOwnership(address newAdmin) public onlyAdmin {
-        if (newAdmin != address(0)) admin = newAdmin;
+    /**
+     * @notice  Transfers ownership of the contract to a new account (`_newAdmin`).
+     * @dev     Can only be called by the current admin.
+     */
+    function transferAdminOwnership(address _newAdmin) public onlyAdmin {
+        require(_newAdmin != address(0), "Adminable: new owner is the zero address");
+        emit AdminOwnershipTransferred(admin, _newAdmin);
+        admin = _newAdmin;
     }
 }
 
@@ -227,6 +245,7 @@ contract LenderPool is Adminable {
     uint public daiTotal;
     uint public daiWithSavings;
     uint public interestRate;
+    uint public duration;
 
     // pool restrictions
     uint public minDai;
@@ -241,6 +260,15 @@ contract LenderPool is Adminable {
 
     address constant daiToken = 0x4F96Fe3b7A6Cf9725f59d353F723c1bDb64CA6Aa;
 
+    event MatchedAgreement(address targetAgreement);
+    event RefundedFromAgreement(address targetAgreement, uint daiWithSavings);
+    event TargetAgreementUpdated(address targetAgreement, uint daiGoal, uint interestRate, uint duration);
+    event Deposited(address pooler, uint amount);
+    event Withdrawn(address caller, address pooler, uint amount, uint amountWithSavings);
+    event AgreementRestrictionsUpdated(uint minInterestRate, uint minDuration, uint maxDuration);
+    event PoolRestrictionsUpdated(uint pendingExpireDate, uint minDai);
+    event StatusUpdated(uint next);
+
     /**
      * @notice Grants access only if pool has appropriate status
      * @param _status status should be checked with
@@ -251,31 +279,35 @@ contract LenderPool is Adminable {
     }
 
     /**
-     * @notice Constructor, set main restrictions, set target agreement
-     * @param _targetAgreement  address of target agreement
-     * @param _minInterestRate  min percent of interest rate, should be passed like RAY 
-     * @param _minDuration      min available agreement duration in secs
-     * @param _maxDuration      mav available agreement duration in secs
-     * @param _maxPendingPeriod max available pending period for gathering dai in pool and do match
-     * @param _minDai           min amount of dai tokens available for deposit to pool
+     * @notice  Constructor, set main restrictions, set target agreement
+     * @param   _targetAgreement    address of target agreement
+     * @param   _minInterestRate    min percent of interest rate, should be passed like RAY
+     * @param   _minDuration        min available agreement duration in secs
+     * @param   _maxDuration        mav available agreement duration in secs
+     * @param   _maxPendingPeriod   max available pending period for gathering dai in pool and do match
+     * @param   _minDai             min amount of dai tokens available for deposit to pool
      */
-    constructor(address _targetAgreement, uint _minInterestRate, uint _minDuration, uint _maxDuration, uint _maxPendingPeriod, uint _minDai) public {
+    constructor(
+        address _targetAgreement,
+        uint _minInterestRate,
+        uint _minDuration,
+        uint _maxDuration,
+        uint _maxPendingPeriod,
+        uint _minDai
+    )
+        public
+    {
         _setAgreementRestrictions(_minInterestRate, _minDuration, _maxDuration);
         _setPoolRestrictions(_maxPendingPeriod, _minDai);
         setTargetAgreement(_targetAgreement);
     }
     
     /**
-     * @notice Set target agreement address
-     * @param _addr  address of target agreement
+     * @notice Set target agreement address and check for restrictions of target agreement
+     * @param   _addr   address of target agreement
      */
     function setTargetAgreement(address _addr) public onlyAdmin {
-        require(_addr != address(0), "LenderPool: target agreement address is null");
-
-        targetAgreement = _addr;
-        daiGoal = IAgreement(targetAgreement).debtValue();
-        interestRate = IAgreement(targetAgreement).interestRate();
-        uint duration = IAgreement(targetAgreement).duration();
+        _setAgreement(_addr);
 
         // require(daiToken == IAgreement(targetAgreement).getDaiAddress(), "LenderPool: dai token address doesn't coincide with required");
         require(daiGoal > 0, "LenderPool: target agreement debt is zero");
@@ -286,7 +318,7 @@ contract LenderPool is Adminable {
 
     /**
      * @notice  Deposit dai tokens to pool
-     * @dev     transfer from pooler's account dai tokens to pool contract. Pooler should approve the amount to this contract beforehand
+     * @dev     Transfer from pooler's account dai tokens to pool contract. Pooler should approve the amount to this contract beforehand
      * @param   _amount     amount of dai tokens for depositing
      */
     function deposit(uint _amount) public onlyStatus(Statuses.Pending) {
@@ -294,14 +326,12 @@ contract LenderPool is Adminable {
 
         require(daiRemaining > 0, "LenderPool: goal is reached");
         // amount should be more than minimal, or if remaning to goal tokens is less than minimal - _amount should cover the remaining completely
-        require(_amount >= minDai || (daiRemaining < minDai && _amount >= daiRemaining), "LenderPool: amount is less min or does not cover remaining");
+        require(_amount >= minDai || _amount >= daiRemaining, "LenderPool: amount is less min or remaining");
 
         // adjust amount in order dai total doesn't exceed the goal
         _amount = _amount > daiRemaining ? daiRemaining : _amount;
 
-        IERC20(daiToken).transferFrom(msg.sender, address(this), _amount);
-        daiTotal = daiTotal.add(_amount);
-        balanceOf[msg.sender] = balanceOf[msg.sender].add(_amount);
+        _deposit(msg.sender, _amount);
     }
 
     /**
@@ -310,54 +340,45 @@ contract LenderPool is Adminable {
     function withdraw() public {
         uint share = availableForWithdrawal(msg.sender);
         require(share > 0, "LenderPool: dai balance is zero or can not be withdrawn now");
-
         _withdraw(msg.sender, balanceOf[msg.sender], share);
     }
 
     /**
      * @notice  Function is aimed to adjust the total dai, deposited to contract, with the goal
-     * @dev     admin can refund some amount of dai tokens to pooler, but no more than pooler's balance
+     * @dev     Admin can refund some amount of dai tokens to pooler, but no more than pooler's balance
+     *          can be called only when pending
      * @param   _to         pooler address
      * @param   _amount     amount for withdrawal
      */
     function withdrawTo(address _to, uint _amount) public onlyAdmin onlyStatus(Statuses.Pending) {
         require(_amount > 0, "LenderPool: amount is zero");
-
         _withdraw(_to, _amount, _amount);
     }
 
     /**
-     * @notice  decrease dai total balance and transfer dai tokens to pooler
-     * @param   _pooler     pooler address
-     * @param   _amount     amount the balance should be decreased by
-     * @param   _amountWithSavings amount with savings should be transfered to pooler, if no savings - is equal to _amount
-     */
-    function _withdraw(address _pooler, uint _amount, uint _amountWithSavings) internal {
-        daiTotal = daiTotal.sub(_amount);
-        balanceOf[_pooler] = balanceOf[_pooler].sub(_amount);
-        IERC20(daiToken).transfer(_pooler, _amountWithSavings);
-    }
-
-    /**
      * @notice  Do match with target agreement
-     * @dev     pool status becomes Matched 
+     * @dev     Pool status becomes Matched
      */
     function matchAgreement() public onlyAdmin {
         require(daiGoal == daiTotal, "LenderPool: dai total should be equal to goal (agreement debt)");
         IERC20(daiToken).approve(targetAgreement, daiGoal);
         IAgreement(targetAgreement).matchAgreement();
         _switchStatus(Statuses.Matched);
+
+        emit MatchedAgreement(targetAgreement);
     }
 
     /**
-     * @notice  refund dai from target agreement after it is closed (terminated, liquidated, cancelled, blocked)
-     * @dev     pool status becomes Closed 
+     * @notice  Refund dai from target agreement after it is closed (terminated, liquidated, cancelled, blocked)
+     * @dev     Pool status becomes Closed
      */
     function refundFromAgreement() public onlyAdmin {
         require(IAgreement(targetAgreement).isStatus(IAgreement.Statuses.Closed), "LenderPool: agreement is not closed yet");
         (, daiWithSavings) = IAgreement(targetAgreement).getAssets(address(this));
         IAgreement(targetAgreement).withdrawDai(daiWithSavings);
         _switchStatus(Statuses.Closed);
+
+        emit RefundedFromAgreement(targetAgreement, daiWithSavings);
     }
 
     /**
@@ -382,34 +403,83 @@ contract LenderPool is Adminable {
             share = balanceOf[_pooler];
         }
     }
+    
+    /**
+     * @notice Set target agreement address
+     * @param _addr  address of target agreement
+     */
+    function _setAgreement(address _addr) internal {
+        require(_addr != address(0), "LenderPool: target agreement address is null");
+
+        targetAgreement = _addr;
+        daiGoal = IAgreement(targetAgreement).debtValue();
+        interestRate = IAgreement(targetAgreement).interestRate();
+        duration = IAgreement(targetAgreement).duration();
+
+        emit TargetAgreementUpdated(targetAgreement, daiGoal, interestRate, duration);
+    }
 
     /**
-    * @notice   switch to exact status
-    * @param    _next   status that should be switched to
-    */
-    function _switchStatus(Statuses _next) internal {
-        status = _next;
+     * @notice  Deposit, change depositer (pooler) balance and total deposited dai
+     * @dev     transfer from pooler's account dai tokens to pool contract. Pooler should approve the amount to this contract beforehand
+     * @param   _pooler     depositer address
+     * @param   _amount     amount of dai tokens for depositing
+     */
+    function _deposit(address _pooler, uint _amount) internal {
+        IERC20(daiToken).transferFrom(_pooler, address(this), _amount);
+        daiTotal = daiTotal.add(_amount);
+        balanceOf[_pooler] = balanceOf[_pooler].add(_amount);
+
+        emit Deposited(_pooler, _amount);
+    }
+
+    /**
+     * @notice  Decrease dai total balance and transfer dai tokens to pooler
+     * @param   _pooler     pooler address
+     * @param   _amount     amount the balance should be decreased by
+     * @param   _amountWithSavings amount with savings should be transfered to pooler, if no savings - is equal to _amount
+     */
+    function _withdraw(address _pooler, uint _amount, uint _amountWithSavings) internal {
+        daiTotal = daiTotal.sub(_amount);
+        balanceOf[_pooler] = balanceOf[_pooler].sub(_amount);
+        IERC20(daiToken).transfer(_pooler, _amountWithSavings);
+
+        emit Withdrawn(msg.sender, _pooler, _amount, _amountWithSavings);
     }
 
     /**
      * @notice Set restrictions to main parameters of target agreement, in irder to prevent match with unprofitable agreement
-     * @param _minInterestRate  min percent of interest rate, should be passed like RAY 
+     * @param _minInterestRate  min percent of interest rate, should be passed like RAY
      * @param _minDuration      min available agreement duration in secs
-     * @param _maxDuration      mav available agreement duration in secs 
+     * @param _maxDuration      mav available agreement duration in secs
      */
     function _setAgreementRestrictions(uint _minInterestRate, uint _minDuration, uint _maxDuration) internal {
         minInterestRate = _minInterestRate;
         minDuration = _minDuration;
         maxDuration = _maxDuration;
+
+        emit AgreementRestrictionsUpdated(minInterestRate, minDuration, maxDuration);
     }
 
     /**
-     * @notice Set restrictions to pool
-     * @param _maxPendingPeriod max available pending period for gathering dai in pool and do match
-     * @param _minDai           min amount of dai tokens available for deposit to pool
+     * @notice  Set restrictions to pool
+     * @param   _maxPendingPeriod   max available pending period for gathering dai in pool and do match
+     * @param   _minDai             min amount of dai tokens available for deposit to pool
      */
     function _setPoolRestrictions(uint _maxPendingPeriod, uint _minDai) internal {
         pendingExpireDate = now.add(_maxPendingPeriod);
         minDai = _minDai;
+
+        emit PoolRestrictionsUpdated(pendingExpireDate, minDai);
+    }
+
+    /**
+    * @notice   Switch to exact status
+    * @param    _next   status that should be switched to
+    */
+    function _switchStatus(Statuses _next) internal {
+        status = _next;
+
+        emit StatusUpdated(uint(_next));
     }
 }
