@@ -431,7 +431,7 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
         return cdpId > 0 ? getCdpCR(collateralType, cdpId) : collateralAmount.mul(getPrice(collateralType)).div(debtValue);
     }
     function getCRBuffer() public view returns(uint) {
-        return getCR().sub(getMCR(collateralType)).mul(100).div(ONE);
+        return getCR() <= getMCR(collateralType) ? 0 : getCR().sub(getMCR(collateralType)).mul(100).div(ONE);
     }
 
     /**
