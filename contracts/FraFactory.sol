@@ -3,14 +3,14 @@ pragma solidity 0.5.12;
 import "./config/Config.sol";
 import "./interfaces/IERC20.sol";
 import "./interfaces/IAgreement.sol";
-import "./helpers/Claimable.sol";
+import "./helpers/Administrable.sol";
 import "zos-lib/contracts/upgradeability/UpgradeabilityProxy.sol";
 
 /**
  * @title Fra Factory
  * @notice Handler of all agreements
  */
-contract FraFactory is Claimable {
+contract FraFactory is Administrable {
     address[] public agreementList;
     address payable public agreementImpl;
     address public configAddr;
@@ -21,7 +21,6 @@ contract FraFactory is Claimable {
      * @param _configAddr address of config contract
      */
     constructor(address payable _agreementImpl, address _configAddr) public {
-        super.initialize();
         setConfigAddr(_configAddr);
         setAgreementImpl(_agreementImpl);
     }
@@ -78,7 +77,7 @@ contract FraFactory is Claimable {
      * @notice Set the new agreement implememntation adresss
      * @param _agreementImpl address of agreement implementation contract
      */
-    function setAgreementImpl(address payable _agreementImpl) public onlyContractOwner() {
+    function setAgreementImpl(address payable _agreementImpl) public onlyAdmin() {
         require(_agreementImpl != address(0), "FraFactory: agreement impl address should not be zero");
         agreementImpl = _agreementImpl;
     }
@@ -87,7 +86,7 @@ contract FraFactory is Claimable {
      * @notice Set the new config adresss
      * @param _configAddr address of config contract
      */
-    function setConfigAddr(address _configAddr) public onlyContractOwner() {
+    function setConfigAddr(address _configAddr) public onlyAdmin() {
         require(_configAddr != address(0), "FraFactory: agreement impl address should not be zero");
         configAddr = _configAddr;
     }
@@ -97,7 +96,7 @@ contract FraFactory is Claimable {
      * @param _address agreement address
      * @return operation success
      */
-    function approveAgreement(address _address) public onlyContractOwner returns(bool _success) {
+    function approveAgreement(address _address) public onlyAdmin() returns(bool _success) {
         return IAgreement(_address).approveAgreement();
     }
 
@@ -105,7 +104,7 @@ contract FraFactory is Claimable {
     * @notice Multi approve
     * @param _addresses agreements addresses array
     */
-    function batchApproveAgreements(address[] memory _addresses) public onlyContractOwner {
+    function batchApproveAgreements(address[] memory _addresses) public onlyAdmin() {
         require(_addresses.length <= 256, "FraMain: batch count is greater than 256");
         for (uint256 i = 0; i < _addresses.length; i++) {
             if (IAgreement(_addresses[i]).isStatus(IAgreement.Statuses.Pending)) {
@@ -119,7 +118,7 @@ contract FraFactory is Claimable {
      * @param _address agreement address
      * @return operation success
      */
-    function rejectAgreement(address _address) public onlyContractOwner returns(bool _success) {
+    function rejectAgreement(address _address) public onlyAdmin() returns(bool _success) {
         return IAgreement(_address).rejectAgreement();
     }
 
@@ -127,7 +126,7 @@ contract FraFactory is Claimable {
     * @notice Multi reject
     * @param _addresses agreements addresses array
     */
-    function batchRejectAgreements(address[] memory _addresses) public onlyContractOwner {
+    function batchRejectAgreements(address[] memory _addresses) public onlyAdmin() {
         require(_addresses.length <= 256, "FraMain: batch count is greater than 256");
         for (uint256 i = 0; i < _addresses.length; i++) {
             if (IAgreement(_addresses[i]).isBeforeStatus(IAgreement.Statuses.Active)) {
@@ -139,7 +138,7 @@ contract FraFactory is Claimable {
     /**
      * @notice Function for cron autoreject (close agreements if matchLimit expired)
      */
-    function autoRejectAgreements() public onlyContractOwner {
+    function autoRejectAgreements() public onlyAdmin() {
         uint _approveLimit = Config(configAddr).approveLimit();
         uint _matchLimit = Config(configAddr).matchLimit();
         uint _len = agreementList.length;
@@ -158,7 +157,7 @@ contract FraFactory is Claimable {
      * @param _address agreement address
      * @return operation success
      */
-    function updateAgreement(address _address) public onlyContractOwner returns(bool _success) {
+    function updateAgreement(address _address) public onlyAdmin() returns(bool _success) {
         return IAgreement(_address).updateAgreement();
     }
 
@@ -166,7 +165,7 @@ contract FraFactory is Claimable {
      * @notice Update the states of all agreemnets
      * @return operation success
      */
-    function updateAgreements() public onlyContractOwner {
+    function updateAgreements() public onlyAdmin() {
         for (uint256 i = 0; i < agreementList.length; i++) {
             if (IAgreement(agreementList[i]).isStatus(IAgreement.Statuses.Active)) {
                 IAgreement(agreementList[i]).updateAgreement();
@@ -178,7 +177,7 @@ contract FraFactory is Claimable {
     * @notice Update state of exact agreements
     * @param _addresses agreements addresses array
     */
-    function batchUpdateAgreements(address[] memory _addresses) public onlyContractOwner {
+    function batchUpdateAgreements(address[] memory _addresses) public onlyAdmin() {
         require(_addresses.length <= 256, "FraMain: batch count is greater than 256");
         for (uint256 i = 0; i < _addresses.length; i++) {
             // check in order to prevent revert
@@ -193,7 +192,7 @@ contract FraFactory is Claimable {
      * @param _address agreement address
      * @return operation success
      */
-    function blockAgreement(address _address) public onlyContractOwner returns(bool _success) {
+    function blockAgreement(address _address) public onlyAdmin() returns(bool _success) {
         return IAgreement(_address).blockAgreement();
     }
 
@@ -201,7 +200,7 @@ contract FraFactory is Claimable {
      * @notice Remove agreement from list,
      * doesn't affect real agreement contract, just removes handle control
      */
-    function removeAgreement(uint _ind) public onlyContractOwner {
+    function removeAgreement(uint _ind) public onlyAdmin() {
         agreementList[_ind] = agreementList[agreementList.length-1];
         agreementList.length--; // Implicitly recovers gas from last element storage
     }
@@ -209,14 +208,14 @@ contract FraFactory is Claimable {
     /**
      * @notice transfer agreement ownership to Fra Factory owner (admin)
      */
-    function transferAgreementOwnership(address _address) public onlyContractOwner {
+    function transferAgreementOwnership(address _address) public onlyAdmin() {
         IAgreement(_address).transferOwnership(owner);
     }
 
     /**
      * @notice accept agreement ownership by Fra Factory contract
      */
-    function claimAgreementOwnership(address _address) public onlyContractOwner {
+    function claimAgreementOwnership(address _address) public onlyAdmin() {
         IAgreement(_address).claimOwnership();
     }
     

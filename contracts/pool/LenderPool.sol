@@ -3,45 +3,12 @@ pragma solidity 0.5.12;
 import "../helpers/SafeMath.sol";
 import "../interfaces/IERC20.sol";
 import "../interfaces/IAgreement.sol";
-
-/**
- * @title Admin ownable
- */
-contract Adminable {
-    address public admin;
-
-    event AdminOwnershipTransferred(address indexed previousAdmin, address indexed newAdmin);
-
-    /**
-     * @dev Initializes the contract setting the deployer as the initial admin.
-     */
-    constructor() internal {
-        admin = msg.sender;
-    }
-
-    /**
-     * @notice  Grants access only for admin
-     */
-    modifier onlyAdmin() {
-        require (msg.sender == admin, "Adminable: caller is not admin");
-        _;
-    }
-
-    /**
-     * @notice  Transfers ownership of the contract to a new account (`_newAdmin`).
-     * @dev     Can only be called by the current admin.
-     */
-    function transferAdminOwnership(address _newAdmin) public onlyAdmin {
-        require(_newAdmin != address(0), "Adminable: new owner is the zero address");
-        emit AdminOwnershipTransferred(admin, _newAdmin);
-        admin = _newAdmin;
-    }
-}
+import "../helpers/ClaimableBase.sol";
 
 /**
  * @title Pool contract for lenders
  */
-contract LenderPool is Adminable {
+contract LenderPool is ClaimableBase {
     using SafeMath for uint;
     enum Statuses {Pending, Matched, Closed}
 
@@ -113,7 +80,7 @@ contract LenderPool is Adminable {
      * @notice Set target agreement address and check for restrictions of target agreement
      * @param   _addr   address of target agreement
      */
-    function setTargetAgreement(address _addr) public onlyAdmin {
+    function setTargetAgreement(address _addr) public onlyContractOwner {
         _setAgreement(_addr);
 
         // require(daiToken == IAgreement(targetAgreement).getDaiAddress(), "LenderPool: dai token address doesn't coincide with required");
@@ -157,7 +124,7 @@ contract LenderPool is Adminable {
      * @param   _to         pooler address
      * @param   _amount     amount for withdrawal
      */
-    function withdrawTo(address _to, uint _amount) public onlyAdmin onlyStatus(Statuses.Pending) {
+    function withdrawTo(address _to, uint _amount) public onlyContractOwner onlyStatus(Statuses.Pending) {
         require(_amount > 0, "LenderPool: amount is zero");
         _withdraw(_to, _amount, _amount);
     }
@@ -166,7 +133,7 @@ contract LenderPool is Adminable {
      * @notice  Do match with target agreement
      * @dev     Pool status becomes Matched
      */
-    function matchAgreement() public onlyAdmin {
+    function matchAgreement() public onlyContractOwner {
         require(daiGoal == daiTotal, "LenderPool: dai total should be equal to goal (agreement debt)");
         IERC20(daiToken).approve(targetAgreement, daiGoal);
         IAgreement(targetAgreement).matchAgreement();
@@ -179,7 +146,7 @@ contract LenderPool is Adminable {
      * @notice  Refund dai from target agreement after it is closed (terminated, liquidated, cancelled, blocked)
      * @dev     Pool status becomes Closed
      */
-    function refundFromAgreement() public onlyAdmin {
+    function refundFromAgreement() public onlyContractOwner {
         require(IAgreement(targetAgreement).isStatus(IAgreement.Statuses.Closed), "LenderPool: agreement is not closed yet");
         (, daiWithSavings) = IAgreement(targetAgreement).getAssets(address(this));
         IAgreement(targetAgreement).withdrawDai(daiWithSavings);
