@@ -1,6 +1,6 @@
 pragma solidity 0.5.12;
 
-import '../mcd/McdWrapper.sol';
+import "../mcd/McdWrapper.sol";
 
 contract McdWrapperMock is McdWrapper {
   uint256 public cdpId;

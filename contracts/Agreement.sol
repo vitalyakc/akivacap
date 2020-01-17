@@ -307,7 +307,7 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
         }
         if (isStatus(Statuses.Active)) {
             if (isETH) {
-                require(msg.value == _amount, "Agreement: ether sent doesn't coinside with required");
+                require(msg.value == _amount, "Agreement: ether sent doesn\'t coinside with required");
                 _lockETH(collateralType, cdpId, msg.value);
             } else {
                 _lockERC20(collateralType, cdpId, _amount, true);

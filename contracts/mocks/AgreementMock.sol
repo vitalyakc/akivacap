@@ -1,7 +1,7 @@
 pragma solidity 0.5.12;
 
-import '../Agreement.sol';
-import './ConfigMock.sol';
+import "../Agreement.sol";
+import "./ConfigMock.sol";
 
 /*
  * @title Base Agreement Mock contract

@@ -19,7 +19,7 @@ contract OwnableBase {
     }
     
     modifier onlyContractOwner() {
-        require(isOwner(), 'Not a contract owner');
+        require(isOwner(), "Not a contract owner");
         _;
     }
 }
@@ -32,7 +32,7 @@ contract ClaimableBase is OwnableBase {
     }
     
     function claimOwnership() public {
-        require(msg.sender == pendingOwner, 'Not a pending owner');
+        require(msg.sender == pendingOwner, "Not a pending owner");
 
         address previousOwner = owner;
         owner = msg.sender;
