@@ -1,4 +1,4 @@
-pragma solidity 0.5.11;
+pragma solidity 0.5.12;
 
 import "./IERC20.sol";
 
@@ -27,6 +27,10 @@ interface IAgreement {
     function cancelAgreement() external returns(bool);
     function rejectAgreement() external returns(bool);
     function blockAgreement() external returns(bool);
+    function matchAgreement() external returns(bool _success);
+    function interestRate() external view returns(uint);
+    function duration() external view returns(uint);
+    function debtValue() external view returns(uint);
     function status() external view returns(uint);
     function lender() external view returns(address);
     function borrower() external view returns(address);
@@ -37,6 +41,9 @@ interface IAgreement {
     function checkTimeToCancel(uint _approveLimit, uint _matchLimit) external view returns(bool);
     function cdpId() external view returns(uint);
     function erc20TokenContract(bytes32 ilk) external view returns(IERC20);
+    function getAssets(address _holder) external view returns(uint,uint);
+    function withdrawDai(uint _amount) external;
+    function getDaiAddress() external view returns(address);
 
     function getInfo()
         external

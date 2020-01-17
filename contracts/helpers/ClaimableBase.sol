@@ -1,9 +1,6 @@
 pragma solidity 0.5.12;
 
-import "./Context.sol";
-import "./Initializable.sol";
-
-contract Ownable is Initializable, Context {
+contract OwnableBase {
     address public owner;
     
     event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
@@ -12,13 +9,13 @@ contract Ownable is Initializable, Context {
      * @dev The Ownable constructor sets the original `owner` of the contract to the sender
      * account.
      */
-    function initialize() public initializer {
+    constructor () public {
         owner = msg.sender;
         emit OwnershipTransferred(address(0), owner);
     }
 
     function isOwner() public view returns(bool) {
-        return owner == msg.sender;
+        return (owner == msg.sender);
     }
     
     modifier onlyContractOwner() {
@@ -27,10 +24,10 @@ contract Ownable is Initializable, Context {
     }
 }
 
-contract Claimable is Ownable {
+contract ClaimableBase is OwnableBase {
     address public pendingOwner;
     
-    function transferOwnership(address _newOwner) public onlyContractOwner {
+    function transferOwnership(address _newOwner) public onlyContractOwner() {
         pendingOwner = _newOwner;
     }
     

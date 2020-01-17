@@ -1,6 +1,6 @@
-pragma solidity 0.5.11;
+pragma solidity 0.5.12;
 
-import '../config/Config.sol';
+import "../config/Config.sol";
 
 
 contract ConfigMock is Config {

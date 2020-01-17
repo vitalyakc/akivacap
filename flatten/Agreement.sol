@@ -1074,7 +1074,7 @@ interface IAgreement {
     event AssetsDaiPop(address _holder, uint _amount);
     event CdpOwnershipTransferred(address _borrower, uint _cdpId);
     event AdditionalCollateralLocked(uint _amount);
-    event riskyToggled(bool _isRisky);
+    event RiskyToggled(bool _isRisky);
 }
 
 // File: contracts/Agreement.sol
@@ -1577,7 +1577,7 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
         bool _isRisky = getCRBuffer() <= Config(configAddr).riskyMargin();
         if (isRisky != _isRisky) {
             isRisky = _isRisky;
-            emit riskyToggled(_isRisky);
+            emit RiskyToggled(_isRisky);
         }
     }
 

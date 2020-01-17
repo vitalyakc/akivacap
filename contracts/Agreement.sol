@@ -1,4 +1,4 @@
-pragma solidity 0.5.11;
+pragma solidity 0.5.12;
 
 import "./config/Config.sol";
 import "./helpers/Claimable.sol";
@@ -307,7 +307,7 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
         }
         if (isStatus(Statuses.Active)) {
             if (isETH) {
-                require(msg.value == _amount, "Agreement: ether sent doesn't coinside with required");
+                require(msg.value == _amount, "Agreement: ether sent doesn\'t coinside with required");
                 _lockETH(collateralType, cdpId, msg.value);
             } else {
                 _lockERC20(collateralType, cdpId, _amount, true);
@@ -418,6 +418,9 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
 
     /**
      * @notice check whether pending or open agreement should be canceled automatically by cron
+     * @param _approveLimit approve limit secods
+     * @param _matchLimit match limit secods
+     * @return true if should be cancelled
      */
     function checkTimeToCancel(uint _approveLimit, uint _matchLimit) public view returns(bool){
         if ((isStatus(Statuses.Pending) && now > statusSnapshots[uint(Statuses.Pending)].add(_approveLimit)) ||
@@ -427,11 +430,28 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
         }
     }
 
+    /**
+     * @notice get collateralization ratio, if cdp is already opened - get cdp CR, if no - calculate according to agreement initial parameters
+     * @return collateralization ratio in RAY
+     */
     function getCR() public view returns(uint) {
         return cdpId > 0 ? getCdpCR(collateralType, cdpId) : collateralAmount.mul(getPrice(collateralType)).div(debtValue);
     }
+
+    /**
+     * @notice get collateralization ratio buffer (difference between current CR and minimal one)
+     * @return buffer percents
+     */
     function getCRBuffer() public view returns(uint) {
         return getCR() <= getMCR(collateralType) ? 0 : getCR().sub(getMCR(collateralType)).mul(100).div(ONE);
+    }
+
+    /**
+     * @notice get address of Dai token contract
+     * @return dai address
+     */
+    function getDaiAddress() public view returns(address) {
+        return mcdDaiAddr;
     }
 
     /**
@@ -574,6 +594,8 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
         assets[_holder].dai = assets[_holder].dai.sub(_amount);
         emit AssetsDaiPop(_holder, _amount);
     }
+
+    
 
     function() external payable {}
 }
