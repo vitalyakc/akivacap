@@ -260,42 +260,79 @@ contract LenderPool is Administrable {
         emit StatusUpdated(uint(_next));
     }
 
+    /**
+    * @notice   Get Agreement debt dai amount
+    */
     function _getAgreementDebtValue() internal returns (uint) {
         return IAgreement(targetAgreement).debtValue();
     }
 
+    /**
+    * @notice   Get Agreement interest rate
+    */
     function _getAgreementInterestRate() internal returns (uint) {
         return IAgreement(targetAgreement).interestRate();
     }
 
+    /**
+    * @notice   Get Agreement duration
+    */
     function _getAgreementDuration() internal returns (uint) {
         return IAgreement(targetAgreement).duration();
     }
 
+    /**
+    * @notice   Check agreement status
+    */
     function _isAgreementInStatus(IAgreement.Statuses _status) internal returns(bool) {
         return IAgreement(targetAgreement).isStatus(_status);
     }
 
+    /**
+    * @notice   Do Agreement match
+    */
     function _matchAgreement() internal {
         IAgreement(targetAgreement).matchAgreement();
     }
 
+    /**
+    * @notice   Get Agreement assets
+    */
     function _getAgreementAssets() internal returns(uint, uint) {
         return IAgreement(targetAgreement).getAssets(address(this));
     }
 
+    /**
+    * @notice   Withdraw all dai from Agreement
+    */
     function _withdrawDaiFromAgreement() internal {
         IAgreement(targetAgreement).withdrawDai(daiWithSavings);
     }
 
+    /**
+    * @notice   Approve dai to agreement
+    * @param    _agreement  address
+    * @param    _amount     dai to approve
+    */
     function _daiTokenApprove(address _agreement, uint _amount) internal {
         IERC20(daiToken).approve(_agreement, _amount);
     }
 
+    /**
+    * @notice   Transfer dai from pooler to pool
+    * @param    _pooler     address from
+    * @param    _to         address to
+    * @param    _amount     dai amount
+    */
     function _daiTokenTransferFrom(address _pooler, address _to, uint _amount) internal {
-        IERC20(daiToken).transferFrom(_pooler, address(this), _amount);
+        IERC20(daiToken).transferFrom(_pooler, _to, _amount);
     }
 
+    /**
+    * @notice   Transfer dai to pooler
+    * @param    _pooler     address from
+    * @param    _amount     dai amount
+    */
     function _daiTokenTransfer(address _pooler, uint _amount) internal {
         IERC20(daiToken).transfer(_pooler, _amount);
     }
