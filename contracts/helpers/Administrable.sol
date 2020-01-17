@@ -1,6 +1,6 @@
 pragma solidity 0.5.12;
 
-import './ClaimableBase.sol';
+import "./ClaimableBase.sol";
 
 contract Administrable is ClaimableBase {
     mapping (address => bool) public isAdmin;
@@ -15,7 +15,7 @@ contract Administrable is ClaimableBase {
     }
     
     modifier onlyAdmin () {
-        require(isAdmin[msg.sender], 'NOT_AN_ADMIN');
+        require(isAdmin[msg.sender], "NOT_AN_ADMIN");
         _;
     }
     
@@ -23,9 +23,8 @@ contract Administrable is ClaimableBase {
     public onlyContractOwner() returns(bool success) {
         if (isAdmin[_newAdmin] == false) {
             isAdmin[_newAdmin] = true;
+            emit AdminAppointed(_newAdmin);
         }
-        
-        emit AdminAppointed(_newAdmin);
         return true;
     }
     

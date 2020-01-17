@@ -3,12 +3,12 @@ pragma solidity 0.5.12;
 import "../helpers/SafeMath.sol";
 import "../interfaces/IERC20.sol";
 import "../interfaces/IAgreement.sol";
-import "../helpers/ClaimableBase.sol";
+import "../helpers/Administrable.sol";
 
 /**
  * @title Pool contract for lenders
  */
-contract LenderPool is ClaimableBase {
+contract LenderPool is Administrable {
     using SafeMath for uint;
     enum Statuses {Pending, Matched, Closed}
 
@@ -32,7 +32,7 @@ contract LenderPool is ClaimableBase {
 
     mapping(address=>uint) public balanceOf;
 
-    address constant daiToken = 0x4F96Fe3b7A6Cf9725f59d353F723c1bDb64CA6Aa;
+    address public daiToken = 0x4F96Fe3b7A6Cf9725f59d353F723c1bDb64CA6Aa;
 
     event MatchedAgreement(address targetAgreement);
     event RefundedFromAgreement(address targetAgreement, uint daiWithSavings);
@@ -80,14 +80,14 @@ contract LenderPool is ClaimableBase {
      * @notice Set target agreement address and check for restrictions of target agreement
      * @param   _addr   address of target agreement
      */
-    function setTargetAgreement(address _addr) public onlyContractOwner {
+    function setTargetAgreement(address _addr) public onlyAdmin() {
         _setAgreement(_addr);
 
         // require(daiToken == IAgreement(targetAgreement).getDaiAddress(), "LenderPool: dai token address doesn't coincide with required");
         require(daiGoal > 0, "LenderPool: target agreement debt is zero");
         require(interestRate >= minInterestRate, "LenderPool: target agreement interest rate is low");
         require(duration >= minDuration && duration <= maxDuration, "LenderPool: target agreement duration does not match min and max");
-        require(IAgreement(targetAgreement).isStatus(IAgreement.Statuses.Open), "LenderPool: Agreement is not open");
+        require(_isAgreementInStatus(IAgreement.Statuses.Open), "LenderPool: Agreement is not open");
     }
 
     /**
@@ -124,7 +124,7 @@ contract LenderPool is ClaimableBase {
      * @param   _to         pooler address
      * @param   _amount     amount for withdrawal
      */
-    function withdrawTo(address _to, uint _amount) public onlyContractOwner onlyStatus(Statuses.Pending) {
+    function withdrawTo(address _to, uint _amount) public onlyAdmin() onlyStatus(Statuses.Pending) {
         require(_amount > 0, "LenderPool: amount is zero");
         _withdraw(_to, _amount, _amount);
     }
@@ -133,10 +133,11 @@ contract LenderPool is ClaimableBase {
      * @notice  Do match with target agreement
      * @dev     Pool status becomes Matched
      */
-    function matchAgreement() public onlyContractOwner {
+    function matchAgreement() public onlyAdmin() onlyStatus(Statuses.Pending) {
         require(daiGoal == daiTotal, "LenderPool: dai total should be equal to goal (agreement debt)");
-        IERC20(daiToken).approve(targetAgreement, daiGoal);
-        IAgreement(targetAgreement).matchAgreement();
+
+        _daiTokenApprove(targetAgreement, daiGoal);
+        _matchAgreement();
         _switchStatus(Statuses.Matched);
 
         emit MatchedAgreement(targetAgreement);
@@ -146,10 +147,12 @@ contract LenderPool is ClaimableBase {
      * @notice  Refund dai from target agreement after it is closed (terminated, liquidated, cancelled, blocked)
      * @dev     Pool status becomes Closed
      */
-    function refundFromAgreement() public onlyContractOwner {
-        require(IAgreement(targetAgreement).isStatus(IAgreement.Statuses.Closed), "LenderPool: agreement is not closed yet");
-        (, daiWithSavings) = IAgreement(targetAgreement).getAssets(address(this));
-        IAgreement(targetAgreement).withdrawDai(daiWithSavings);
+    function refundFromAgreement() public onlyAdmin() onlyStatus(Statuses.Matched) {
+        require(_isAgreementInStatus(IAgreement.Statuses.Closed), "LenderPool: agreement is not closed yet");
+
+        (, daiWithSavings) = _getAgreementAssets();
+        _withdrawDaiFromAgreement();
+
         _switchStatus(Statuses.Closed);
 
         emit RefundedFromAgreement(targetAgreement, daiWithSavings);
@@ -186,9 +189,9 @@ contract LenderPool is ClaimableBase {
         require(_addr != address(0), "LenderPool: target agreement address is null");
 
         targetAgreement = _addr;
-        daiGoal = IAgreement(targetAgreement).debtValue();
-        interestRate = IAgreement(targetAgreement).interestRate();
-        duration = IAgreement(targetAgreement).duration();
+        daiGoal = _getAgreementDebtValue();
+        interestRate = _getAgreementInterestRate();
+        duration = _getAgreementDuration();
 
         emit TargetAgreementUpdated(targetAgreement, daiGoal, interestRate, duration);
     }
@@ -200,7 +203,7 @@ contract LenderPool is ClaimableBase {
      * @param   _amount     amount of dai tokens for depositing
      */
     function _deposit(address _pooler, uint _amount) internal {
-        IERC20(daiToken).transferFrom(_pooler, address(this), _amount);
+        _daiTokenTransferFrom(_pooler, address(this), _amount);
         daiTotal = daiTotal.add(_amount);
         balanceOf[_pooler] = balanceOf[_pooler].add(_amount);
 
@@ -216,7 +219,7 @@ contract LenderPool is ClaimableBase {
     function _withdraw(address _pooler, uint _amount, uint _amountWithSavings) internal {
         daiTotal = daiTotal.sub(_amount);
         balanceOf[_pooler] = balanceOf[_pooler].sub(_amount);
-        IERC20(daiToken).transfer(_pooler, _amountWithSavings);
+        _daiTokenTransfer(_pooler, _amountWithSavings);
 
         emit Withdrawn(msg.sender, _pooler, _amount, _amountWithSavings);
     }
@@ -255,6 +258,46 @@ contract LenderPool is ClaimableBase {
         status = _next;
 
         emit StatusUpdated(uint(_next));
+    }
+
+    function _getAgreementDebtValue() internal returns (uint) {
+        return IAgreement(targetAgreement).debtValue();
+    }
+
+    function _getAgreementInterestRate() internal returns (uint) {
+        return IAgreement(targetAgreement).interestRate();
+    }
+
+    function _getAgreementDuration() internal returns (uint) {
+        return IAgreement(targetAgreement).duration();
+    }
+
+    function _isAgreementInStatus(IAgreement.Statuses _status) internal returns(bool) {
+        return IAgreement(targetAgreement).isStatus(_status);
+    }
+
+    function _matchAgreement() internal {
+        IAgreement(targetAgreement).matchAgreement();
+    }
+
+    function _getAgreementAssets() internal returns(uint, uint) {
+        return IAgreement(targetAgreement).getAssets(address(this));
+    }
+
+    function _withdrawDaiFromAgreement() internal {
+        IAgreement(targetAgreement).withdrawDai(daiWithSavings);
+    }
+
+    function _daiTokenApprove(address _agreement, uint _amount) internal {
+        IERC20(daiToken).approve(_agreement, _amount);
+    }
+
+    function _daiTokenTransferFrom(address _pooler, address _to, uint _amount) internal {
+        IERC20(daiToken).transferFrom(_pooler, address(this), _amount);
+    }
+
+    function _daiTokenTransfer(address _pooler, uint _amount) internal {
+        IERC20(daiToken).transfer(_pooler, _amount);
     }
 }
 
