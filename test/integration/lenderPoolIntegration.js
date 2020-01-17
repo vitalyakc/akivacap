@@ -13,7 +13,7 @@ const fromPercentToRey = (num) => {
   return (toBN(num).times((toBN(10).pow(toBN(25))))).plus((toBN(10).pow(toBN(27))));
 };
 
-contract.only('IntegrationPool', async (accounts) => {
+contract('IntegrationPool', async (accounts) => {
   let configContract;
   let agreement;
   let fraFactory;

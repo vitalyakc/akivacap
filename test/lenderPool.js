@@ -15,7 +15,7 @@ const fromPercentToRey = (num) => {
   return (toBN(num).times((toBN(10).pow(toBN(25))))).plus((toBN(10).pow(toBN(27))));
 };
 
-contract.only('LenderPool', async (accounts) => {
+contract('LenderPool', async (accounts) => {
   const reverter = new Reverter(web3);
 
   let lenderPool;
