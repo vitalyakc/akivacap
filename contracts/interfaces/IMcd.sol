@@ -30,6 +30,7 @@ contract JugLike {
         uint256  rho;
     }
     mapping (bytes32 => Ilk) public ilks;
+    function drip(bytes32 ilk) external returns (uint);
 }
 contract PipLike {
     function read() external view returns (bytes32);

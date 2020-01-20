@@ -282,6 +282,7 @@ contract McdWrapper is McdAddressesR17, RaySupport {
      * @return  drawn dai amount
      */
     function _drawDaiToCdp(bytes32 ilk, uint cdp, uint wad) internal returns (uint drawnDai) {
+        JugLike(mcdJugAddr).drip(ilk);
         uint maxToDraw = getDaiAvailable(ilk, cdp);
         drawnDai = wad > maxToDraw ? maxToDraw : wad;
         proxy().execute(
