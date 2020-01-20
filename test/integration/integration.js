@@ -449,98 +449,98 @@ contract('Integration', async (accounts) => {
     });
   });
 
-  // describe('Case when agreement is initialized by borrower, gets approved by owner, gets matched by lender, gets updated and gets liquidated', async () => {
-  //   it('', async () => {
-  //     const initiatiziationResult = await agreement.initAgreement(BORROWER,
-  //       toBN(250000000000000000), toBN(28400000000000000000), 60000,
-  //       fromPercentToRey(3), ETH_A, true, configContract.address,
-  //       {from: OWNER, value: toBN(250000000000000000)});
+  describe('Case when agreement is initialized by borrower, gets approved by owner, gets matched by lender, gets updated and gets liquidated', async () => {
+    it('', async () => {
+      const initiatiziationResult = await agreement.initAgreement(BORROWER,
+        toBN(205000000100000000), '25051000000000001930', 60000,
+        fromPercentToRey(5), ETH_A, true, configContract.address,
+        {from: OWNER, value: toBN(205000000100000000)});
 
-  //     console.log(agreement.address);
+      console.log(agreement.address);
 
-  //     console.log('Agreement initialized');
-  //     assert.equal((await agreement.duration.call()).toString(), 60000);
-  //     console.log('Agreement duration is 60000');
-  //     assert.equal(await agreement.borrower.call(), BORROWER);
-  //     console.log('Agreement borrower is ' + BORROWER);
-  //     assert.equal((await agreement.debtValue.call()).toString(), '28400000000000000000');
-  //     console.log('Agreement debtValue is 28400000000000000000');
-  //     assert.equal((await agreement.interestRate.call()).toString(), fromPercentToRey(3).toFixed());
-  //     console.log('Agreement interestRate is ' + fromPercentToRey(3).toFixed());
-  //     assert.equal((await agreement.collateralAmount.call()).toString(), '250000000000000000');
-  //     console.log('Agreement collateralAmount is 250000000000000000 wei');
-  //     assert.equal(await agreement.collateralType.call(), ETH_A);
-  //     console.log('Agreement collateralType is ' + ETH_A);
-  //     assert.equal((await agreement.status()).toString(), 1);
-  //     console.log('Agreement status is 1');
+      console.log('Agreement initialized');
+      assert.equal((await agreement.duration.call()).toString(), 60000);
+      console.log('Agreement duration is 60000');
+      assert.equal(await agreement.borrower.call(), BORROWER);
+      console.log('Agreement borrower is ' + BORROWER);
+      assert.equal((await agreement.debtValue.call()).toString(), '25051000000000001930');
+      console.log('Agreement debtValue is 25051000000000001930');
+      assert.equal((await agreement.interestRate.call()).toString(), fromPercentToRey(5).toFixed());
+      console.log('Agreement interestRate is ' + fromPercentToRey(5).toFixed());
+      assert.equal((await agreement.collateralAmount.call()).toString(), '205000000100000000');
+      console.log('Agreement collateralAmount is 205000000100000000 wei');
+      assert.equal(await agreement.collateralType.call(), ETH_A);
+      console.log('Agreement collateralType is ' + ETH_A);
+      assert.equal((await agreement.status()).toString(), 1);
+      console.log('Agreement status is 1');
 
-  //     assert.equal(initiatiziationResult.logs.length, 2);
-  //     assert.equal(initiatiziationResult.logs[1].event, 'AgreementInitiated');
-  //     assert.equal(initiatiziationResult.logs[1].args._borrower, BORROWER);
-  //     assert.equal(initiatiziationResult.logs[1].args._collateralValue.toString(),
-  //       '250000000000000000');
-  //     assert.equal(initiatiziationResult.logs[1].args._debtValue.toString(),
-  //       '28400000000000000000');
-  //     assert.equal(initiatiziationResult.logs[1].args._expireDate.toString(), 60000);
-  //     assert.equal(initiatiziationResult.logs[1].args._interestRate.toString(),
-  //       fromPercentToRey(3).toFixed());
-  //     console.log('Event ' + initiatiziationResult.logs[1].event + ' emmited');
+      assert.equal(initiatiziationResult.logs.length, 3);
+      assert.equal(initiatiziationResult.logs[2].event, 'AgreementInitiated');
+      assert.equal(initiatiziationResult.logs[2].args._borrower, BORROWER);
+      assert.equal(initiatiziationResult.logs[2].args._collateralValue.toString(),
+        '205000000100000000');
+      assert.equal(initiatiziationResult.logs[2].args._debtValue.toString(),
+        '25051000000000001930');
+      assert.equal(initiatiziationResult.logs[2].args._expireDate.toString(), 60000);
+      assert.equal(initiatiziationResult.logs[2].args._interestRate.toString(),
+        fromPercentToRey(5).toFixed());
+      console.log('Event ' + initiatiziationResult.logs[2].event + ' emmited');
 
-  //     const resultApproved = await agreement.approveAgreement();
-  //     console.log('Agreement approved');
+      const resultApproved = await agreement.approveAgreement();
+      console.log('Agreement approved');
 
-  //     assert.equal(resultApproved.logs.length, 1);
-  //     assert.equal(resultApproved.logs[0].event, 'AgreementApproved');
-  //     console.log('Event ' + resultApproved.logs[0].event + ' emmited');
+      assert.equal(resultApproved.logs.length, 1);
+      assert.equal(resultApproved.logs[0].event, 'AgreementApproved');
+      console.log('Event ' + resultApproved.logs[0].event + ' emmited');
 
-  //     assert.equal((await agreement.status()).toString(), 2);
+      assert.equal((await agreement.status()).toString(), 2);
 
-  //     await daiToken.approve(agreement.address, toBN(28400000000000000000), {from: LENDER});
-  //     const resultMatched = await agreement.matchAgreement({from: LENDER});
+      await daiToken.approve(agreement.address, '25051000000000001930', {from: LENDER});
+      const resultMatched = await agreement.matchAgreement({from: LENDER});
 
-  //     console.log('Agreement matched');
-  //     console.log('Cdp id is ' + resultMatched.logs[1].args._cdpId);
-  //     console.log('expire date is ' + resultMatched.logs[1].args._expireDate);
+      console.log('Agreement matched');
+      console.log('Cdp id is ' + resultMatched.logs[1].args._cdpId);
+      console.log('expire date is ' + resultMatched.logs[1].args._expireDate);
 
-  //     assert.equal(await agreement.lender(), LENDER);
-  //     console.log('Lender is '+ LENDER);
-  //     assert.equal((await agreement.status()).toString(), 3);
-  //     console.log('Agreement status is 3 - active');
+      assert.equal(await agreement.lender(), LENDER);
+      console.log('Lender is '+ LENDER);
+      assert.equal((await agreement.status()).toString(), 3);
+      console.log('Agreement status is 3 - active');
 
-  //     assert.equal(resultMatched.logs.length, 2);
-  //     assert.equal(resultMatched.logs[1].event, 'AgreementMatched');
-  //     assert.equal(resultMatched.logs[1].args._lender, LENDER);
-  //     assert.equal(resultMatched.logs[1].args._collateralAmount, '250000000000000000');
-  //     assert.equal(resultMatched.logs[1].args._debtValue, '28400000000000000000');
-  //     assert.equal(resultMatched.logs[1].args._drawnDai, '28400000000000000000');
+      assert.equal(resultMatched.logs.length, 2);
+      assert.equal(resultMatched.logs[1].event, 'AgreementMatched');
+      assert.equal(resultMatched.logs[1].args._lender, LENDER);
+      assert.equal(resultMatched.logs[1].args._collateralAmount, '205000000100000000');
+      assert.equal(resultMatched.logs[1].args._debtValue, '25051000000000001930');
+      assert.equal(resultMatched.logs[1].args._drawnDai, '25051000000000001930');
 
-  //     let resultLiquidated;
+      let resultLiquidated;
 
-  //     while (await agreement.status() < 4) {
-  //       resultLiquidated = await agreement.updateAgreement();
-  //       console.log('Agreement updated');
-  //     }
+      while (await agreement.status() < 4) {
+        resultLiquidated = await agreement.updateAgreement();
+        console.log('Agreement updated');
+      }
 
-  //     assert.equal(resultLiquidated.logs[0].event, 'AgreementClosed');
-  //     assert.equal(resultLiquidated.logs[0].args._closedType, 1);
+      assert.equal(resultLiquidated.logs[0].event, 'AgreementClosed');
+      assert.equal(resultLiquidated.logs[0].args._closedType, 1);
 
-  //     console.log('Agreement was liquidated');
+      console.log('Agreement was liquidated');
 
-  //     console.log((await agreement.assets(LENDER)).dai
-  //     .toString() + ' Amount of dai available to withdraw by lender');
+      console.log((await agreement.assets(LENDER)).dai
+      .toString() + ' Amount of dai available to withdraw by lender');
 
-  //     await agreement.withdrawDai((await agreement.assets(LENDER)).dai, {from: LENDER});
-  //     console.log('Lender gets debt dai back');
-  //   });
-  // });
+      await agreement.withdrawDai((await agreement.assets(LENDER)).dai, {from: LENDER});
+      console.log('Lender gets debt dai back');
+    });
+  });
 
   // for reviving lost tokens from agreement contract
-  //   describe('withdraw lost tokens', async () => {
+  //   describe.only('withdraw lost tokens', async () => {
   //     it('', async () => {
-  //       const localAgreemnet = await Agreement.at('0x9261e63429e80dcd8ea342536A85f15c0C7646fa');
+  //       const localAgreemnet = await Agreement.at('0xFBB436873A24410ac6b92338fE99697FFe4A655E');
 
-  //       // await localAgreemnet.blockAgreement();
-  //       // console.log('Agreement blocked by owner');
+  //       await localAgreemnet.blockAgreement();
+  //       console.log('Agreement blocked by owner');
 
   //     await localAgreemnet.withdrawDai((await localAgreemnet.assets(LENDER)).dai,
   //     {from: LENDER});
