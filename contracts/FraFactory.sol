@@ -218,7 +218,7 @@ contract FraFactory is Administrable {
     function claimAgreementOwnership(address _address) public onlyAdmin() {
         IAgreement(_address).claimOwnership();
     }
-    
+
     /**
      * @notice Returns a full list of existing agreements
      */

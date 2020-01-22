@@ -1,8 +1,8 @@
-const Claimable = artifacts.require('Claimable');
+const ClaimableIni = artifacts.require('ClaimableIni');
 const Reverter = require('./helpers/reverter');
 const {assertReverts} = require('./helpers/assertThrows');
 
-contract('Claimable', async (accounts) => {
+contract('ClaimableIni', async (accounts) => {
   const reverter = new Reverter(web3);
 
   let claimable;
@@ -13,7 +13,7 @@ contract('Claimable', async (accounts) => {
   const ADDRESS_NULL = '0x0000000000000000000000000000000000000000';
 
   before('setup', async () => {
-    claimable = await Claimable.new();
+    claimable = await ClaimableIni.new();
 
     await reverter.snapshot();
   });

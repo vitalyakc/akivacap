@@ -1,11 +1,11 @@
 pragma solidity 0.5.12;
 
-import "../helpers/Claimable.sol";
+import "../helpers/ClaimableBase.sol";
 
 /**
  * @title Config for Agreement contract
  */
-contract Config is Claimable {
+contract Config is ClaimableBase {
     mapping(bytes32 => bool) public collateralsEnabled;
 
     uint public approveLimit; // max duration in secs available for approve after creation, if expires - agreement should be closed
@@ -16,13 +16,11 @@ contract Config is Claimable {
     uint public minDuration;
     uint public maxDuration;
     uint public riskyMargin;
-    
 
     /**
      * @dev     Set default config
      */
     constructor() public {
-        super.initialize();
         setGeneral(7 days, 1 days, 0.01 ether, 0.2 ether, 10000 ether, 1 minutes, 365 days, 20);
         enableCollateral("ETH-A");
         enableCollateral("BAT-A");

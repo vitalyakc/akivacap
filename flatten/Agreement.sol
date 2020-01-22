@@ -1,7 +1,7 @@
 
 // File: contracts/helpers/Context.sol
 
-pragma solidity ^0.5.0;
+pragma solidity 0.5.12;
 
 /*
  * @dev Provides information about the current execution context, including the
@@ -31,7 +31,7 @@ contract Context {
 
 // File: contracts/helpers/Initializable.sol
 
-pragma solidity >=0.4.24 <0.6.0;
+pragma solidity 0.5.12;
 
 
 /**
@@ -95,16 +95,12 @@ contract Initializable {
 
 // File: contracts/helpers/Claimable.sol
 
-pragma solidity 0.5.11;
+pragma solidity 0.5.12;
 
 
 
 contract Ownable is Initializable, Context {
     address public owner;
-    address constant AKIVA = 0xa2064B04126a6658546744B5D78959c7433A27da;
-    address constant VITALIY = 0xD8CCd965274499eB658C2BF32d2bd2068D57968b;
-    address constant COOPER = 0x5B93FF82faaF241c15997ea3975419DDDd8362c5;
-    address constant ALEX = 0x82Fd11085ae6d16B85924ECE4849F94ea88737a2;
     
     event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
 
@@ -118,7 +114,7 @@ contract Ownable is Initializable, Context {
     }
 
     function isOwner() public view returns(bool) {
-        return (owner == msg.sender) || (AKIVA == msg.sender) || (VITALIY == msg.sender) || (COOPER == msg.sender) || (ALEX == msg.sender);
+        return owner == msg.sender;
     }
     
     modifier onlyContractOwner() {
@@ -147,7 +143,7 @@ contract Claimable is Ownable {
 
 // File: contracts/config/Config.sol
 
-pragma solidity 0.5.11;
+pragma solidity 0.5.12;
 
 
 /**
@@ -270,7 +266,7 @@ contract Config is Claimable {
 
 // File: contracts/helpers/SafeMath.sol
 
-pragma solidity >=0.5.0 <0.6.0;
+pragma solidity 0.5.12;
 
 /**
  * @title SafeMath
@@ -366,7 +362,7 @@ library SafeMath {
 
 // File: contracts/mcd/McdAddressesR17.sol
 
-pragma solidity 0.5.11;
+pragma solidity 0.5.12;
 /**
  * @title Mcd cdp maker dao system contracts deployed for 14th release
  */
@@ -396,7 +392,7 @@ contract McdAddressesR17 {
 
 // File: contracts/interfaces/IMcd.sol
 
-pragma solidity 0.5.11;
+pragma solidity 0.5.12;
 
 contract PotLike {
     function dsr() public view returns (uint);
@@ -428,6 +424,7 @@ contract JugLike {
         uint256  rho;
     }
     mapping (bytes32 => Ilk) public ilks;
+    function drip(bytes32 ilk) external returns (uint);
 }
 contract PipLike {
     function read() external view returns (bytes32);
@@ -456,15 +453,15 @@ contract DSProxyLike {
 
 // File: contracts/interfaces/IERC20.sol
 
-pragma solidity 0.5.11;
+pragma solidity 0.5.12;
 
-contract IERC20 {
-    function totalSupply() public view returns (uint);
-    function balanceOf(address tokenOwner) public view returns (uint balance);
-    function allowance(address tokenOwner, address spender) public view returns (uint remaining);
-    function transfer(address to, uint tokens) public returns (bool success);
-    function approve(address spender, uint tokens) public returns (bool success);
-    function transferFrom(address from, address to, uint tokens) public returns (bool success);
+interface IERC20 {
+    function totalSupply() external view returns (uint);
+    function balanceOf(address tokenOwner) external view returns (uint balance);
+    function allowance(address tokenOwner, address spender) external view returns (uint remaining);
+    function transfer(address to, uint tokens) external returns (bool success);
+    function approve(address spender, uint tokens) external returns (bool success);
+    function transferFrom(address from, address to, uint tokens) external returns (bool success);
 
     event Transfer(address indexed from, address indexed to, uint tokens);
     event Approval(address indexed tokenOwner, address indexed spender, uint tokens);
@@ -472,7 +469,7 @@ contract IERC20 {
 
 // File: contracts/helpers/RaySupport.sol
 
-pragma solidity 0.5.11;
+pragma solidity 0.5.12;
 
 
 contract RaySupport {
@@ -544,7 +541,7 @@ contract RaySupport {
 
 // File: contracts/mcd/McdWrapper.sol
 
-pragma solidity 0.5.11;
+pragma solidity 0.5.12;
 
 
 
@@ -827,6 +824,7 @@ contract McdWrapper is McdAddressesR17, RaySupport {
      * @return  drawn dai amount
      */
     function _drawDaiToCdp(bytes32 ilk, uint cdp, uint wad) internal returns (uint drawnDai) {
+        JugLike(mcdJugAddr).drip(ilk);
         uint maxToDraw = getDaiAvailable(ilk, cdp);
         drawnDai = wad > maxToDraw ? maxToDraw : wad;
         proxy().execute(
@@ -1007,7 +1005,7 @@ contract McdWrapper is McdAddressesR17, RaySupport {
 
 // File: contracts/interfaces/IAgreement.sol
 
-pragma solidity 0.5.11;
+pragma solidity 0.5.12;
 
 
 /**
@@ -1035,6 +1033,10 @@ interface IAgreement {
     function cancelAgreement() external returns(bool);
     function rejectAgreement() external returns(bool);
     function blockAgreement() external returns(bool);
+    function matchAgreement() external returns(bool _success);
+    function interestRate() external view returns(uint);
+    function duration() external view returns(uint);
+    function debtValue() external view returns(uint);
     function status() external view returns(uint);
     function lender() external view returns(address);
     function borrower() external view returns(address);
@@ -1045,6 +1047,9 @@ interface IAgreement {
     function checkTimeToCancel(uint _approveLimit, uint _matchLimit) external view returns(bool);
     function cdpId() external view returns(uint);
     function erc20TokenContract(bytes32 ilk) external view returns(IERC20);
+    function getAssets(address _holder) external view returns(uint,uint);
+    function withdrawDai(uint _amount) external;
+    function getDaiAddress() external view returns(address);
 
     function getInfo()
         external
@@ -1079,7 +1084,7 @@ interface IAgreement {
 
 // File: contracts/Agreement.sol
 
-pragma solidity 0.5.11;
+pragma solidity 0.5.12;
 
 
 
@@ -1089,8 +1094,7 @@ pragma solidity 0.5.11;
 
 /**
  * @title Base Agreement contract
- * @notice Contract will be deployed only once as logic(implementation), proxy will be deployed for each agreement as storage
- * @dev Should not be deployed. It is being used as an abstract class
+ * @notice Contract will be deployed only once as logic(implementation), proxy will be deployed by FraFactory for each agreement as storage
  */
 contract Agreement is IAgreement, Claimable, McdWrapper {
     using SafeMath for uint;
@@ -1388,7 +1392,7 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
         }
         if (isStatus(Statuses.Active)) {
             if (isETH) {
-                require(msg.value == _amount, "Agreement: ether sent doesn't coinside with required");
+                require(msg.value == _amount, "Agreement: ether sent doesn\'t coinside with required");
                 _lockETH(collateralType, cdpId, msg.value);
             } else {
                 _lockERC20(collateralType, cdpId, _amount, true);
@@ -1499,6 +1503,9 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
 
     /**
      * @notice check whether pending or open agreement should be canceled automatically by cron
+     * @param _approveLimit approve limit secods
+     * @param _matchLimit match limit secods
+     * @return true if should be cancelled
      */
     function checkTimeToCancel(uint _approveLimit, uint _matchLimit) public view returns(bool){
         if ((isStatus(Statuses.Pending) && now > statusSnapshots[uint(Statuses.Pending)].add(_approveLimit)) ||
@@ -1508,11 +1515,28 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
         }
     }
 
+    /**
+     * @notice get collateralization ratio, if cdp is already opened - get cdp CR, if no - calculate according to agreement initial parameters
+     * @return collateralization ratio in RAY
+     */
     function getCR() public view returns(uint) {
         return cdpId > 0 ? getCdpCR(collateralType, cdpId) : collateralAmount.mul(getPrice(collateralType)).div(debtValue);
     }
+
+    /**
+     * @notice get collateralization ratio buffer (difference between current CR and minimal one)
+     * @return buffer percents
+     */
     function getCRBuffer() public view returns(uint) {
-        return getCR().sub(getMCR(collateralType)).mul(100).div(ONE);
+        return getCR() <= getMCR(collateralType) ? 0 : getCR().sub(getMCR(collateralType)).mul(100).div(ONE);
+    }
+
+    /**
+     * @notice get address of Dai token contract
+     * @return dai address
+     */
+    function getDaiAddress() public view returns(address) {
+        return mcdDaiAddr;
     }
 
     /**
@@ -1655,6 +1679,8 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
         assets[_holder].dai = assets[_holder].dai.sub(_amount);
         emit AssetsDaiPop(_holder, _amount);
     }
+
+    
 
     function() external payable {}
 }

@@ -57,48 +57,4 @@ contract('RaySupport', async (accounts) => {
       .fromRay.call(1))).toFixed(), 0);
     });
   });
-
-  describe('fromPercentToRay()', async () => {
-    it('should correctly convert from persent 5 to ray', async () => {
-      assert.equal((await raySupport
-      .fromPercentToRay.call(5)).toString(), '1050000000000000000000000000');
-    });
-
-    it('should correctly convert from percent 10 to ray', async () => {
-      assert.equal((await raySupport
-      .fromPercentToRay.call(10)).toString(), '1100000000000000000000000000');
-    });
-
-    it('should correctly convert from percent 65 to ray', async () => {
-      assert.equal((await raySupport
-      .fromPercentToRay.call(65)).toString(), '1650000000000000000000000000');
-    });
-
-    it('should correctly convert from value 1 to ray', async () => {
-      assert.equal((await raySupport
-      .fromPercentToRay.call(1)).toString(), '1010000000000000000000000000');
-    });
-  });
-
-  describe('fromRayToPercent()', async () => {
-    it('should correctly convert from ray to persent 5', async () => {
-      assert.equal((await raySupport
-      .fromRayToPercent.call(toBN(1050000000000000000000000000))).toString(), 5);
-    });
-
-    it('should correctly convert from ray to percent 10', async () => {
-      assert.equal((await raySupport
-      .fromRayToPercent.call(toBN(1100000000000000000000000000))).toString(), 10);
-    });
-
-    it('should correctly convert from ray to percent 65', async () => {
-      assert.equal((await raySupport
-      .fromRayToPercent.call(toBN(1650000000000000000000000000))).toString(), 65);
-    });
-
-    it('should correctly convert from ray to percent 1', async () => {
-      assert.equal((await raySupport
-      .fromRayToPercent.call(toBN(1010000000000000000000000000))).toString(), 1);
-    });
-  });
 });

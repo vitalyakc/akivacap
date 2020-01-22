@@ -1,5 +1,8 @@
 pragma solidity 0.5.12;
 
+/**
+ * @title Interfaces for maker dao mcd contracts
+ */
 contract PotLike {
     function dsr() public view returns (uint);
     function chi() public view returns (uint);
@@ -47,12 +50,12 @@ contract ManagerLike {
 
 contract ProxyRegistryLike {
     mapping(address => DSProxyLike) public proxies;
-    function build() public returns (address payable proxy);
-    function build(address owner) public returns (address payable proxy);
+    function build() public returns (address payable);
+    function build(address) public returns (address payable);
 }
 
 contract DSProxyLike {
-    function execute(bytes memory _code, bytes memory _data) public payable returns (address target, bytes memory response);
-    function execute(address _target, bytes memory _data) public payable returns (bytes memory response);
-    function setOwner(address owner_) public;
+    function execute(bytes memory, bytes memory) public payable returns (address, bytes memory);
+    function execute(address, bytes memory) public payable returns (bytes memory);
+    function setOwner(address) public;
 }

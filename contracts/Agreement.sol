@@ -1,7 +1,7 @@
 pragma solidity 0.5.12;
 
 import "./config/Config.sol";
-import "./helpers/Claimable.sol";
+import "./helpers/ClaimableIni.sol";
 import "./helpers/SafeMath.sol";
 import "./mcd/McdWrapper.sol";
 import "./interfaces/IERC20.sol";
@@ -11,7 +11,7 @@ import "./interfaces/IAgreement.sol";
  * @title Base Agreement contract
  * @notice Contract will be deployed only once as logic(implementation), proxy will be deployed by FraFactory for each agreement as storage
  */
-contract Agreement is IAgreement, Claimable, McdWrapper {
+contract Agreement is IAgreement, ClaimableIni, McdWrapper {
     using SafeMath for uint;
     using SafeMath for int;
     
@@ -38,7 +38,7 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
     Statuses public status;
 
     /**
-     * Type the agreement is closed by 
+     * Type the agreement is closed by
      */
     ClosedTypes public closedType;
 
@@ -178,7 +178,7 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
         bool _isETH,
         address _configAddr
     ) public payable initializer {
-        Ownable.initialize();
+        ClaimableIni.initialize();
 
         require(Config(_configAddr).isCollateralEnabled(_collateralType), "Agreement: collateral type is currencly disabled");
         require(_debtValue > 0, "Agreement: debt is zero");

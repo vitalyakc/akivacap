@@ -75,7 +75,7 @@ contract LenderPool is Administrable {
         _setPoolRestrictions(_maxPendingPeriod, _minDai);
         setTargetAgreement(_targetAgreement);
     }
-    
+
     /**
      * @notice Set target agreement address and check for restrictions of target agreement
      * @param   _addr   address of target agreement
@@ -180,7 +180,7 @@ contract LenderPool is Administrable {
             share = balanceOf[_pooler];
         }
     }
-    
+
     /**
      * @notice Set target agreement address
      * @param _addr  address of target agreement
@@ -261,45 +261,10 @@ contract LenderPool is Administrable {
     }
 
     /**
-    * @notice   Get Agreement debt dai amount
-    */
-    function _getAgreementDebtValue() internal returns (uint) {
-        return IAgreement(targetAgreement).debtValue();
-    }
-
-    /**
-    * @notice   Get Agreement interest rate
-    */
-    function _getAgreementInterestRate() internal returns (uint) {
-        return IAgreement(targetAgreement).interestRate();
-    }
-
-    /**
-    * @notice   Get Agreement duration
-    */
-    function _getAgreementDuration() internal returns (uint) {
-        return IAgreement(targetAgreement).duration();
-    }
-
-    /**
-    * @notice   Check agreement status
-    */
-    function _isAgreementInStatus(IAgreement.Statuses _status) internal returns(bool) {
-        return IAgreement(targetAgreement).isStatus(_status);
-    }
-
-    /**
     * @notice   Do Agreement match
     */
     function _matchAgreement() internal {
         IAgreement(targetAgreement).matchAgreement();
-    }
-
-    /**
-    * @notice   Get Agreement assets
-    */
-    function _getAgreementAssets() internal returns(uint, uint) {
-        return IAgreement(targetAgreement).getAssets(address(this));
     }
 
     /**
@@ -335,6 +300,41 @@ contract LenderPool is Administrable {
     */
     function _daiTokenTransfer(address _pooler, uint _amount) internal {
         IERC20(daiToken).transfer(_pooler, _amount);
+    }
+
+    /**
+    * @notice   Get Agreement debt dai amount
+    */
+    function _getAgreementDebtValue() internal view returns (uint) {
+        return IAgreement(targetAgreement).debtValue();
+    }
+
+    /**
+    * @notice   Get Agreement interest rate
+    */
+    function _getAgreementInterestRate() internal view returns (uint) {
+        return IAgreement(targetAgreement).interestRate();
+    }
+
+    /**
+    * @notice   Get Agreement duration
+    */
+    function _getAgreementDuration() internal view returns (uint) {
+        return IAgreement(targetAgreement).duration();
+    }
+
+    /**
+    * @notice   Check agreement status
+    */
+    function _isAgreementInStatus(IAgreement.Statuses _status) internal view returns(bool) {
+        return IAgreement(targetAgreement).isStatus(_status);
+    }
+
+    /**
+    * @notice   Get Agreement assets
+    */
+    function _getAgreementAssets() internal view returns(uint, uint) {
+        return IAgreement(targetAgreement).getAssets(address(this));
     }
 }
 

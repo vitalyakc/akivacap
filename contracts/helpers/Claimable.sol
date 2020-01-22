@@ -1,41 +1,60 @@
 pragma solidity 0.5.12;
 
-import "./Context.sol";
-import "./Initializable.sol";
-
-contract Ownable is Initializable, Context {
+/**
+ * @title   Ownable contract
+ * @dev     Contract has all neccessary ownable functions but doesn't have initialization
+ */
+contract Ownable {
     address public owner;
-    
+
     event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
 
     /**
-     * @dev The Ownable constructor sets the original `owner` of the contract to the sender
-     * account.
+     * @dev     Grants access only for owner
      */
-    function initialize() public initializer {
-        owner = msg.sender;
-        emit OwnershipTransferred(address(0), owner);
+    modifier onlyContractOwner() {
+        require(isOwner(msg.sender), "Ownable: Not a contract owner");
+        _;
     }
 
-    function isOwner() public view returns(bool) {
-        return owner == msg.sender;
+    /**
+     * @dev     Check if address is  owner
+     */
+    function isOwner(address _addr) public view returns(bool) {
+        return owner == _addr;
     }
-    
-    modifier onlyContractOwner() {
-        require(isOwner(), "Not a contract owner");
-        _;
+
+    /**
+     * @dev     Set initial owner
+     * @param   _addr   owner address
+     */
+    function _setInitialOwner(address _addr) internal {
+        owner = _addr;
+        emit OwnershipTransferred(address(0), owner);
     }
 }
 
+/**
+ * @title   Base Claimable contract
+ * @dev     The same as Ownable but with two-step ownership transfering procedure
+ *          Contract has all neccessary Claimable functions for transfer and claim ownership
+ */
 contract Claimable is Ownable {
     address public pendingOwner;
-    
+
+    /**
+     * @dev     Transfer ownership
+     * @param   _newOwner   address, the ownership should be transferred to, becomes pending until claim
+     */
     function transferOwnership(address _newOwner) public onlyContractOwner {
         pendingOwner = _newOwner;
     }
-    
+
+    /**
+     * @dev     Approve pending owner by new owner
+     */
     function claimOwnership() public {
-        require(msg.sender == pendingOwner, "Not a pending owner");
+        require(msg.sender == pendingOwner, "Claimable: Not a pending owner");
 
         address previousOwner = owner;
         owner = msg.sender;
