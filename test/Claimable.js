@@ -93,37 +93,37 @@ contract('ClaimableIni', async (accounts) => {
     });
 
     it('should pass by valid owner', async () => {
-      assert.isTrue(await claimable.isOwner.call());
+      assert.isTrue(await claimable.isOwner.call(OWNER));
     });
 
     it('should pass by valid owner after ownership transfered', async () => {
       await claimable.transferOwnership(SOMEBODY);
 
-      assert.isTrue(await claimable.isOwner.call());
+      assert.isTrue(await claimable.isOwner.call(OWNER));
     });
 
     it('should pass by valid owner after ownership claimed', async () => {
       await claimable.transferOwnership(SOMEBODY);
       await claimable.claimOwnership({from: SOMEBODY});
 
-      assert.isTrue(await claimable.isOwner.call({from: SOMEBODY}));
+      assert.isTrue(await claimable.isOwner.call(SOMEBODY, {from: SOMEBODY}));
     });
 
     it('should not pass by not a valid owner', async () => {
-      assert.isFalse(await claimable.isOwner.call({from: SOMEBODY}));
+      assert.isFalse(await claimable.isOwner.call(SOMEBODY, {from: SOMEBODY}));
     });
 
     it('should not pass by not a valid owner after ownership transfered', async () => {
       await claimable.transferOwnership(SOMEBODY);
 
-      assert.isFalse(await claimable.isOwner.call({from: SOMEBODY}));
+      assert.isFalse(await claimable.isOwner.call(SOMEBODY, {from: SOMEBODY}));
     });
 
     it('should not pass by old valid owner after ownership claimed', async () => {
       await claimable.transferOwnership(SOMEBODY);
       await claimable.claimOwnership({from: SOMEBODY});
 
-      assert.isFalse(await claimable.isOwner.call());
+      assert.isFalse(await claimable.isOwner.call(OWNER));
     });
   });
 });
