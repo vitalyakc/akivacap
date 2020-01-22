@@ -202,8 +202,9 @@ contract Agreement is IAgreement, ClaimableIni, McdWrapper {
         
         _nextStatus();
         _initMcdWrapper(collateralType, isETH);
-        _monitorRisky();
         emit AgreementInitiated(borrower, collateralAmount, debtValue, duration, interestRate);
+
+        _monitorRisky();
     }
     
     /**
@@ -238,9 +239,10 @@ contract Agreement is IAgreement, ClaimableIni, McdWrapper {
         }
         uint drawnDai = _balanceDai(address(this));
         // due to the lack of preceision in mcd cdp contracts drawn dai can be less by 1 dai wei
+        
+        emit AgreementMatched(lender, expireDate, cdpId, collateralAmount, debtValue, drawnDai);
         _pushDaiAsset(borrower, debtValue < drawnDai ? debtValue : drawnDai);
 
-        emit AgreementMatched(lender, expireDate, cdpId, collateralAmount, debtValue, drawnDai);
         return true;
     }
 
@@ -347,7 +349,9 @@ contract Agreement is IAgreement, ClaimableIni, McdWrapper {
      * @param _to address should be withdrawn to
      */
     function withdrawRemainingEth(address payable _to) external hasStatus(Statuses.Closed) onlyContractOwner {
-        uint _remainingEth = isETH ? address(this).balance.sub(assets[borrower].collateral.add(assets[lender].collateral)) : address(this).balance;
+        uint _remainingEth = isETH ?
+            address(this).balance.sub(assets[borrower].collateral.add(assets[lender].collateral)) :
+            address(this).balance;
         require(_remainingEth > 0, "Agreement: the remaining balance available for withdrawal is zero");
         _to.transfer(_remainingEth);
     }
@@ -381,6 +385,12 @@ contract Agreement is IAgreement, ClaimableIni, McdWrapper {
         _isRisky = isRisky;
     }
 
+    /**
+     * @notice Get user assets available for withdrawal
+     * @param _holder address of lender or borrower
+     * @return collateral amount
+     * @return dai amount
+     */
     function getAssets(address _holder) public view returns(uint,uint) {
         return (assets[_holder].collateral, assets[_holder].dai);
     }
@@ -594,8 +604,6 @@ contract Agreement is IAgreement, ClaimableIni, McdWrapper {
         assets[_holder].dai = assets[_holder].dai.sub(_amount);
         emit AssetsDaiPop(_holder, _amount);
     }
-
-    
 
     function() external payable {}
 }
