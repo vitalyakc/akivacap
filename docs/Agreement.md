@@ -81,7 +81,7 @@ modifier hasStatus(enum IAgreement.Statuses _status) internal
 
 | Name        | Type           | Description  |
 | ------------- |------------- | -----|
-| _status | enum IAgreement.Statuses | status should be checked with | 
+| _status | enum IAgreement.Statuses |  | 
 
 ### beforeStatus
 
@@ -95,11 +95,10 @@ modifier beforeStatus(enum IAgreement.Statuses _status) internal
 
 | Name        | Type           | Description  |
 | ------------- |------------- | -----|
-| _status | enum IAgreement.Statuses | check before status | 
+| _status | enum IAgreement.Statuses |  | 
 
 ## Functions
 
-- [_doStatusSnapshot()](#_dostatussnapshot)
 - [initAgreement(address payable _borrower, uint256 _collateralAmount, uint256 _debtValue, uint256 _duration, uint256 _interestRate, bytes32 _collateralType, bool _isETH, address _configAddr)](#initagreement)
 - [approveAgreement()](#approveagreement)
 - [matchAgreement()](#matchagreement)
@@ -121,6 +120,7 @@ modifier beforeStatus(enum IAgreement.Statuses _status) internal
 - [getCR()](#getcr)
 - [getCRBuffer()](#getcrbuffer)
 - [getDaiAddress()](#getdaiaddress)
+- [_doStatusSnapshot()](#_dostatussnapshot)
 - [_closeAgreement(enum IAgreement.ClosedTypes _closedType)](#_closeagreement)
 - [_updateAgreementState(bool _isLastUpdate)](#_updateagreementstate)
 - [_monitorRisky()](#_monitorrisky)
@@ -133,19 +133,6 @@ modifier beforeStatus(enum IAgreement.Statuses _status) internal
 - [_popCollateralAsset(address _holder, uint256 _amount)](#_popcollateralasset)
 - [_popDaiAsset(address _holder, uint256 _amount)](#_popdaiasset)
 - [()](#)
-
-### _doStatusSnapshot
-
-Save timestamp for current status
-
-```js
-function _doStatusSnapshot() internal nonpayable
-```
-
-**Arguments**
-
-| Name        | Type           | Description  |
-| ------------- |------------- | -----|
 
 ### initAgreement
 
@@ -163,14 +150,14 @@ function initAgreement(address payable _borrower, uint256 _collateralAmount, uin
 
 | Name        | Type           | Description  |
 | ------------- |------------- | -----|
-| _borrower | address payable | borrower address | 
-| _collateralAmount | uint256 | value of borrower's collateral amount put into the contract as collateral or approved to transferFrom | 
-| _debtValue | uint256 | value of debt | 
-| _duration | uint256 | number of seconds which agreement should be terminated after | 
-| _interestRate | uint256 | percent of interest rate, should be passed like RAY | 
-| _collateralType | bytes32 | type of collateral, should be passed as bytes32 | 
-| _isETH | bool | true if ether and false if erc-20 token | 
-| _configAddr | address | config contract address | 
+| _borrower | address payable |  | 
+| _collateralAmount | uint256 |  | 
+| _debtValue | uint256 |  | 
+| _duration | uint256 |  | 
+| _interestRate | uint256 |  | 
+| _collateralType | bytes32 |  | 
+| _isETH | bool |  | 
+| _configAddr | address |  | 
 
 ### approveAgreement
 
@@ -325,7 +312,7 @@ function withdrawDai(uint256 _amount) external nonpayable
 
 | Name        | Type           | Description  |
 | ------------- |------------- | -----|
-| _amount | uint256 | dai amount for withdrawal | 
+| _amount | uint256 |  | 
 
 ### withdrawCollateral
 
@@ -531,6 +518,19 @@ returns(address)
 **Returns**
 
 dai address
+
+**Arguments**
+
+| Name        | Type           | Description  |
+| ------------- |------------- | -----|
+
+### _doStatusSnapshot
+
+Save timestamp for current status
+
+```js
+function _doStatusSnapshot() internal nonpayable
+```
 
 **Arguments**
 

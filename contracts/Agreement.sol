@@ -296,6 +296,7 @@ contract Agreement is IAgreement, ClaimableIni, McdWrapper {
 
     /**
      * @notice  Lock additional ether as collateral to agreement cdp contract
+     * @param   _amount collateral amount for additional lock
      * @return  Operation success
      */
     function lockAdditionalCollateral(uint _amount) external payable onlyBorrower beforeStatus(Statuses.Closed) returns(bool _success)  {

@@ -241,7 +241,7 @@ function _setAgreement(address _addr) internal nonpayable
 
 | Name        | Type           | Description  |
 | ------------- |------------- | -----|
-| _addr | address | address of target agreement | 
+| _addr | address |  | 
 
 ### _deposit
 
@@ -286,9 +286,9 @@ function _setAgreementRestrictions(uint256 _minInterestRate, uint256 _minDuratio
 
 | Name        | Type           | Description  |
 | ------------- |------------- | -----|
-| _minInterestRate | uint256 | min percent of interest rate, should be passed like RAY | 
-| _minDuration | uint256 | min available agreement duration in secs | 
-| _maxDuration | uint256 | mav available agreement duration in secs | 
+| _minInterestRate | uint256 |  | 
+| _minDuration | uint256 |  | 
+| _maxDuration | uint256 |  | 
 
 ### _setPoolRestrictions
 
@@ -323,7 +323,7 @@ function _switchStatus(enum LenderPool.Statuses _next) internal nonpayable
 
 ⤿ Overridden Implementation(s): [LenderPoolMock._matchAgreement](LenderPoolMock.md#_matchagreement)
 
-Do Agreement match
+Do match with agreement
 
 ```js
 function _matchAgreement() internal nonpayable
