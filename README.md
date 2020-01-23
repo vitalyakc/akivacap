@@ -36,7 +36,28 @@ This repository contains the core smart contract code for Forward Rate Agreement
 
 
 **The main storage variables:**
-- `status` - current status of agreement. Can be:
+- `status` - current status of agreement. Defined as enum `Statuses`
+
+```js
+enum Statuses {
+ All,
+ Pending,
+ Open,
+ Active,
+ Closed
+}
+```
+
+### ClosedTypes
+
+```js
+enum ClosedTypes {
+ Ended,
+ Liquidated,
+ Blocked,
+ Cancelled
+}
+```
     - 1 - STATUS_PENDING // 0001
     - 2 - STATUS_OPEN // 0010
     - 3 - STATUS_ACTIVE // 0011
