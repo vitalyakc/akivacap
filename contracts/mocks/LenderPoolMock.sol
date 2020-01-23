@@ -20,12 +20,12 @@ contract LenderPoolMock is LenderPool {
         uint _maxPendingPeriod,
         uint _minDai
     ) LenderPool(
-    _targetAgreement, 
-    _minInterestRate, 
-    _minDuration, 
-    _maxDuration, 
-    _maxPendingPeriod, 
-    _minDai
+        _targetAgreement,
+        _minInterestRate,
+        _minDuration,
+        _maxDuration,
+        _maxPendingPeriod,
+        _minDai
     ) public {}
 
     function setDaiTokenMock(address _daiTokenMock) public {
@@ -36,7 +36,7 @@ contract LenderPoolMock is LenderPool {
         debtValue = _debtValue;
     }
 
-    function _getAgreementDebtValue() internal returns (uint) {
+    function _getAgreementDebtValue() internal view returns (uint) {
         return debtValue;
     }
 
@@ -44,7 +44,7 @@ contract LenderPoolMock is LenderPool {
         interestRate = _interestRate;
     }
 
-    function _getAgreementInterestRate() internal returns (uint) {
+    function _getAgreementInterestRate() internal view returns (uint) {
         return interestRate;
     }
 
@@ -52,15 +52,15 @@ contract LenderPoolMock is LenderPool {
         duration = _duration;
     }
 
-    function _getAgreementDuration() internal returns (uint) {
+    function _getAgreementDuration() internal view returns (uint) {
         return duration;
     }
 
     function setAgreementStatus(bool _status) public {
         isStatusMock = _status;
-    } 
+    }
 
-    function _isAgreementInStatus(IAgreement.Statuses _status) internal returns(bool) {
+    function _isAgreementInStatus(IAgreement.Statuses) internal view returns(bool) {
         return isStatusMock;
     }
 
@@ -68,9 +68,9 @@ contract LenderPoolMock is LenderPool {
 
     function setAgreementDaiAsset(uint _daiAsset) public {
         daiAsset = _daiAsset;
-    } 
+    }
 
-    function _getAgreementAssets() internal returns(uint, uint) {
+    function _getAgreementAssets() internal view returns(uint, uint) {
         return (0, daiAsset);
     }
 

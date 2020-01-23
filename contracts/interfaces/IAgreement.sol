@@ -9,25 +9,16 @@ interface IAgreement {
     enum Statuses {All, Pending, Open, Active, Closed}
     enum ClosedTypes {Ended, Liquidated, Blocked, Cancelled}
 
-    function initAgreement(
-        address payable _borrower,
-        uint256 _collateralAmount,
-        uint256 _debtValue,
-        uint256 _duration,
-        uint256 _interestRate,
-        bytes32 _collateralType,
-        bool _isETH,
-        address _configAddr
-    ) external payable;
+    function initAgreement(address payable, uint256, uint256, uint256, uint256, bytes32, bool, address) external payable;
 
-    function transferOwnership(address _newOwner) external;
+    function transferOwnership(address) external;
     function claimOwnership() external;
     function approveAgreement() external returns(bool);
     function updateAgreement() external returns(bool);
     function cancelAgreement() external returns(bool);
     function rejectAgreement() external returns(bool);
     function blockAgreement() external returns(bool);
-    function matchAgreement() external returns(bool _success);
+    function matchAgreement() external returns(bool);
     function interestRate() external view returns(uint);
     function duration() external view returns(uint);
     function debtValue() external view returns(uint);
@@ -35,32 +26,17 @@ interface IAgreement {
     function lender() external view returns(address);
     function borrower() external view returns(address);
     function collateralType() external view returns(bytes32);
-    function isStatus(Statuses _status) external view returns(bool);
-    function isBeforeStatus(Statuses _status) external view returns(bool);
-    function isClosedWithType(ClosedTypes _type) external view returns(bool);
-    function checkTimeToCancel(uint _approveLimit, uint _matchLimit) external view returns(bool);
+    function isStatus(Statuses) external view returns(bool);
+    function isBeforeStatus(Statuses) external view returns(bool);
+    function isClosedWithType(ClosedTypes) external view returns(bool);
+    function checkTimeToCancel(uint, uint) external view returns(bool);
     function cdpId() external view returns(uint);
-    function erc20TokenContract(bytes32 ilk) external view returns(IERC20);
-    function getAssets(address _holder) external view returns(uint,uint);
-    function withdrawDai(uint _amount) external;
+    function erc20TokenContract(bytes32) external view returns(IERC20);
+    function getAssets(address) external view returns(uint,uint);
+    function withdrawDai(uint) external;
     function getDaiAddress() external view returns(address);
 
-    function getInfo()
-        external
-        view
-        returns (
-            address _addr,
-            uint _status,
-            uint _closedType,
-            uint _duration,
-            address _borrower,
-            address _lender,
-            bytes32 _collateralType,
-            uint _collateralAmount,
-            uint _debtValue,
-            uint _interestRate,
-            bool _isRisky
-        );
+    function getInfo() external view returns (address,uint,uint,uint,address,address,bytes32,uint,uint,uint,bool);
 
     event AgreementInitiated(address _borrower, uint _collateralValue, uint _debtValue, uint _expireDate, uint _interestRate);
     event AgreementApproved();

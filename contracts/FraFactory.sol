@@ -7,8 +7,8 @@ import "./helpers/Administrable.sol";
 import "zos-lib/contracts/upgradeability/UpgradeabilityProxy.sol";
 
 /**
- * @title Fra Factory
- * @notice Handler of all agreements
+ * @title   Fra Factory
+ * @dev     Handler of all agreements
  */
 contract FraFactory is Administrable {
     address[] public agreementList;
@@ -16,7 +16,7 @@ contract FraFactory is Administrable {
     address public configAddr;
 
     /**
-     * @notice Set config and agreement implementation
+     * @dev Set config and agreement implementation
      * @param _agreementImpl address of agreement implementation contract
      * @param _configAddr address of config contract
      */
@@ -26,7 +26,7 @@ contract FraFactory is Administrable {
     }
 
     /**
-     * @notice Requests agreement on ETH collateralType
+     * @dev Requests agreement on ETH collateralType
      * @param _debtValue value of borrower's ETH put into the contract as collateral
      * @param _duration number of minutes which agreement should be terminated after
      * @param _interestRate percent of interest rate, should be passed like RAY
@@ -48,7 +48,7 @@ contract FraFactory is Administrable {
     }
 
     /**
-     * @notice Requests agreement on ERC-20 collateralType
+     * @dev Requests agreement on ERC-20 collateralType
      * @param _debtValue value of borrower's collateral
      * @param _duration number of minutes which agreement should be terminated after
      * @param _interestRate percent of interest rate, should be passed like
@@ -74,7 +74,7 @@ contract FraFactory is Administrable {
     }
 
     /**
-     * @notice Set the new agreement implememntation adresss
+     * @dev Set the new agreement implememntation adresss
      * @param _agreementImpl address of agreement implementation contract
      */
     function setAgreementImpl(address payable _agreementImpl) public onlyAdmin() {
@@ -83,7 +83,7 @@ contract FraFactory is Administrable {
     }
 
     /**
-     * @notice Set the new config adresss
+     * @dev Set the new config adresss
      * @param _configAddr address of config contract
      */
     function setConfigAddr(address _configAddr) public onlyAdmin() {
@@ -92,7 +92,7 @@ contract FraFactory is Administrable {
     }
 
     /**
-     * @notice Makes the specific agreement valid
+     * @dev Makes the specific agreement valid
      * @param _address agreement address
      * @return operation success
      */
@@ -101,7 +101,7 @@ contract FraFactory is Administrable {
     }
 
     /**
-    * @notice Multi approve
+    * @dev Multi approve
     * @param _addresses agreements addresses array
     */
     function batchApproveAgreements(address[] memory _addresses) public onlyAdmin() {
@@ -114,7 +114,7 @@ contract FraFactory is Administrable {
     }
 
     /**
-     * @notice Reject specific agreement
+     * @dev Reject specific agreement
      * @param _address agreement address
      * @return operation success
      */
@@ -123,7 +123,7 @@ contract FraFactory is Administrable {
     }
 
     /**
-    * @notice Multi reject
+    * @dev Multi reject
     * @param _addresses agreements addresses array
     */
     function batchRejectAgreements(address[] memory _addresses) public onlyAdmin() {
@@ -136,7 +136,7 @@ contract FraFactory is Administrable {
     }
 
     /**
-     * @notice Function for cron autoreject (close agreements if matchLimit expired)
+     * @dev Function for cron autoreject (close agreements if matchLimit expired)
      */
     function autoRejectAgreements() public onlyAdmin() {
         uint _approveLimit = Config(configAddr).approveLimit();
@@ -153,7 +153,7 @@ contract FraFactory is Administrable {
     }
 
     /**
-     * @notice Update the state of specific agreement
+     * @dev Update the state of specific agreement
      * @param _address agreement address
      * @return operation success
      */
@@ -162,7 +162,7 @@ contract FraFactory is Administrable {
     }
 
     /**
-     * @notice Update the states of all agreemnets
+     * @dev Update the states of all agreemnets
      * @return operation success
      */
     function updateAgreements() public onlyAdmin() {
@@ -174,7 +174,7 @@ contract FraFactory is Administrable {
     }
 
     /**
-    * @notice Update state of exact agreements
+    * @dev Update state of exact agreements
     * @param _addresses agreements addresses array
     */
     function batchUpdateAgreements(address[] memory _addresses) public onlyAdmin() {
@@ -188,7 +188,7 @@ contract FraFactory is Administrable {
     }
 
     /**
-     * @notice Block specific agreement
+     * @dev Block specific agreement
      * @param _address agreement address
      * @return operation success
      */
@@ -197,7 +197,7 @@ contract FraFactory is Administrable {
     }
 
     /**
-     * @notice Remove agreement from list,
+     * @dev Remove agreement from list,
      * doesn't affect real agreement contract, just removes handle control
      */
     function removeAgreement(uint _ind) public onlyAdmin() {
@@ -206,21 +206,21 @@ contract FraFactory is Administrable {
     }
 
     /**
-     * @notice transfer agreement ownership to Fra Factory owner (admin)
+     * @dev transfer agreement ownership to Fra Factory owner (admin)
      */
     function transferAgreementOwnership(address _address) public onlyAdmin() {
         IAgreement(_address).transferOwnership(owner);
     }
 
     /**
-     * @notice accept agreement ownership by Fra Factory contract
+     * @dev accept agreement ownership by Fra Factory contract
      */
     function claimAgreementOwnership(address _address) public onlyAdmin() {
         IAgreement(_address).claimOwnership();
     }
-    
+
     /**
-     * @notice Returns a full list of existing agreements
+     * @dev Returns a full list of existing agreements
      */
     function getAgreementList() public view returns(address[] memory _agreementList) {
         return agreementList;

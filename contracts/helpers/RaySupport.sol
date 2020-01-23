@@ -2,36 +2,53 @@ pragma solidity 0.5.12;
 
 import "./SafeMath.sol";
 
+/**
+ * @title   RaySupport contract for ray (10^27) preceision calculations
+ */
 contract RaySupport {
     using SafeMath for uint256;
     using SafeMath for int256;
     uint constant public ONE = 10 ** 27;
     uint constant public HUNDRED = 100;
 
+    /**
+     * @dev     Convert uint value to Ray format
+     * @param   _val    uint value should be converted
+     */
     function toRay(uint _val) public pure returns(uint) {
         return _val.mul(ONE);
     }
 
+    /**
+     * @dev     Convert uint value from Ray format
+     * @param   _val    uint value should be converted
+     */
     function fromRay(uint _val) public pure returns(uint) {
         return _val / ONE;
     }
 
+    /**
+     * @dev     Convert int value to Ray format
+     * @param   _val    int value should be converted
+     */
     function toRay(int _val) public pure returns(int) {
         return _val.mul(int(ONE));
     }
 
+    /**
+     * @dev     Convert int value from Ray format
+     * @param   _val    int value should be converted
+     */
     function fromRay(int _val) public pure returns(int) {
         return _val / int(ONE);
     }
 
-    function fromPercentToRay(uint _val) public pure returns(uint) {
-        return (_val.mul(ONE) / HUNDRED).add(ONE);
-    }
-
-    function fromRayToPercent(uint _val) public pure returns(uint) {
-        return _val.mul(HUNDRED) / ONE - HUNDRED;
-    }
-
+    /**
+     * @dev     Calculate x pow n by base
+     * @param   x   value should be powered
+     * @param   n   power degree
+     * @param   base    base value
+     */
     function rpow(uint x, uint n, uint base) public pure returns (uint z) {
         assembly {
             switch x case 0 {switch n case 0 {z := base} default {z := 0}}
@@ -55,16 +72,4 @@ contract RaySupport {
             }
         }
     }
-
-    // function rmul(uint x, uint y) public pure returns (uint z) {
-    //     z = mul(x, y) / ONE;
-    // }
-
-    // function add(uint x, uint y) internal view returns (uint z) {
-    //     require((z = x + y) >= x);
-    // }
-
-    // function mul(uint x, uint y) internal view returns (uint z) {
-    //     require(y == 0 || (z = x * y) / y == x);
-    // }
 }

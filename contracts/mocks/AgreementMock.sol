@@ -45,7 +45,7 @@ contract AgreementMock is Agreement {
       mcdDaiAddrMock = _addr;
     }
 
-    function _transferDai(address to, uint amount) internal returns(bool) {
+    function _transferDai(address, uint) internal returns(bool) {
           return true;
     }
 
@@ -62,7 +62,7 @@ contract AgreementMock is Agreement {
         return unlockedDai;
     }
 
-    function _balanceDai(address addr) internal view returns(uint) {
+    function _balanceDai(address) internal view returns(uint) {
         return unlockedDai;
     }
 
@@ -72,7 +72,7 @@ contract AgreementMock is Agreement {
       erc20Token = _contract;
     }
 
-    function erc20TokenContract(bytes32 ilk) public view returns(IERC20) {
+    function erc20TokenContract(bytes32) public view returns(IERC20) {
       return IERC20(erc20Token);
     }
 
@@ -114,11 +114,11 @@ contract AgreementMock is Agreement {
         drawnCdp = _drawnCdp;
     }
 
-    function _drawDaiToCdp(bytes32 ilk, uint cdp, uint wad) internal returns (uint) {
+    function _drawDaiToCdp(bytes32, uint, uint) internal returns (uint) {
       return drawnCdp;
     }
 
-    function _injectToCdpFromDsr(uint cdp, uint wad) internal returns(uint) {
+    function _injectToCdpFromDsr(uint, uint) internal returns(uint) {
       return injectionWad;
     }
 
@@ -158,7 +158,7 @@ contract AgreementMock is Agreement {
         _popDaiAsset(_holder, _amount);
     }
 
-    function isCdpSafe(bytes32 ilk, uint cdpId) public view returns(bool) {
+    function isCdpSafe(bytes32, uint) public view returns(bool) {
         return now < 200000;
     }
 
@@ -176,7 +176,7 @@ contract AgreementMock is Agreement {
 }
 
 contract AgreementDeepMock is AgreementMock {
-  function _transferFromDai(address from, address to, uint amount) internal returns(bool) {
+  function _transferFromDai(address, address, uint) internal returns(bool) {
       return true;
   }
 }

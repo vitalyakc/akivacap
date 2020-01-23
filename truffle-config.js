@@ -86,9 +86,12 @@ module.exports = {
         [process.env.PRIVATEKEY1, process.env.PRIVATEKEY2, process.env.PRIVATEKEY3],
         'https://kovan.infura.io/v3/' + process.env.INFURA_API_KEY, 0, 3),
       network_id: 42,
-      // gas: 8000000,
-      // gasLimit: 8000000, // <-- Use this high gas value
+      gasPrice: 1000000000,
+    },
 
+    kovandeploy: {
+      provider: () => new HDWalletProvider(process.env.MNENOMIC, 'https://kovan.infura.io/v3/' + process.env.INFURA_API_KEY, 0, 3),
+      network_id: 42,
       gasPrice: 1000000000,
     },
 
@@ -97,13 +100,6 @@ module.exports = {
       gasPrice: 10000000000,
       network_id: 1,
     },
-
-    // Useful for private networks
-    // private: {
-    // provider: () => new HDWalletProvider(mnemonic, `https://network.io`),
-    // network_id: 2111,   // This network is yours, in the cloud.
-    // production: true    // Treats this network as if it was a public net. (default: false)
-    // }
   },
 
   // Set default mocha options here, use special reporters etc.

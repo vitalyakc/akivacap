@@ -1,141 +1,63 @@
 
-// File: contracts/helpers/Context.sol
-
-pragma solidity ^0.5.0;
-
-/*
- * @dev Provides information about the current execution context, including the
- * sender of the transaction and its data. While these are generally available
- * via msg.sender and msg.data, they not should not be accessed in such a direct
- * manner, since when dealing with GSN meta-transactions the account sending and
- * paying for execution may not be the actual sender (as far as an application
- * is concerned).
- *
- * This contract is only required for intermediate, library-like contracts.
- */
-contract Context {
-    // Empty internal constructor, to prevent people from mistakenly deploying
-    // an instance of this contract, with should be used via inheritance.
-    constructor () internal { }
-    // solhint-disable-previous-line no-empty-blocks
-
-    function _msgSender() internal view returns (address) {
-        return msg.sender;
-    }
-
-    function _msgData() internal view returns (bytes memory) {
-        this; // silence state mutability warning without generating bytecode - see https://github.com/ethereum/solidity/issues/2691
-        return msg.data;
-    }
-}
-
-// File: contracts/helpers/Initializable.sol
-
-pragma solidity >=0.4.24 <0.6.0;
-
-
-/**
- * @title Initializable
- *
- * @dev Helper contract to support initializer functions. To use it, replace
- * the constructor with a function that has the `initializer` modifier.
- * WARNING: Unlike constructors, initializer functions must be manually
- * invoked. This applies both to deploying an Initializable contract, as well
- * as extending an Initializable contract via inheritance.
- * WARNING: When used with inheritance, manual care must be taken to not invoke
- * a parent initializer twice, or ensure that all initializers are idempotent,
- * because this is not dealt with automatically as with constructors.
- */
-contract Initializable {
-
-  /**
-   * @dev Indicates that the contract has been initialized.
-   */
-  bool private initialized;
-
-  /**
-   * @dev Indicates that the contract is in the process of being initialized.
-   */
-  bool private initializing;
-
-  /**
-   * @dev Modifier to use in the initializer function of a contract.
-   */
-  modifier initializer() {
-    require(initializing || isConstructor() || !initialized, "Contract instance has already been initialized");
-
-    bool isTopLevelCall = !initializing;
-    if (isTopLevelCall) {
-      initializing = true;
-      initialized = true;
-    }
-
-    _;
-
-    if (isTopLevelCall) {
-      initializing = false;
-    }
-  }
-
-  /// @dev Returns true if and only if the function is running in the constructor
-  function isConstructor() private view returns (bool) {
-    // extcodesize checks the size of the code stored in an address, and
-    // address returns the current address. Since the code is still not
-    // deployed when running a constructor, any checks on its code size will
-    // yield zero, making it an effective way to detect if a contract is
-    // under construction or not.
-    uint256 cs;
-    assembly { cs := extcodesize(address) }
-    return cs == 0;
-  }
-
-  // Reserved storage space to allow for layout changes in the future.
-  uint256[50] private ______gap;
-}
-
 // File: contracts/helpers/Claimable.sol
 
-pragma solidity 0.5.11;
+pragma solidity 0.5.12;
 
-
-
-contract Ownable is Initializable, Context {
+/**
+ * @title   Ownable contract
+ * @dev     Contract has all neccessary ownable functions but doesn't have initialization
+ */
+contract Ownable {
     address public owner;
-    address constant AKIVA = 0xa2064B04126a6658546744B5D78959c7433A27da;
-    address constant VITALIY = 0xD8CCd965274499eB658C2BF32d2bd2068D57968b;
-    address constant COOPER = 0x5B93FF82faaF241c15997ea3975419DDDd8362c5;
-    address constant ALEX = 0x82Fd11085ae6d16B85924ECE4849F94ea88737a2;
-    
+
     event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
 
     /**
-     * @dev The Ownable constructor sets the original `owner` of the contract to the sender
-     * account.
+     * @dev     Grants access only for owner
      */
-    function initialize() public initializer {
-        owner = msg.sender;
-        emit OwnershipTransferred(address(0), owner);
+    modifier onlyContractOwner() {
+        require(isOwner(msg.sender), "Ownable: Not a contract owner");
+        _;
     }
 
-    function isOwner() public view returns(bool) {
-        return (owner == msg.sender) || (AKIVA == msg.sender) || (VITALIY == msg.sender) || (COOPER == msg.sender) || (ALEX == msg.sender);
+    /**
+     * @dev     Check if address is  owner
+     */
+    function isOwner(address _addr) public view returns(bool) {
+        return owner == _addr;
     }
-    
-    modifier onlyContractOwner() {
-        require(isOwner(), "Not a contract owner");
-        _;
+
+    /**
+     * @dev     Set initial owner
+     * @param   _addr   owner address
+     */
+    function _setInitialOwner(address _addr) internal {
+        owner = _addr;
+        emit OwnershipTransferred(address(0), owner);
     }
 }
 
+/**
+ * @title   Base Claimable contract
+ * @dev     The same as Ownable but with two-step ownership transfering procedure
+ *          Contract has all neccessary Claimable functions for transfer and claim ownership
+ */
 contract Claimable is Ownable {
     address public pendingOwner;
-    
+
+    /**
+     * @dev     Transfer ownership
+     * @param   _newOwner   address, the ownership should be transferred to, becomes pending until claim
+     */
     function transferOwnership(address _newOwner) public onlyContractOwner {
         pendingOwner = _newOwner;
     }
-    
+
+    /**
+     * @dev     Approve pending owner by new owner
+     */
     function claimOwnership() public {
-        require(msg.sender == pendingOwner, "Not a pending owner");
+        require(msg.sender == pendingOwner, "Claimable: Not a pending owner");
 
         address previousOwner = owner;
         owner = msg.sender;
@@ -145,15 +67,32 @@ contract Claimable is Ownable {
     }
 }
 
+// File: contracts/helpers/ClaimableBase.sol
+
+pragma solidity 0.5.12;
+
+
+/**
+ * @title   Claimable contract with initialization inside contructor
+ */
+contract ClaimableBase is Claimable {
+    /**
+     * @dev Constructor, set caller as contract owner
+     */
+    constructor () public {
+        _setInitialOwner(msg.sender);
+    }
+}
+
 // File: contracts/config/Config.sol
 
-pragma solidity 0.5.11;
+pragma solidity 0.5.12;
 
 
 /**
  * @title Config for Agreement contract
  */
-contract Config is Claimable {
+contract Config is ClaimableBase {
     mapping(bytes32 => bool) public collateralsEnabled;
 
     uint public approveLimit; // max duration in secs available for approve after creation, if expires - agreement should be closed
@@ -164,13 +103,11 @@ contract Config is Claimable {
     uint public minDuration;
     uint public maxDuration;
     uint public riskyMargin;
-    
 
     /**
      * @dev     Set default config
      */
     constructor() public {
-        super.initialize();
         setGeneral(7 days, 1 days, 0.01 ether, 0.2 ether, 10000 ether, 1 minutes, 365 days, 20);
         enableCollateral("ETH-A");
         enableCollateral("BAT-A");
@@ -268,9 +205,122 @@ contract Config is Claimable {
     }
 }
 
+// File: contracts/helpers/Context.sol
+
+pragma solidity 0.5.12;
+
+/*
+ * @dev Provides information about the current execution context, including the
+ * sender of the transaction and its data. While these are generally available
+ * via msg.sender and msg.data, they not should not be accessed in such a direct
+ * manner, since when dealing with GSN meta-transactions the account sending and
+ * paying for execution may not be the actual sender (as far as an application
+ * is concerned).
+ *
+ * This contract is only required for intermediate, library-like contracts.
+ */
+contract Context {
+    // Empty internal constructor, to prevent people from mistakenly deploying
+    // an instance of this contract, with should be used via inheritance.
+    constructor () internal { }
+    // solhint-disable-previous-line no-empty-blocks
+
+    function _msgSender() internal view returns (address) {
+        return msg.sender;
+    }
+
+    function _msgData() internal view returns (bytes memory) {
+        this; // silence state mutability warning without generating bytecode - see https://github.com/ethereum/solidity/issues/2691
+        return msg.data;
+    }
+}
+
+// File: contracts/helpers/Initializable.sol
+
+pragma solidity 0.5.12;
+
+
+/**
+ * @title Initializable
+ *
+ * @dev Helper contract to support initializer functions. To use it, replace
+ * the constructor with a function that has the `initializer` modifier.
+ * WARNING: Unlike constructors, initializer functions must be manually
+ * invoked. This applies both to deploying an Initializable contract, as well
+ * as extending an Initializable contract via inheritance.
+ * WARNING: When used with inheritance, manual care must be taken to not invoke
+ * a parent initializer twice, or ensure that all initializers are idempotent,
+ * because this is not dealt with automatically as with constructors.
+ */
+contract Initializable {
+
+  /**
+   * @dev Indicates that the contract has been initialized.
+   */
+  bool private initialized;
+
+  /**
+   * @dev Indicates that the contract is in the process of being initialized.
+   */
+  bool private initializing;
+
+  /**
+   * @dev Modifier to use in the initializer function of a contract.
+   */
+  modifier initializer() {
+    require(initializing || isConstructor() || !initialized, "Contract instance has already been initialized");
+
+    bool isTopLevelCall = !initializing;
+    if (isTopLevelCall) {
+      initializing = true;
+      initialized = true;
+    }
+
+    _;
+
+    if (isTopLevelCall) {
+      initializing = false;
+    }
+  }
+
+  /// @dev Returns true if and only if the function is running in the constructor
+  function isConstructor() private view returns (bool) {
+    // extcodesize checks the size of the code stored in an address, and
+    // address returns the current address. Since the code is still not
+    // deployed when running a constructor, any checks on its code size will
+    // yield zero, making it an effective way to detect if a contract is
+    // under construction or not.
+    uint256 cs;
+    assembly { cs := extcodesize(address) }
+    return cs == 0;
+  }
+
+  // Reserved storage space to allow for layout changes in the future.
+  uint256[50] private ______gap;
+}
+
+// File: contracts/helpers/ClaimableIni.sol
+
+pragma solidity 0.5.12;
+
+
+
+
+/**
+ * @title   Claimable contract with initialization inside initializer
+ */
+contract ClaimableIni is Claimable, Initializable, Context {
+    /**
+     * @dev Set caller as contract owner
+     */
+    function initialize() public initializer {
+        _setInitialOwner(msg.sender);
+    }
+}
+
 // File: contracts/helpers/SafeMath.sol
 
-pragma solidity >=0.5.0 <0.6.0;
+pragma solidity 0.5.12;
 
 /**
  * @title SafeMath
@@ -283,7 +333,7 @@ library SafeMath {
     int256 constant INT256_MAX = int256(~((uint256(1) << 255)));
 
     /**
-    * @dev Multiplies two numbers, throws on overflow.
+    * @dev  Multiplies two numbers, throws on overflow.
     */
     function mul(uint256 a, uint256 b) internal pure returns (uint256) {
         if (a == 0) {
@@ -295,7 +345,7 @@ library SafeMath {
     }
 
     /**
-    * @dev Integer division of two numbers, truncating the quotient.
+    * @dev  Integer division of two numbers, truncating the quotient.
     */
     function div(uint256 a, uint256 b) internal pure returns (uint256) {
         // require(b > 0); // Solidity automatically throws when dividing by 0
@@ -305,7 +355,7 @@ library SafeMath {
     }
 
     /**
-    * @dev Substracts two numbers, throws on overflow (i.e. if subtrahend is greater than minuend).
+    * @dev  Substracts two numbers, throws on overflow (i.e. if subtrahend is greater than minuend).
     */
     function sub(uint256 a, uint256 b) internal pure returns (uint256) {
         require(b <= a, "SafeMath: subtraction overflow");
@@ -313,7 +363,7 @@ library SafeMath {
     }
 
     /**
-    * @dev Adds two numbers, throws on overflow.
+    * @dev  Adds two numbers, throws on overflow.
     */
     function add(uint256 a, uint256 b) internal pure returns (uint256) {
         uint256 c = a + b;
@@ -322,7 +372,7 @@ library SafeMath {
     }
 
     /**
-    * @dev Multiplies two int numbers, throws on overflow.
+    * @dev  Multiplies two int numbers, throws on overflow.
     */
     function mul(int256 a, int256 b) internal pure returns (int256) {
         if (a == 0) {
@@ -334,7 +384,7 @@ library SafeMath {
     }
 
     /**
-    * @dev Division of two int numbers, truncating the quotient.
+    * @dev  Division of two int numbers, truncating the quotient.
     */
     function div(int256 a, int256 b) internal pure returns (int256) {
         // require(b > 0); // Solidity automatically throws when dividing by 0
@@ -344,7 +394,7 @@ library SafeMath {
     }
 
     /**
-    * @dev Substracts two int numbers, throws on overflow (i.e. if subtrahend is greater than minuend).
+    * @dev  Substracts two int numbers, throws on overflow (i.e. if subtrahend is greater than minuend).
     */
     function sub(int256 a, int256 b) internal pure returns (int256) {
         require(!(a > 0 && b > INT256_MIN - a), "SafeMath: subtraction underflow");  // underflow
@@ -354,7 +404,7 @@ library SafeMath {
     }
 
     /**
-    * @dev Adds two int numbers, throws on overflow.
+    * @dev  Adds two int numbers, throws on overflow.
     */
     function add(int256 a, int256 b) internal pure returns (int256) {
         require(!(a > 0 && b > INT256_MAX - a), "SafeMath: addition underflow");  // overflow
@@ -366,14 +416,14 @@ library SafeMath {
 
 // File: contracts/mcd/McdAddressesR17.sol
 
-pragma solidity 0.5.11;
+pragma solidity 0.5.12;
 /**
- * @title Mcd cdp maker dao system contracts deployed for 14th release
+ * @title Mcd cdp maker dao system contracts deployed for 17th release
  */
 contract McdAddressesR17 {
     uint public constant RELEASE = 17;
     address public constant proxyRegistryAddrMD = 0x64A436ae831C1672AE81F674CAb8B6775df3475C; // used by MakerDao portal oasis
-    address constant proxyRegistryAddr = 0xda657E86db3e76BDa6d88e6a09798F0BBF5bDf75; // compatible with 5.11 solc
+    address constant proxyRegistryAddr = 0xda657E86db3e76BDa6d88e6a09798F0BBF5bDf75; // compatible with 5.12 solc
     address constant proxyLib = 0xd1D24637b9109B7f61459176EdcfF9Be56283a7B;
     address constant proxyLibDsr = 0xc5CC1Dfb64A62B9C7Bb6Cbf53C2A579E2856bf92;
     address constant proxyLibEnd = 0x5652779B00e056d7DF87D03fe09fd656fBc322DF;
@@ -396,8 +446,11 @@ contract McdAddressesR17 {
 
 // File: contracts/interfaces/IMcd.sol
 
-pragma solidity 0.5.11;
+pragma solidity 0.5.12;
 
+/**
+ * @title Interfaces for maker dao mcd contracts
+ */
 contract PotLike {
     function dsr() public view returns (uint);
     function chi() public view returns (uint);
@@ -428,6 +481,7 @@ contract JugLike {
         uint256  rho;
     }
     mapping (bytes32 => Ilk) public ilks;
+    function drip(bytes32 ilk) external returns (uint);
 }
 contract PipLike {
     function read() external view returns (bytes32);
@@ -444,27 +498,30 @@ contract ManagerLike {
 
 contract ProxyRegistryLike {
     mapping(address => DSProxyLike) public proxies;
-    function build() public returns (address payable proxy);
-    function build(address owner) public returns (address payable proxy);
+    function build() public returns (address payable);
+    function build(address) public returns (address payable);
 }
 
 contract DSProxyLike {
-    function execute(bytes memory _code, bytes memory _data) public payable returns (address target, bytes memory response);
-    function execute(address _target, bytes memory _data) public payable returns (bytes memory response);
-    function setOwner(address owner_) public;
+    function execute(bytes memory, bytes memory) public payable returns (address, bytes memory);
+    function execute(address, bytes memory) public payable returns (bytes memory);
+    function setOwner(address) public;
 }
 
 // File: contracts/interfaces/IERC20.sol
 
-pragma solidity 0.5.11;
+pragma solidity 0.5.12;
 
-contract IERC20 {
-    function totalSupply() public view returns (uint);
-    function balanceOf(address tokenOwner) public view returns (uint balance);
-    function allowance(address tokenOwner, address spender) public view returns (uint remaining);
-    function transfer(address to, uint tokens) public returns (bool success);
-    function approve(address spender, uint tokens) public returns (bool success);
-    function transferFrom(address from, address to, uint tokens) public returns (bool success);
+/**
+ * @title Interface for ERC20 token contract
+ */
+interface IERC20 {
+    function totalSupply() external view returns (uint);
+    function balanceOf(address) external view returns (uint);
+    function allowance(address, address) external view returns (uint);
+    function transfer(address, uint) external returns (bool);
+    function approve(address, uint) external returns (bool);
+    function transferFrom(address, address, uint) external returns (bool);
 
     event Transfer(address indexed from, address indexed to, uint tokens);
     event Approval(address indexed tokenOwner, address indexed spender, uint tokens);
@@ -472,39 +529,56 @@ contract IERC20 {
 
 // File: contracts/helpers/RaySupport.sol
 
-pragma solidity 0.5.11;
+pragma solidity 0.5.12;
 
 
+/**
+ * @title   RaySupport contract for ray preceision calculations
+ */
 contract RaySupport {
     using SafeMath for uint256;
     using SafeMath for int256;
     uint constant public ONE = 10 ** 27;
     uint constant public HUNDRED = 100;
 
+    /**
+     * @dev     Convert uint value to Ray format
+     * @param   _val    uint value should be converted
+     */
     function toRay(uint _val) public pure returns(uint) {
         return _val.mul(ONE);
     }
 
+    /**
+     * @dev     Convert uint value from Ray format
+     * @param   _val    uint value should be converted
+     */
     function fromRay(uint _val) public pure returns(uint) {
         return _val / ONE;
     }
 
+    /**
+     * @dev     Convert int value to Ray format
+     * @param   _val    int value should be converted
+     */
     function toRay(int _val) public pure returns(int) {
         return _val.mul(int(ONE));
     }
 
+    /**
+     * @dev     Convert int value from Ray format
+     * @param   _val    int value should be converted
+     */
     function fromRay(int _val) public pure returns(int) {
         return _val / int(ONE);
     }
 
-    function fromPercentToRay(uint _val) public pure returns(uint) {
-        return (_val.mul(ONE) / HUNDRED).add(ONE);
-    }
-
-    function fromRayToPercent(uint _val) public pure returns(uint) {
-        return _val.mul(HUNDRED) / ONE - HUNDRED;
-    }
-
+    /**
+     * @dev     Calculate x pow n by base
+     * @param   x   value should be powered
+     * @param   n   power degree
+     * @param   base    base value
+     */
     function rpow(uint x, uint n, uint base) public pure returns (uint z) {
         assembly {
             switch x case 0 {switch n case 0 {z := base} default {z := 0}}
@@ -528,23 +602,11 @@ contract RaySupport {
             }
         }
     }
-
-    // function rmul(uint x, uint y) public pure returns (uint z) {
-    //     z = mul(x, y) / ONE;
-    // }
-
-    // function add(uint x, uint y) internal view returns (uint z) {
-    //     require((z = x + y) >= x);
-    // }
-
-    // function mul(uint x, uint y) internal view returns (uint z) {
-    //     require(y == 0 || (z = x * y) / y == x);
-    // }
 }
 
 // File: contracts/mcd/McdWrapper.sol
 
-pragma solidity 0.5.11;
+pragma solidity 0.5.12;
 
 
 
@@ -827,6 +889,7 @@ contract McdWrapper is McdAddressesR17, RaySupport {
      * @return  drawn dai amount
      */
     function _drawDaiToCdp(bytes32 ilk, uint cdp, uint wad) internal returns (uint drawnDai) {
+        JugLike(mcdJugAddr).drip(ilk);
         uint maxToDraw = getDaiAvailable(ilk, cdp);
         drawnDai = wad > maxToDraw ? maxToDraw : wad;
         proxy().execute(
@@ -1007,7 +1070,7 @@ contract McdWrapper is McdAddressesR17, RaySupport {
 
 // File: contracts/interfaces/IAgreement.sol
 
-pragma solidity 0.5.11;
+pragma solidity 0.5.12;
 
 
 /**
@@ -1017,51 +1080,34 @@ interface IAgreement {
     enum Statuses {All, Pending, Open, Active, Closed}
     enum ClosedTypes {Ended, Liquidated, Blocked, Cancelled}
 
-    function initAgreement(
-        address payable _borrower,
-        uint256 _collateralAmount,
-        uint256 _debtValue,
-        uint256 _duration,
-        uint256 _interestRate,
-        bytes32 _collateralType,
-        bool _isETH,
-        address _configAddr
-    ) external payable;
+    function initAgreement(address payable, uint256, uint256, uint256, uint256, bytes32, bool, address) external payable;
 
-    function transferOwnership(address _newOwner) external;
+    function transferOwnership(address) external;
     function claimOwnership() external;
     function approveAgreement() external returns(bool);
     function updateAgreement() external returns(bool);
     function cancelAgreement() external returns(bool);
     function rejectAgreement() external returns(bool);
     function blockAgreement() external returns(bool);
+    function matchAgreement() external returns(bool);
+    function interestRate() external view returns(uint);
+    function duration() external view returns(uint);
+    function debtValue() external view returns(uint);
     function status() external view returns(uint);
     function lender() external view returns(address);
     function borrower() external view returns(address);
     function collateralType() external view returns(bytes32);
-    function isStatus(Statuses _status) external view returns(bool);
-    function isBeforeStatus(Statuses _status) external view returns(bool);
-    function isClosedWithType(ClosedTypes _type) external view returns(bool);
-    function checkTimeToCancel(uint _approveLimit, uint _matchLimit) external view returns(bool);
+    function isStatus(Statuses) external view returns(bool);
+    function isBeforeStatus(Statuses) external view returns(bool);
+    function isClosedWithType(ClosedTypes) external view returns(bool);
+    function checkTimeToCancel(uint, uint) external view returns(bool);
     function cdpId() external view returns(uint);
-    function erc20TokenContract(bytes32 ilk) external view returns(IERC20);
+    function erc20TokenContract(bytes32) external view returns(IERC20);
+    function getAssets(address) external view returns(uint,uint);
+    function withdrawDai(uint) external;
+    function getDaiAddress() external view returns(address);
 
-    function getInfo()
-        external
-        view
-        returns (
-            address _addr,
-            uint _status,
-            uint _closedType,
-            uint _duration,
-            address _borrower,
-            address _lender,
-            bytes32 _collateralType,
-            uint _collateralAmount,
-            uint _debtValue,
-            uint _interestRate,
-            bool _isRisky
-        );
+    function getInfo() external view returns (address,uint,uint,uint,address,address,bytes32,uint,uint,uint,bool);
 
     event AgreementInitiated(address _borrower, uint _collateralValue, uint _debtValue, uint _expireDate, uint _interestRate);
     event AgreementApproved();
@@ -1079,7 +1125,7 @@ interface IAgreement {
 
 // File: contracts/Agreement.sol
 
-pragma solidity 0.5.11;
+pragma solidity 0.5.12;
 
 
 
@@ -1089,10 +1135,9 @@ pragma solidity 0.5.11;
 
 /**
  * @title Base Agreement contract
- * @notice Contract will be deployed only once as logic(implementation), proxy will be deployed for each agreement as storage
- * @dev Should not be deployed. It is being used as an abstract class
+ * @notice Contract will be deployed only once as logic(implementation), proxy will be deployed by FraFactory for each agreement as storage
  */
-contract Agreement is IAgreement, Claimable, McdWrapper {
+contract Agreement is IAgreement, ClaimableIni, McdWrapper {
     using SafeMath for uint;
     using SafeMath for int;
     
@@ -1119,7 +1164,7 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
     Statuses public status;
 
     /**
-     * Type the agreement is closed by 
+     * Type the agreement is closed by
      */
     ClosedTypes public closedType;
 
@@ -1259,7 +1304,7 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
         bool _isETH,
         address _configAddr
     ) public payable initializer {
-        Ownable.initialize();
+        ClaimableIni.initialize();
 
         require(Config(_configAddr).isCollateralEnabled(_collateralType), "Agreement: collateral type is currencly disabled");
         require(_debtValue > 0, "Agreement: debt is zero");
@@ -1283,8 +1328,9 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
         
         _nextStatus();
         _initMcdWrapper(collateralType, isETH);
-        _monitorRisky();
         emit AgreementInitiated(borrower, collateralAmount, debtValue, duration, interestRate);
+
+        _monitorRisky();
     }
     
     /**
@@ -1319,9 +1365,10 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
         }
         uint drawnDai = _balanceDai(address(this));
         // due to the lack of preceision in mcd cdp contracts drawn dai can be less by 1 dai wei
+        
+        emit AgreementMatched(lender, expireDate, cdpId, collateralAmount, debtValue, drawnDai);
         _pushDaiAsset(borrower, debtValue < drawnDai ? debtValue : drawnDai);
 
-        emit AgreementMatched(lender, expireDate, cdpId, collateralAmount, debtValue, drawnDai);
         return true;
     }
 
@@ -1388,7 +1435,7 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
         }
         if (isStatus(Statuses.Active)) {
             if (isETH) {
-                require(msg.value == _amount, "Agreement: ether sent doesn't coinside with required");
+                require(msg.value == _amount, "Agreement: ether sent doesn\'t coinside with required");
                 _lockETH(collateralType, cdpId, msg.value);
             } else {
                 _lockERC20(collateralType, cdpId, _amount, true);
@@ -1428,7 +1475,9 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
      * @param _to address should be withdrawn to
      */
     function withdrawRemainingEth(address payable _to) external hasStatus(Statuses.Closed) onlyContractOwner {
-        uint _remainingEth = isETH ? address(this).balance.sub(assets[borrower].collateral.add(assets[lender].collateral)) : address(this).balance;
+        uint _remainingEth = isETH ?
+            address(this).balance.sub(assets[borrower].collateral.add(assets[lender].collateral)) :
+            address(this).balance;
         require(_remainingEth > 0, "Agreement: the remaining balance available for withdrawal is zero");
         _to.transfer(_remainingEth);
     }
@@ -1462,6 +1511,12 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
         _isRisky = isRisky;
     }
 
+    /**
+     * @notice Get user assets available for withdrawal
+     * @param _holder address of lender or borrower
+     * @return collateral amount
+     * @return dai amount
+     */
     function getAssets(address _holder) public view returns(uint,uint) {
         return (assets[_holder].collateral, assets[_holder].dai);
     }
@@ -1499,6 +1554,9 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
 
     /**
      * @notice check whether pending or open agreement should be canceled automatically by cron
+     * @param _approveLimit approve limit secods
+     * @param _matchLimit match limit secods
+     * @return true if should be cancelled
      */
     function checkTimeToCancel(uint _approveLimit, uint _matchLimit) public view returns(bool){
         if ((isStatus(Statuses.Pending) && now > statusSnapshots[uint(Statuses.Pending)].add(_approveLimit)) ||
@@ -1508,11 +1566,28 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
         }
     }
 
+    /**
+     * @notice get collateralization ratio, if cdp is already opened - get cdp CR, if no - calculate according to agreement initial parameters
+     * @return collateralization ratio in RAY
+     */
     function getCR() public view returns(uint) {
         return cdpId > 0 ? getCdpCR(collateralType, cdpId) : collateralAmount.mul(getPrice(collateralType)).div(debtValue);
     }
+
+    /**
+     * @notice get collateralization ratio buffer (difference between current CR and minimal one)
+     * @return buffer percents
+     */
     function getCRBuffer() public view returns(uint) {
-        return getCR().sub(getMCR(collateralType)).mul(100).div(ONE);
+        return getCR() <= getMCR(collateralType) ? 0 : getCR().sub(getMCR(collateralType)).mul(100).div(ONE);
+    }
+
+    /**
+     * @notice get address of Dai token contract
+     * @return dai address
+     */
+    function getDaiAddress() public view returns(address) {
+        return mcdDaiAddr;
     }
 
     /**

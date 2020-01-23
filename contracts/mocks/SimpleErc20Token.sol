@@ -1,8 +1,8 @@
 pragma solidity 0.5.12;
 
-import "../helpers/Context.sol";
 import "../interfaces/IERC20.sol";
-import "../helpers/Claimable.sol";
+import "../helpers/Context.sol";
+import "../helpers/ClaimableBase.sol";
 import "../helpers/SafeMath.sol";
 
 /**
@@ -29,7 +29,7 @@ import "../helpers/SafeMath.sol";
  * functions have been added to mitigate the well-known issues around setting
  * allowances. See {IERC20-approve}.
  */
-contract SimpleErc20Token is Context, IERC20, Claimable {
+contract SimpleErc20Token is IERC20, ClaimableBase, Context {
     using SafeMath for uint256;
 
     mapping (address => uint256) private _balances;
@@ -38,9 +38,6 @@ contract SimpleErc20Token is Context, IERC20, Claimable {
 
     uint256 private _totalSupply;
 
-    constructor () public {
-      Ownable.initialize();
-    }
 
     /**
      * @dev See {IERC20-totalSupply}.

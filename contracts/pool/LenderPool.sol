@@ -44,8 +44,8 @@ contract LenderPool is Administrable {
     event StatusUpdated(uint next);
 
     /**
-     * @notice Grants access only if pool has appropriate status
-     * @param _status status should be checked with
+     * @dev     Grants access only if pool has appropriate status
+     * @param   _status status should be checked with
      */
     modifier onlyStatus(Statuses _status) {
         require(status == _status, "LenderPool: status is incorrect");
@@ -53,7 +53,7 @@ contract LenderPool is Administrable {
     }
 
     /**
-     * @notice  Constructor, set main restrictions, set target agreement
+     * @dev     Constructor, set main restrictions, set target agreement
      * @param   _targetAgreement    address of target agreement
      * @param   _minInterestRate    min percent of interest rate, should be passed like RAY
      * @param   _minDuration        min available agreement duration in secs
@@ -75,9 +75,9 @@ contract LenderPool is Administrable {
         _setPoolRestrictions(_maxPendingPeriod, _minDai);
         setTargetAgreement(_targetAgreement);
     }
-    
+
     /**
-     * @notice Set target agreement address and check for restrictions of target agreement
+     * @dev     Set target agreement address and check for restrictions of target agreement
      * @param   _addr   address of target agreement
      */
     function setTargetAgreement(address _addr) public onlyAdmin() {
@@ -91,8 +91,8 @@ contract LenderPool is Administrable {
     }
 
     /**
-     * @notice  Deposit dai tokens to pool
-     * @dev     Transfer from pooler's account dai tokens to pool contract. Pooler should approve the amount to this contract beforehand
+     * @dev     Deposit dai tokens to pool
+     *          Transfer from pooler's account dai tokens to pool contract. Pooler should approve the amount to this contract beforehand
      * @param   _amount     amount of dai tokens for depositing
      */
     function deposit(uint _amount) public onlyStatus(Statuses.Pending) {
@@ -109,7 +109,7 @@ contract LenderPool is Administrable {
     }
 
     /**
-     * @notice  Withdraw own dai tokens by pooler
+     * @dev     Withdraw own dai tokens by pooler
      */
     function withdraw() public {
         uint share = availableForWithdrawal(msg.sender);
@@ -118,8 +118,8 @@ contract LenderPool is Administrable {
     }
 
     /**
-     * @notice  Function is aimed to adjust the total dai, deposited to contract, with the goal
-     * @dev     Admin can refund some amount of dai tokens to pooler, but no more than pooler's balance
+     * @dev     Function is aimed to adjust the total dai, deposited to contract, with the goal
+     *          Admin can refund some amount of dai tokens to pooler, but no more than pooler's balance
      *          can be called only when pending
      * @param   _to         pooler address
      * @param   _amount     amount for withdrawal
@@ -130,8 +130,8 @@ contract LenderPool is Administrable {
     }
 
     /**
-     * @notice  Do match with target agreement
-     * @dev     Pool status becomes Matched
+     * @dev     Do match with target agreement
+     *          Pool status becomes Matched
      */
     function matchAgreement() public onlyAdmin() onlyStatus(Statuses.Pending) {
         require(daiGoal == daiTotal, "LenderPool: dai total should be equal to goal (agreement debt)");
@@ -144,8 +144,8 @@ contract LenderPool is Administrable {
     }
 
     /**
-     * @notice  Refund dai from target agreement after it is closed (terminated, liquidated, cancelled, blocked)
-     * @dev     Pool status becomes Closed
+     * @dev     Refund dai from target agreement after it is closed (terminated, liquidated, cancelled, blocked)
+     *          Pool status becomes Closed
      */
     function refundFromAgreement() public onlyAdmin() onlyStatus(Statuses.Matched) {
         require(_isAgreementInStatus(IAgreement.Statuses.Closed), "LenderPool: agreement is not closed yet");
@@ -159,7 +159,7 @@ contract LenderPool is Administrable {
     }
 
     /**
-     * @notice  Check if pool has appropriate status
+     * @dev     Check if pool has appropriate status
      * @param   _status     status should be checked with
      */
     function isStatus(Statuses _status) public view returns(bool) {
@@ -167,8 +167,8 @@ contract LenderPool is Administrable {
     }
 
     /**
-     * @notice  Calculate the amount of dai available for withdrawal for exact pooler now
-     * @dev     if pool has Closed status the share is calculated according to dai refunded with savings from agreement
+     * @dev     Calculate the amount of dai available for withdrawal for exact pooler now
+     *          if pool has Closed status the share is calculated according to dai refunded with savings from agreement
      *          if pool has Depositing status but deposit time is expired - the share is equal to pooler's balance (deposited amount)
      * @param   _pooler         pooler address
      */
@@ -180,10 +180,10 @@ contract LenderPool is Administrable {
             share = balanceOf[_pooler];
         }
     }
-    
+
     /**
-     * @notice Set target agreement address
-     * @param _addr  address of target agreement
+     * @dev     Set target agreement address
+     * @param   _addr  address of target agreement
      */
     function _setAgreement(address _addr) internal {
         require(_addr != address(0), "LenderPool: target agreement address is null");
@@ -197,8 +197,8 @@ contract LenderPool is Administrable {
     }
 
     /**
-     * @notice  Deposit, change depositer (pooler) balance and total deposited dai
-     * @dev     transfer from pooler's account dai tokens to pool contract. Pooler should approve the amount to this contract beforehand
+     * @dev     Deposit, change depositer (pooler) balance and total deposited dai
+     *          Transfer from pooler's account dai tokens to pool contract. Pooler should approve the amount to this contract beforehand
      * @param   _pooler     depositer address
      * @param   _amount     amount of dai tokens for depositing
      */
@@ -211,7 +211,7 @@ contract LenderPool is Administrable {
     }
 
     /**
-     * @notice  Decrease dai total balance and transfer dai tokens to pooler
+     * @dev     Decrease dai total balance and transfer dai tokens to pooler
      * @param   _pooler     pooler address
      * @param   _amount     amount the balance should be decreased by
      * @param   _amountWithSavings amount with savings should be transfered to pooler, if no savings - is equal to _amount
@@ -225,10 +225,10 @@ contract LenderPool is Administrable {
     }
 
     /**
-     * @notice Set restrictions to main parameters of target agreement, in irder to prevent match with unprofitable agreement
-     * @param _minInterestRate  min percent of interest rate, should be passed like RAY
-     * @param _minDuration      min available agreement duration in secs
-     * @param _maxDuration      mav available agreement duration in secs
+     * @dev     Set restrictions to main parameters of target agreement, in irder to prevent match with unprofitable agreement
+     * @param   _minInterestRate  min percent of interest rate, should be passed like RAY
+     * @param   _minDuration      min available agreement duration in secs
+     * @param   _maxDuration      mav available agreement duration in secs
      */
     function _setAgreementRestrictions(uint _minInterestRate, uint _minDuration, uint _maxDuration) internal {
         minInterestRate = _minInterestRate;
@@ -239,7 +239,7 @@ contract LenderPool is Administrable {
     }
 
     /**
-     * @notice  Set restrictions to pool
+     * @dev     Set restrictions to pool
      * @param   _maxPendingPeriod   max available pending period for gathering dai in pool and do match
      * @param   _minDai             min amount of dai tokens available for deposit to pool
      */
@@ -251,7 +251,7 @@ contract LenderPool is Administrable {
     }
 
     /**
-    * @notice   Switch to exact status
+    * @dev      Switch to exact status
     * @param    _next   status that should be switched to
     */
     function _switchStatus(Statuses _next) internal {
@@ -261,56 +261,21 @@ contract LenderPool is Administrable {
     }
 
     /**
-    * @notice   Get Agreement debt dai amount
-    */
-    function _getAgreementDebtValue() internal returns (uint) {
-        return IAgreement(targetAgreement).debtValue();
-    }
-
-    /**
-    * @notice   Get Agreement interest rate
-    */
-    function _getAgreementInterestRate() internal returns (uint) {
-        return IAgreement(targetAgreement).interestRate();
-    }
-
-    /**
-    * @notice   Get Agreement duration
-    */
-    function _getAgreementDuration() internal returns (uint) {
-        return IAgreement(targetAgreement).duration();
-    }
-
-    /**
-    * @notice   Check agreement status
-    */
-    function _isAgreementInStatus(IAgreement.Statuses _status) internal returns(bool) {
-        return IAgreement(targetAgreement).isStatus(_status);
-    }
-
-    /**
-    * @notice   Do Agreement match
+    * @dev      Do match with agreement
     */
     function _matchAgreement() internal {
         IAgreement(targetAgreement).matchAgreement();
     }
 
     /**
-    * @notice   Get Agreement assets
-    */
-    function _getAgreementAssets() internal returns(uint, uint) {
-        return IAgreement(targetAgreement).getAssets(address(this));
-    }
-
-    /**
-    * @notice   Withdraw all dai from Agreement
+    * @dev      Withdraw all dai from Agreement
     */
     function _withdrawDaiFromAgreement() internal {
         IAgreement(targetAgreement).withdrawDai(daiWithSavings);
     }
 
     /**
-    * @notice   Approve dai to agreement
+    * @dev      Approve dai to agreement
     * @param    _agreement  address
     * @param    _amount     dai to approve
     */
@@ -319,7 +284,7 @@ contract LenderPool is Administrable {
     }
 
     /**
-    * @notice   Transfer dai from pooler to pool
+    * @dev      Transfer dai from pooler to pool
     * @param    _pooler     address from
     * @param    _to         address to
     * @param    _amount     dai amount
@@ -329,12 +294,47 @@ contract LenderPool is Administrable {
     }
 
     /**
-    * @notice   Transfer dai to pooler
+    * @dev      Transfer dai to pooler
     * @param    _pooler     address from
     * @param    _amount     dai amount
     */
     function _daiTokenTransfer(address _pooler, uint _amount) internal {
         IERC20(daiToken).transfer(_pooler, _amount);
+    }
+
+    /**
+    * @dev      Get Agreement debt dai amount
+    */
+    function _getAgreementDebtValue() internal view returns (uint) {
+        return IAgreement(targetAgreement).debtValue();
+    }
+
+    /**
+    * @dev      Get Agreement interest rate
+    */
+    function _getAgreementInterestRate() internal view returns (uint) {
+        return IAgreement(targetAgreement).interestRate();
+    }
+
+    /**
+    * @dev      Get Agreement duration
+    */
+    function _getAgreementDuration() internal view returns (uint) {
+        return IAgreement(targetAgreement).duration();
+    }
+
+    /**
+    * @dev      Check agreement status
+    */
+    function _isAgreementInStatus(IAgreement.Statuses _status) internal view returns(bool) {
+        return IAgreement(targetAgreement).isStatus(_status);
+    }
+
+    /**
+    * @dev      Get Agreement assets
+    */
+    function _getAgreementAssets() internal view returns(uint, uint) {
+        return IAgreement(targetAgreement).getAssets(address(this));
     }
 }
 

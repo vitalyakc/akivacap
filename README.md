@@ -5,7 +5,7 @@ This repository contains the core smart contract code for Forward Rate Agreement
 
 # Core Contracts
 
-## FraFactory
+## [FraFactory](docs/FraFactory.md)
 
 `FraFactory.sol` is main system contracts for deploying and managing Agreement contracts. The deployer of FraFactory is owner and able to init new Agreement, call reject/approve/update functions of Agreement contracts.
 
@@ -25,26 +25,40 @@ This repository contains the core smart contract code for Forward Rate Agreement
 - `transferAgreementOwnership` - transfer agreement ownership to Fra Factory owner (admin)
 - `getAgreementList` - Returns a full list of existing agreements
 
-## UpgradeabilityProxy
+## [UpgradeabilityProxy](docs/UpgradeabilityProxy.md)
+
 `UpgradeabilityProxy.sol` is proxy acts as storage for Agreement. It delegates calls to Agreement implementation contract
 
-## Agreement
+
+
+## [Agreement](docs/Agreement.md)
 
 `Agreement.sol` is implementation responsible for main logic of forward rate agreement. Should be deployed only once as logic, and `UpgradeabilityProxy.sol` is deployed every time when new agreement is inited. `UpgradeabilityProxy` acts as storage for each Agreement.
 
 
 **The main storage variables:**
-- `status` - current status of agreement. Can be:
-    - 1 - STATUS_PENDING // 0001
-    - 2 - STATUS_OPEN // 0010
-    - 3 - STATUS_ACTIVE // 0011
-    - 8 - STATUS_CLOSED // 1000
-    - 9 - STATUS_ENDED // 1001
-    - 10 - STATUS_LIQUIDATED // 1010
-    - 11 - STATUS_BLOCKED // 1011
-    - 12 - STATUS_CANCELED // 1100
-    
-    in all closed statused the forth bit = 1, binary "AND" with STATUS_CLOSED is used to determine whether the agreement is closed
+- `status` - current status of agreement. Defined as enum `Statuses`
+
+```js
+enum Statuses {
+ All,
+ Pending,
+ Open,
+ Active,
+ Closed
+}
+```
+- `closedType` - Defined as enum ClosedTypes
+
+```js
+enum ClosedTypes {
+ Ended,
+ Liquidated,
+ Blocked,
+ Cancelled
+}
+```
+
 - `borrower` - borrower's address
 - `lender` - lender's address
 - `collateralType` - type of collateral (ETH-A, BAT-A), should be passed as bytes32 
@@ -55,18 +69,13 @@ This repository contains the core smart contract code for Forward Rate Agreement
 - `duration` - number of seconds which agreement should be terminated after
 
 
-**Datetime variables:**
-- `initialDate` 
-- `approveDate`
-- `matchDate`
-- `expireDate`
-- `closeDate`
-- `lastCheckTime`
-
 
 **Forward rate agreement current results**
-- `delta` (in *rad* units) - signed integer, if < 0 - shows borrowers Fra debt, if > 0 shows dai amount waiting for injection (waiting of excess of injectionThreshold which is set during agrement init (is defined in Config contract)). Every agreement update `delta` is increased or decreased according to difference between current `dsr` from Multi Collateral Dai `Pot.sol` % and fixed `interestRate` %. After injection `delta` resets to zero
-- `deltaCommon` (in *rad* units) - shows common profit for lender (< 0) or borrower (> 0). Every agreement update `delta` is increased or decreased according to difference between current `dsr` from Multi Collateral Dai `Pot.sol` % and fixed `interestRate` %. Unlike to `delta`, `deltaCommon` doesn't reset to zero after injection.
+- `delta` (in *rad* units) - Delta shows user's debt
+     * if delta < 0 - it is borrower's debt to lender
+     * if delta > 0 - it is lender's debt to borrower
+- `drawnTotal` (in *wad* units) -  Total amount drawn to cdp while paying off borrower's agreement debt 
+- `injectedTotal` (in *wad* units) Total amount injected to cdp during paying off lender's agreement debt
 
 
 **Basic agreement lifecycle**
@@ -78,7 +87,7 @@ This repository contains the core smart contract code for Forward Rate Agreement
     - `updateAgreements` - update the state of all active agreements
 - if agreement is expired it is terminated
 - if agreement CR is less than MCR - it is liquidated
-- during termination\liquidation the dai locked from dsr + borrowersFraDebt if any is refunded to lender, cdp ownership (if borrowersFradebt is zero or settled) is transferred to borrower
+- during termination\liquidation the debt paying off (injection or draw dai), cdp ownership  is transferred to borrower
 
 
 **Saving difference**
@@ -108,5 +117,49 @@ The base of `ray` is `ONE = 10 ** 27`.
 
 A good explanation of fixed point arithmetic can be found at [Wikipedia](https://en.wikipedia.org/wiki/Fixed-point_arithmetic).
 
-## McdWrapper
+## [McdWrapper](docs/McdWrapper.md)
 `McdWrapper.sol` acts as agreement multicollateral dai wrapper for maker dao system interaction
+
+
+
+## All Contracts
+
+* [Administrable](Administrable.md)
+* [Agreement](Agreement.md)
+* [AgreementDeepMock](AgreementDeepMock.md)
+* [AgreementMock](AgreementMock.md)
+* [BaseUpgradeabilityProxy](BaseUpgradeabilityProxy.md)
+* [CatLike](CatLike.md)
+* [Claimable](Claimable.md)
+* [ClaimableBase](ClaimableBase.md)
+* [ClaimableIni](ClaimableIni.md)
+* [Config](Config.md)
+* [ConfigMock](ConfigMock.md)
+* [Context](Context.md)
+* [DSProxyLike](DSProxyLike.md)
+* [FraFactory](FraFactory.md)
+* [FraFactoryI](FraFactoryI.md)
+* [FraQueries](FraQueries.md)
+* [IAgreement](IAgreement.md)
+* [IERC20](IERC20.md)
+* [Initializable](Initializable.md)
+* [JugLike](JugLike.md)
+* [LenderPool](LenderPool.md)
+* [LenderPoolMock](LenderPoolMock.md)
+* [ManagerLike](ManagerLike.md)
+* [McdAddressesR17](McdAddressesR17.md)
+* [McdWrapper](McdWrapper.md)
+* [McdWrapperMock](McdWrapperMock.md)
+* [Migrations](Migrations.md)
+* [Ownable](Ownable.md)
+* [PipLike](PipLike.md)
+* [PotLike](PotLike.md)
+* [Proxy](Proxy.md)
+* [ProxyRegistryLike](ProxyRegistryLike.md)
+* [RaySupport](RaySupport.md)
+* [SafeMath](SafeMath.md)
+* [SimpleErc20Token](SimpleErc20Token.md)
+* [SpotterLike](SpotterLike.md)
+* [UpgradeabilityProxy](UpgradeabilityProxy.md)
+* [VatLike](VatLike.md)
+* [ZOSLibAddress](ZOSLibAddress.md)

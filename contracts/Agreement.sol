@@ -1,7 +1,7 @@
 pragma solidity 0.5.12;
 
 import "./config/Config.sol";
-import "./helpers/Claimable.sol";
+import "./helpers/ClaimableIni.sol";
 import "./helpers/SafeMath.sol";
 import "./mcd/McdWrapper.sol";
 import "./interfaces/IERC20.sol";
@@ -9,9 +9,9 @@ import "./interfaces/IAgreement.sol";
 
 /**
  * @title Base Agreement contract
- * @notice Contract will be deployed only once as logic(implementation), proxy will be deployed by FraFactory for each agreement as storage
+ * @dev Contract will be deployed only once as logic(implementation), proxy will be deployed by FraFactory for each agreement as storage
  */
-contract Agreement is IAgreement, Claimable, McdWrapper {
+contract Agreement is IAgreement, ClaimableIni, McdWrapper {
     using SafeMath for uint;
     using SafeMath for int;
     
@@ -38,7 +38,7 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
     Statuses public status;
 
     /**
-     * Type the agreement is closed by 
+     * Type the agreement is closed by
      */
     ClosedTypes public closedType;
 
@@ -118,14 +118,14 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
     uint public injectedTotal;
 
     /**
-     * delta shows user's debt
+     * Delta shows user's debt
      * if delta < 0 - it is borrower's debt to lender
      * if delta > 0 - it is lender's debt to borrower
      */
     int public delta;
-    
+
     /**
-     * @notice Grants access only to agreement's borrower
+     * @dev  Grants access only to agreement's borrower
      */
     modifier onlyBorrower() {
         require(msg.sender == borrower, "Agreement: Accessible only for borrower");
@@ -133,8 +133,8 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
     }
 
     /**
-     * @notice Grants access only if agreement has appropriate status
-     * @param _status status should be checked with
+     * @dev  Grants access only if agreement has appropriate status
+     * @param   _status status should be checked with
      */
     modifier hasStatus(Statuses _status) {
         require(status == _status, "Agreement: Agreement status is incorrect");
@@ -142,8 +142,8 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
     }
 
     /**
-     * @notice Grants access only if agreement has status before requested one
-     * @param _status check before status
+     * @dev  Grants access only if agreement has status before requested one
+     * @param   _status check before status
      */
     modifier beforeStatus(Statuses _status) {
         require(status < _status, "Agreement: Agreement status is not before requested one");
@@ -151,22 +151,15 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
     }
 
     /**
-    * @notice Save timestamp for current status
-    */
-    function _doStatusSnapshot() internal {
-        statusSnapshots[uint(status)] = now;
-    }
-
-    /**
-     * @notice Initialize new agreement
-     * @param _borrower borrower address
-     * @param _collateralAmount value of borrower's collateral amount put into the contract as collateral or approved to transferFrom
-     * @param _debtValue value of debt
-     * @param _duration number of seconds which agreement should be terminated after
-     * @param _interestRate percent of interest rate, should be passed like RAY
-     * @param _collateralType type of collateral, should be passed as bytes32
-     * @param _isETH true if ether and false if erc-20 token
-     * @param _configAddr config contract address
+     * @dev  Initialize new agreement
+     * @param   _borrower       borrower address
+     * @param   _collateralAmount value of borrower's collateral amount put into the contract as collateral or approved to transferFrom
+     * @param   _debtValue      value of debt
+     * @param   _duration       number of seconds which agreement should be terminated after
+     * @param   _interestRate   percent of interest rate, should be passed like RAY
+     * @param   _collateralType type of collateral, should be passed as bytes32
+     * @param   _isETH          true if ether and false if erc-20 token
+     * @param   _configAddr     config contract address
      */
     function initAgreement(
         address payable _borrower,
@@ -178,19 +171,21 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
         bool _isETH,
         address _configAddr
     ) public payable initializer {
-        Ownable.initialize();
+        ClaimableIni.initialize();
 
         require(Config(_configAddr).isCollateralEnabled(_collateralType), "Agreement: collateral type is currencly disabled");
         require(_debtValue > 0, "Agreement: debt is zero");
-        require((_collateralAmount > Config(_configAddr).minCollateralAmount()) &&
+        require(
+            (_collateralAmount > Config(_configAddr).minCollateralAmount()) &&
             (_collateralAmount < Config(_configAddr).maxCollateralAmount()), "Agreement: collateral value does not match min and max");
-        require((_interestRate > ONE) && 
+        require(
+            (_interestRate > ONE) &&
             (_interestRate <= ONE * 2), "Agreement: interestRate should be between 0 and 100 %");
-        require((_duration > Config(_configAddr).minDuration()) &&
+        require(
+            (_duration > Config(_configAddr).minDuration()) &&
             (_duration < Config(_configAddr).maxDuration()), "Agreement: duration value does not match min and max");
-        if (_isETH) {
-            require(msg.value == _collateralAmount, "Agreement: Actual ehter sent value is not correct");
-        }
+        require(!_isETH || msg.value == _collateralAmount, "Agreement: Actual ehter sent value is not correct");
+    
         configAddr = _configAddr;
         isETH = _isETH;
         borrower = _borrower;
@@ -199,15 +194,16 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
         interestRate = _interestRate;
         collateralAmount = _collateralAmount;
         collateralType = _collateralType;
-        
+
         _nextStatus();
         _initMcdWrapper(collateralType, isETH);
-        _monitorRisky();
         emit AgreementInitiated(borrower, collateralAmount, debtValue, duration, interestRate);
+
+        _monitorRisky();
     }
-    
+
     /**
-     * @notice Approve the agreement. Only for contract owner (FraFactory)
+     * @dev Approve the agreement. Only for contract owner (FraFactory)
      * @return Operation success
      */
     function approveAgreement() external onlyContractOwner hasStatus(Statuses.Pending) returns(bool _success) {
@@ -216,9 +212,9 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
 
         return true;
     }
-    
+
     /**
-     * @notice Match lender to the agreement.
+     * @dev Match lender to the agreement.
      * @return Operation success
      */
     function matchAgreement() external hasStatus(Statuses.Open) returns(bool _success) {
@@ -238,17 +234,17 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
         }
         uint drawnDai = _balanceDai(address(this));
         // due to the lack of preceision in mcd cdp contracts drawn dai can be less by 1 dai wei
-        _pushDaiAsset(borrower, debtValue < drawnDai ? debtValue : drawnDai);
 
         emit AgreementMatched(lender, expireDate, cdpId, collateralAmount, debtValue, drawnDai);
+        _pushDaiAsset(borrower, debtValue < drawnDai ? debtValue : drawnDai);
+
         return true;
     }
 
     /**
-     * @notice Update agreement state
-     * @dev Calls needed function according to the expireDate
-     * (terminates or liquidated or updates the agreement)
-     * @return Operation success
+     * @dev     Update Agreement state. Calls needed function according to the expireDate
+     *          (terminates or liquidated or updates the agreement)
+     * @return  Operation success
      */
     function updateAgreement() external onlyContractOwner hasStatus(Statuses.Active) returns(bool _success) {
         if (now > expireDate) {
@@ -266,8 +262,8 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
     }
 
     /**
-     * @notice Cancel agreement by borrower before it is matched, change status to the correspondant one, refund
-     * @return Operation success
+     * @dev  Cancel agreement by borrower before it is matched, change status to the correspondant one, refund
+     * @return  Operation success
      */
     function cancelAgreement() external onlyBorrower beforeStatus(Statuses.Active) returns(bool _success)  {
         _closeAgreement(ClosedTypes.Cancelled);
@@ -277,8 +273,8 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
     }
 
     /**
-     * @notice Reject agreement by admin or cron job before it is matched, change status to the correspondant one, refund
-     * @return Operation success
+     * @dev  Reject agreement by admin or cron job before it is matched, change status to the correspondant one, refund
+     * @return  Operation success
      */
     function rejectAgreement() external onlyContractOwner beforeStatus(Statuses.Active) returns(bool _success)  {
         _closeAgreement(ClosedTypes.Cancelled);
@@ -288,8 +284,8 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
     }
 
     /**
-     * @notice Block active agreement, change status to the correspondant one, refund
-     * @return Operation success
+     * @dev  Block active agreement, change status to the correspondant one, refund
+     * @return  Operation success
      */
     function blockAgreement() external hasStatus(Statuses.Active) onlyContractOwner returns(bool _success)  {
         _closeAgreement(ClosedTypes.Blocked);
@@ -298,8 +294,9 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
     }
 
     /**
-     * @notice Lock additional ether as collateral to agreement cdp contract
-     * @return Operation success
+     * @dev  Lock additional ether as collateral to agreement cdp contract
+     * @param   _amount collateral amount for additional lock
+     * @return  Operation success
      */
     function lockAdditionalCollateral(uint _amount) external payable onlyBorrower beforeStatus(Statuses.Closed) returns(bool _success)  {
         if (!isETH) {
@@ -320,8 +317,8 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
     }
 
     /**
-     * @notice withdraw dai to user's external wallet
-     * @param _amount dai amount for withdrawal
+     * @dev  Withdraw dai to user's external wallet
+     * @param   _amount dai amount for withdrawal
      */
     function withdrawDai(uint _amount) external {
         _popDaiAsset(msg.sender, _amount);
@@ -329,8 +326,8 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
     }
 
     /**
-     * @notice withdraw collateral to user's (msg.sender) external wallet from internal wallet
-     * @param _amount collateral amount for withdrawal
+     * @dev  Withdraw collateral to user's (msg.sender) external wallet from internal wallet
+     * @param   _amount collateral amount for withdrawal
      */
     function withdrawCollateral(uint _amount) external {
         _popCollateralAsset(msg.sender, _amount);
@@ -342,18 +339,20 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
     }
 
     /**
-     * @notice Withdraw accidentally locked ether in the contract, can be called only after agreement is closed and all assets are refunded
-     * @dev Check the current balance is more than users ether assets, and withdraw the remaining ether
-     * @param _to address should be withdrawn to
+     * @dev     Withdraw accidentally locked ether in the contract, can be called only after agreement is closed and all assets are refunded
+     *          Check the current balance is more than users ether assets, and withdraw the remaining ether
+     * @param   _to address should be withdrawn to
      */
     function withdrawRemainingEth(address payable _to) external hasStatus(Statuses.Closed) onlyContractOwner {
-        uint _remainingEth = isETH ? address(this).balance.sub(assets[borrower].collateral.add(assets[lender].collateral)) : address(this).balance;
+        uint _remainingEth = isETH ?
+            address(this).balance.sub(assets[borrower].collateral.add(assets[lender].collateral)) :
+            address(this).balance;
         require(_remainingEth > 0, "Agreement: the remaining balance available for withdrawal is zero");
         _to.transfer(_remainingEth);
     }
 
     /**
-     * @notice Get agreement main info
+     * @dev     Get agreement main info
      */
     function getInfo() external view returns(
         address _addr,
@@ -381,46 +380,52 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
         _isRisky = isRisky;
     }
 
+    /**
+     * @dev     Get user assets available for withdrawal
+     * @param   _holder address of lender or borrower
+     * @return  collateral amount
+     * @return  dai amount
+     */
     function getAssets(address _holder) public view returns(uint,uint) {
         return (assets[_holder].collateral, assets[_holder].dai);
     }
 
     /**
-     * @notice Check if agreement has appropriate status
-     * @param _status status should be checked with
+     * @dev     Check if agreement has appropriate status
+     * @param   _status status should be checked with
      */
     function isStatus(Statuses _status) public view returns(bool) {
         return status == _status;
     }
 
     /**
-     * @notice Check if agreement has status before requested one
-     * @param _status check before status
+     * @dev     Check if agreement has status before requested one
+     * @param   _status check before status
      */
     function isBeforeStatus(Statuses _status) public view returns(bool) {
         return status < _status;
     }
 
     /**
-     * @notice Check if agreement is closed with appropriate type
-     * @param _type type should be checked with
+     * @dev     Check if agreement is closed with appropriate type
+     * @param   _type type should be checked with
      */
     function isClosedWithType(ClosedTypes _type) public view returns(bool) {
         return isStatus(Statuses.Closed) && (closedType == _type);
     }
 
     /**
-     * @notice Borrower debt according to FRA
+     * @dev     Borrower debt according to FRA
      */
     function borrowerFraDebt() public view returns(uint) {
         return (delta < 0) ? uint(fromRay(-delta)) : 0;
     }
 
     /**
-     * @notice check whether pending or open agreement should be canceled automatically by cron
-     * @param _approveLimit approve limit secods
-     * @param _matchLimit match limit secods
-     * @return true if should be cancelled
+     * @dev     check whether pending or open agreement should be canceled automatically by cron
+     * @param   _approveLimit approve limit secods
+     * @param   _matchLimit match limit secods
+     * @return  true if should be cancelled
      */
     function checkTimeToCancel(uint _approveLimit, uint _matchLimit) public view returns(bool){
         if ((isStatus(Statuses.Pending) && now > statusSnapshots[uint(Statuses.Pending)].add(_approveLimit)) ||
@@ -431,33 +436,40 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
     }
 
     /**
-     * @notice get collateralization ratio, if cdp is already opened - get cdp CR, if no - calculate according to agreement initial parameters
-     * @return collateralization ratio in RAY
+     * @dev     get collateralization ratio, if cdp is already opened - get cdp CR, if no - calculate according to agreement initial parameters
+     * @return  collateralization ratio in RAY
      */
     function getCR() public view returns(uint) {
         return cdpId > 0 ? getCdpCR(collateralType, cdpId) : collateralAmount.mul(getPrice(collateralType)).div(debtValue);
     }
 
     /**
-     * @notice get collateralization ratio buffer (difference between current CR and minimal one)
-     * @return buffer percents
+     * @dev     get collateralization ratio buffer (difference between current CR and minimal one)
+     * @return  buffer percents
      */
     function getCRBuffer() public view returns(uint) {
         return getCR() <= getMCR(collateralType) ? 0 : getCR().sub(getMCR(collateralType)).mul(100).div(ONE);
     }
 
     /**
-     * @notice get address of Dai token contract
-     * @return dai address
+     * @dev     get address of Dai token contract
+     * @return  dai address
      */
     function getDaiAddress() public view returns(address) {
         return mcdDaiAddr;
     }
 
     /**
-     * @notice Close agreement
+    * @dev      Save timestamp for current status
+    */
+    function _doStatusSnapshot() internal {
+        statusSnapshots[uint(status)] = now;
+    }
+
+    /**
+     * @dev     Close agreement
      * @param   _closedType closing type
-     * @return Operation success
+     * @return  Operation success
      */
     function _closeAgreement(ClosedTypes _closedType) internal returns(bool _success) {
         _switchStatusClosedWithType(_closedType);
@@ -467,9 +479,9 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
     }
 
     /**
-     * @notice Updates the state of Agreement
-     * @param _isLastUpdate true if the agreement is going to be terminated, false otherwise
-     * @return Operation success
+     * @dev     Updates the state of Agreement
+     * @param   _isLastUpdate true if the agreement is going to be terminated, false otherwise
+     * @return  Operation success
      */
     function _updateAgreementState(bool _isLastUpdate) public returns(bool _success) {
         // if it is last update take the time interval up to expireDate, otherwise up to current time
@@ -510,7 +522,7 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
     }
 
     /**
-     * @notice Monitor and set up or set down risky marker
+     * @dev     Monitor and set up or set down risky marker
      */
     function _monitorRisky() internal {
         bool _isRisky = getCRBuffer() <= Config(configAddr).riskyMargin();
@@ -521,8 +533,8 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
     }
 
     /**
-     * @notice Refund agreement, push dai to lender assets, transfer cdp ownership to borrower if debt is payed
-     * @return Operation success
+     * @dev     Refund agreement, push dai to lender assets, transfer cdp ownership to borrower if debt is payed
+     * @return  Operation success
      */
     function _refund() internal {
         _pushDaiAsset(lender, _unlockAllDai());
@@ -531,15 +543,15 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
     }
 
     /**
-     * @notice Serial status transition
+     * @dev     Serial status transition
      */
     function _nextStatus() internal {
         _switchStatus(Statuses(uint(status) + 1));
     }
 
     /**
-    * @notice switch to exact status
-    * @param _next status that should be switched to
+    * @dev      switch to exact status
+    * @param    _next status that should be switched to
     */
     function _switchStatus(Statuses _next) internal {
         status = _next;
@@ -547,8 +559,8 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
     }
 
     /**
-    * @notice switch status to closed with exact type
-    * @param _closedType closing type
+    * @dev      switch status to closed with exact type
+    * @param    _closedType closing type
     */
     function _switchStatusClosedWithType(ClosedTypes _closedType) internal {
         _switchStatus(Statuses.Closed);
@@ -556,9 +568,9 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
     }
 
     /**
-     * @notice Add collateral to user's internal wallet
-     * @param _holder user's address
-     * @param _amount collateral amount to push
+     * @dev     Add collateral to user's internal wallet
+     * @param   _holder user's address
+     * @param   _amount collateral amount to push
      */
     function _pushCollateralAsset(address _holder, uint _amount) internal {
         assets[_holder].collateral = assets[_holder].collateral.add(_amount);
@@ -566,9 +578,9 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
     }
 
     /**
-     * @notice Add dai to user's internal wallet
-     * @param _holder user's address
-     * @param _amount dai amount to push
+     * @dev     Add dai to user's internal wallet
+     * @param   _holder user's address
+     * @param   _amount dai amount to push
      */
     function _pushDaiAsset(address _holder, uint _amount) internal {
         assets[_holder].dai = assets[_holder].dai.add(_amount);
@@ -576,9 +588,9 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
     }
 
     /**
-     * @notice Take away collateral from user's internal wallet
-     * @param _holder user's address
-     * @param _amount collateral amount to pop
+     * @dev     Take away collateral from user's internal wallet
+     * @param   _holder user's address
+     * @param   _amount collateral amount to pop
      */
     function _popCollateralAsset(address _holder, uint _amount) internal {
         assets[_holder].collateral = assets[_holder].collateral.sub(_amount);
@@ -586,16 +598,14 @@ contract Agreement is IAgreement, Claimable, McdWrapper {
     }
 
     /**
-     * @notice Take away dai from user's internal wallet
-     * @param _holder user's address
-     * @param _amount dai amount to pop
+     * @dev     Take away dai from user's internal wallet
+     * @param   _holder user's address
+     * @param   _amount dai amount to pop
      */
     function _popDaiAsset(address _holder, uint _amount) internal {
         assets[_holder].dai = assets[_holder].dai.sub(_amount);
         emit AssetsDaiPop(_holder, _amount);
     }
-
-    
 
     function() external payable {}
 }
