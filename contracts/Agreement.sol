@@ -242,7 +242,6 @@ contract Agreement is IAgreement, ClaimableIni, McdWrapper {
     }
 
     /**
-     * @notice  Update agreement state
      * @dev     Calls needed function according to the expireDate
      *          (terminates or liquidated or updates the agreement)
      * @return  Operation success
@@ -318,7 +317,7 @@ contract Agreement is IAgreement, ClaimableIni, McdWrapper {
     }
 
     /**
-     * @notice  withdraw dai to user's external wallet
+     * @notice  Withdraw dai to user's external wallet
      * @param   _amount dai amount for withdrawal
      */
     function withdrawDai(uint _amount) external {
@@ -327,8 +326,8 @@ contract Agreement is IAgreement, ClaimableIni, McdWrapper {
     }
 
     /**
-     * @notice withdraw collateral to user's (msg.sender) external wallet from internal wallet
-     * @param _amount collateral amount for withdrawal
+     * @notice  Withdraw collateral to user's (msg.sender) external wallet from internal wallet
+     * @param   _amount collateral amount for withdrawal
      */
     function withdrawCollateral(uint _amount) external {
         _popCollateralAsset(msg.sender, _amount);
@@ -340,9 +339,9 @@ contract Agreement is IAgreement, ClaimableIni, McdWrapper {
     }
 
     /**
-     * @notice Withdraw accidentally locked ether in the contract, can be called only after agreement is closed and all assets are refunded
-     * @dev Check the current balance is more than users ether assets, and withdraw the remaining ether
-     * @param _to address should be withdrawn to
+     * @notice  Withdraw accidentally locked ether in the contract, can be called only after agreement is closed and all assets are refunded
+     * @dev     Check the current balance is more than users ether assets, and withdraw the remaining ether
+     * @param   _to address should be withdrawn to
      */
     function withdrawRemainingEth(address payable _to) external hasStatus(Statuses.Closed) onlyContractOwner {
         uint _remainingEth = isETH ?
