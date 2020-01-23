@@ -203,7 +203,7 @@ Operation success
 
 ⤾ overrides [IAgreement.updateAgreement](IAgreement.md#updateagreement)
 
-Calls needed function according to the expireDate
+Update Agreement state. Calls needed function according to the expireDate
          (terminates or liquidated or updates the agreement)
 
 ```js
@@ -332,6 +332,7 @@ function withdrawCollateral(uint256 _amount) external nonpayable
 ### withdrawRemainingEth
 
 Withdraw accidentally locked ether in the contract, can be called only after agreement is closed and all assets are refunded
+         Check the current balance is more than users ether assets, and withdraw the remaining ether
 
 ```js
 function withdrawRemainingEth(address payable _to) external nonpayable hasStatus onlyContractOwner 
@@ -378,7 +379,7 @@ collateral amount
 
 | Name        | Type           | Description  |
 | ------------- |------------- | -----|
-| _holder | address | address of lender or borrower | 
+| _holder | address |  | 
 
 ### isStatus
 
@@ -395,7 +396,7 @@ returns(bool)
 
 | Name        | Type           | Description  |
 | ------------- |------------- | -----|
-| _status | enum IAgreement.Statuses | status should be checked with | 
+| _status | enum IAgreement.Statuses |  | 
 
 ### isBeforeStatus
 
@@ -412,7 +413,7 @@ returns(bool)
 
 | Name        | Type           | Description  |
 | ------------- |------------- | -----|
-| _status | enum IAgreement.Statuses | check before status | 
+| _status | enum IAgreement.Statuses |  | 
 
 ### isClosedWithType
 
@@ -429,7 +430,7 @@ returns(bool)
 
 | Name        | Type           | Description  |
 | ------------- |------------- | -----|
-| _type | enum IAgreement.ClosedTypes | type should be checked with | 
+| _type | enum IAgreement.ClosedTypes |  | 
 
 ### borrowerFraDebt
 
@@ -464,8 +465,8 @@ true if should be cancelled
 
 | Name        | Type           | Description  |
 | ------------- |------------- | -----|
-| _approveLimit | uint256 | approve limit secods | 
-| _matchLimit | uint256 | match limit secods | 
+| _approveLimit | uint256 |  | 
+| _matchLimit | uint256 |  | 
 
 ### getCR
 
@@ -574,7 +575,7 @@ Operation success
 
 | Name        | Type           | Description  |
 | ------------- |------------- | -----|
-| _isLastUpdate | bool | true if the agreement is going to be terminated, false otherwise | 
+| _isLastUpdate | bool |  | 
 
 ### _monitorRisky
 
@@ -631,7 +632,7 @@ function _switchStatus(enum IAgreement.Statuses _next) internal nonpayable
 
 | Name        | Type           | Description  |
 | ------------- |------------- | -----|
-| _next | enum IAgreement.Statuses | status that should be switched to | 
+| _next | enum IAgreement.Statuses |  | 
 
 ### _switchStatusClosedWithType
 
@@ -645,7 +646,7 @@ function _switchStatusClosedWithType(enum IAgreement.ClosedTypes _closedType) in
 
 | Name        | Type           | Description  |
 | ------------- |------------- | -----|
-| _closedType | enum IAgreement.ClosedTypes | closing type | 
+| _closedType | enum IAgreement.ClosedTypes |  | 
 
 ### _pushCollateralAsset
 
@@ -659,8 +660,8 @@ function _pushCollateralAsset(address _holder, uint256 _amount) internal nonpaya
 
 | Name        | Type           | Description  |
 | ------------- |------------- | -----|
-| _holder | address | user's address | 
-| _amount | uint256 | collateral amount to push | 
+| _holder | address |  | 
+| _amount | uint256 |  | 
 
 ### _pushDaiAsset
 
@@ -674,8 +675,8 @@ function _pushDaiAsset(address _holder, uint256 _amount) internal nonpayable
 
 | Name        | Type           | Description  |
 | ------------- |------------- | -----|
-| _holder | address | user's address | 
-| _amount | uint256 | dai amount to push | 
+| _holder | address |  | 
+| _amount | uint256 |  | 
 
 ### _popCollateralAsset
 
@@ -689,8 +690,8 @@ function _popCollateralAsset(address _holder, uint256 _amount) internal nonpayab
 
 | Name        | Type           | Description  |
 | ------------- |------------- | -----|
-| _holder | address | user's address | 
-| _amount | uint256 | collateral amount to pop | 
+| _holder | address |  | 
+| _amount | uint256 |  | 
 
 ### _popDaiAsset
 
@@ -704,8 +705,8 @@ function _popDaiAsset(address _holder, uint256 _amount) internal nonpayable
 
 | Name        | Type           | Description  |
 | ------------- |------------- | -----|
-| _holder | address | user's address | 
-| _amount | uint256 | dai amount to pop | 
+| _holder | address |  | 
+| _amount | uint256 |  | 
 
 ### 
 

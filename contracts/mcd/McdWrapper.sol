@@ -6,21 +6,21 @@ import "../interfaces/IERC20.sol";
 import "../helpers/RaySupport.sol";
 
 /**
- * @title Agreement multicollateral dai wrapper for maker dao system interaction.
- * @notice delegates calls to proxy. Oriented to exact MCD release. Current version oriented to 17th release mcd cdp.
+ * @title   Agreement multicollateral dai wrapper for maker dao system interaction.
+ * @dev     delegates calls to proxy. Oriented to exact MCD release. Current version oriented to 17th release mcd cdp.
  */
 contract McdWrapper is McdAddressesR17, RaySupport {
     address payable public proxyAddress;
 
     /**
-     * @notice  Get registered proxy for current caller (msg.sender address)
+     * @dev     Get registered proxy for current caller (msg.sender address)
      */
     function proxy() public view returns (DSProxyLike) {
         return DSProxyLike(proxyAddress);
     }
 
     /**
-     * @notice  transfer exact amount of erc20 tokens, approved beforehand
+     * @dev     transfer exact amount of erc20 tokens, approved beforehand
      * @param   ilk     collateral type
      * @return  IERC20 instance
      */
@@ -30,7 +30,7 @@ contract McdWrapper is McdAddressesR17, RaySupport {
     }
 
     /**
-     * @notice  get amount of dai tokens currently locked in dsr(pot) contract.
+     * @dev     get amount of dai tokens currently locked in dsr(pot) contract.
      * @return  pie amount of all dai tokens locked in dsr
      */
     function getLockedDai() public view returns(uint256 pie, uint256 pieS) {
@@ -39,7 +39,7 @@ contract McdWrapper is McdAddressesR17, RaySupport {
     }
 
     /**
-     * @notice  get dai savings rate
+     * @dev     get dai savings rate
      * @return  dsr value in multiplier format defined by maker dao system. 100 * 10^25 - means 0% dsr. 103 * 10^25 means 3% dsr.
      */
     function getDsr() public view returns(uint) {
@@ -47,7 +47,7 @@ contract McdWrapper is McdAddressesR17, RaySupport {
     }
 
     /**
-     * @notice  Get the equivalent of exact dai amount in terms of collateral type.
+     * @dev     Get the equivalent of exact dai amount in terms of collateral type.
      * @dev     Add one more collateral token unit in case if calculated value doesn't cover dai amount
      * @param   ilk         collateral type in bytes32 format
      * @param   daiAmount   dai tokens amount
@@ -60,7 +60,7 @@ contract McdWrapper is McdAddressesR17, RaySupport {
     }
 
     /**
-     * @notice  Get current cdp main info: collateral amount, dai (debt) amount
+     * @dev     Get current cdp main info: collateral amount, dai (debt) amount
      * @param   ilk     collateral type in bytes32 format
      * @param   cdpId   cdp ID
      * @return  ink     collateral tokens amount
@@ -72,7 +72,7 @@ contract McdWrapper is McdAddressesR17, RaySupport {
     }
 
     /**
-     * @notice  Get collateral token price to USD
+     * @dev     Get collateral token price to USD
      * @param   ilk     collateral type in bytes32 format
      * @return  collateral to USD price
      */
@@ -81,7 +81,7 @@ contract McdWrapper is McdAddressesR17, RaySupport {
     }
 
     /**
-     * @notice  Get collateral token safe price to USD. Equals current origin price devided by liquidation ratio
+     * @dev     Get collateral token safe price to USD. Equals current origin price devided by liquidation ratio
      * @param   ilk     collateral type in bytes32 format
      * @return  collateral to USD price
      */
@@ -91,7 +91,7 @@ contract McdWrapper is McdAddressesR17, RaySupport {
     }
 
     /**
-     * @notice  Get collateral liquidation ratio. Percent of overcollateralization. If collateral / debt < liauidation ratio - cdp should be autoliquidated
+     * @dev     Get collateral liquidation ratio. Percent of overcollateralization. If collateral / debt < liauidation ratio - cdp should be autoliquidated
      * @param   ilk     collateral type in bytes32 format
      * @return  liquidation ratio  150 * 10^25 - means 150%
      */
@@ -101,7 +101,7 @@ contract McdWrapper is McdAddressesR17, RaySupport {
     }
 
     /**
-     * @notice  Check is cdp is unsafe already
+     * @dev     Check is cdp is unsafe already
      * @param   ilk     collateral type in bytes32 format
      * @param   cdpId   cdp ID
      * @return  true if unsafe
@@ -111,7 +111,7 @@ contract McdWrapper is McdAddressesR17, RaySupport {
     }
 
     /**
-     * @notice  Calculate available dai to be drawn in Cdp
+     * @dev     Calculate available dai to be drawn in Cdp
      * @param   ilk     collateral type in bytes32 format
      * @param   cdpId   cdp ID
      * @return  dai amount available to be drawn
@@ -123,7 +123,7 @@ contract McdWrapper is McdAddressesR17, RaySupport {
     }
 
     /**
-     * @notice  Calculate current cdp collateralization ratio
+     * @dev     Calculate current cdp collateralization ratio
      * @param   ilk     collateral type in bytes32 format
      * @param   cdpId   cdp ID
      * @return  collateralization ratio
@@ -136,7 +136,7 @@ contract McdWrapper is McdAddressesR17, RaySupport {
     }
 
     /**
-     * @notice  Get minimal collateralization ratio for collateral type
+     * @dev     Get minimal collateralization ratio for collateral type
      * @param   ilk     collateral type in bytes32 format
      * @return  minimal collateralization ratio
      */
@@ -146,7 +146,7 @@ contract McdWrapper is McdAddressesR17, RaySupport {
     }
 
     /**
-     * @notice init mcd Wrapper, build proxy
+     * @dev    init mcd Wrapper, build proxy
      * @param   ilk     collateral type in bytes32 format
      * @param   isEther  true if ether and false if erc-20 token
      */
@@ -159,14 +159,14 @@ contract McdWrapper is McdAddressesR17, RaySupport {
     }
 
     /**
-     * @notice Build proxy for current caller (msg.sender address)
+     * @dev    Build proxy for current caller (msg.sender address)
      */
     function _buildProxy() internal {
         proxyAddress = ProxyRegistryLike(proxyRegistryAddr).build();
     }
 
     /**
-     * @notice  Change proxy owner to a new one
+     * @dev     Change proxy owner to a new one
      * @param   newOwner new owner address
      */
     function _setOwnerProxy(address newOwner) internal {
@@ -174,7 +174,7 @@ contract McdWrapper is McdAddressesR17, RaySupport {
     }
 
     /**
-     * @notice  Lock additional ether as collateral
+     * @dev     Lock additional ether as collateral
      * @param   ilk     collateral type in bytes32 format
      * @param   cdp     cdp id
      * @param   wadC    collateral amount to be locked in cdp contract
@@ -190,7 +190,7 @@ contract McdWrapper is McdAddressesR17, RaySupport {
     }
 
     /**
-     * @notice  Lock additional erc-20 tokens as collateral
+     * @dev     Lock additional erc-20 tokens as collateral
      * @param   ilk     collateral type in bytes32 format
      * @param   cdp     cdp id
      * @param   wadC    collateral amount to be locked in cdp contract
@@ -206,7 +206,7 @@ contract McdWrapper is McdAddressesR17, RaySupport {
     }
 
     /**
-     * @notice  Create new cdp with Ether as collateral, lock collateral and draw dai
+     * @dev     Create new cdp with Ether as collateral, lock collateral and draw dai
      * @dev     build new Proxy for a caller before cdp creation
      * @param   ilk     collateral type in bytes32 format
      * @param   wadC    collateral amount to be locked in cdp contract
@@ -240,7 +240,7 @@ contract McdWrapper is McdAddressesR17, RaySupport {
     }
 
     /**
-     * @notice  Create new cdp with ERC-20 tokens as collateral, lock collateral and draw dai
+     * @dev     Create new cdp with ERC-20 tokens as collateral, lock collateral and draw dai
      * @dev     build new Proxy for a caller before cdp creation and approve transferFrom collateral token from Agrrement by Proxy
      * @param   ilk     collateral type in bytes32 format
      * @param   wadC    collateral amount to be locked in cdp contract
@@ -261,7 +261,7 @@ contract McdWrapper is McdAddressesR17, RaySupport {
     }
 
     /**
-     * @notice  inject(wipe) some amount of dai to cdp from agreement (pay off some amount of dai to cdp)
+     * @dev     inject(wipe) some amount of dai to cdp from agreement (pay off some amount of dai to cdp)
      * @param   cdp   cdp ID
      * @param   wad   amount of dai tokens
      */
@@ -275,7 +275,7 @@ contract McdWrapper is McdAddressesR17, RaySupport {
     }
 
     /**
-     * @notice  draw dai into cdp contract, if not enough - draw max available dai
+     * @dev     draw dai into cdp contract, if not enough - draw max available dai
      * @param   ilk   collateral type in bytes32 format
      * @param   cdp   cdp ID
      * @param   wad   amount of dai tokens
@@ -293,7 +293,7 @@ contract McdWrapper is McdAddressesR17, RaySupport {
     }
 
     /**
-     * @notice  lock dai tokens to dsr(pot) contract.
+     * @dev     lock dai tokens to dsr(pot) contract.
      * @dev     approves this amount of dai tokens to proxy before locking
      * @param   wad amount of dai tokens
      */
@@ -306,7 +306,7 @@ contract McdWrapper is McdAddressesR17, RaySupport {
     }
 
     /**
-     * @notice  unlock dai tokens from dsr(pot) contract.
+     * @dev     unlock dai tokens from dsr(pot) contract.
      * @param   wad amount of dai tokens
      * @return  actually unlocked amount of dai
      */
@@ -321,7 +321,7 @@ contract McdWrapper is McdAddressesR17, RaySupport {
     }
 
     /**
-     * @notice  unlock all dai tokens from dsr(pot) contract.
+     * @dev     unlock all dai tokens from dsr(pot) contract.
      * @return  pie amount of all dai tokens was unlocked in fact
      */
     function _unlockAllDai() internal returns(uint pie) {
@@ -335,7 +335,7 @@ contract McdWrapper is McdAddressesR17, RaySupport {
     }
 
     /**
-     * @notice  Approve exact amount of dai tokens for transferFrom
+     * @dev     Approve exact amount of dai tokens for transferFrom
      * @param   to      address allowed to call transferFrom
      * @param   amount  tokens amount for approval
      */
@@ -345,7 +345,7 @@ contract McdWrapper is McdAddressesR17, RaySupport {
     }
 
     /**
-     * @notice  Approve exact amount of erc20 tokens for transferFrom
+     * @dev     Approve exact amount of erc20 tokens for transferFrom
      * @param   ilk     collateral type
      * @param   to      address allowed to call transferFrom
      * @param   amount  tokens amount for approval
@@ -356,7 +356,7 @@ contract McdWrapper is McdAddressesR17, RaySupport {
     }
 
     /**
-     * @notice  Transfer exact amount of dai tokens
+     * @dev     Transfer exact amount of dai tokens
      * @param   to      address of recepient
      * @param   amount  tokens amount
      */
@@ -366,7 +366,7 @@ contract McdWrapper is McdAddressesR17, RaySupport {
     }
 
     /**
-     * @notice  Transfer exact amount of erc20 tokens
+     * @dev     Transfer exact amount of erc20 tokens
      * @param   ilk     collateral type
      * @param   to      address of recepient
      * @param   amount  tokens amount
@@ -377,7 +377,7 @@ contract McdWrapper is McdAddressesR17, RaySupport {
     }
 
     /**
-     * @notice  Transfer exact amount of dai tokens, approved beforehand
+     * @dev     Transfer exact amount of dai tokens, approved beforehand
      * @param   from    address of spender
      * @param   to      address of recepient
      * @param   amount  tokens amount
@@ -387,7 +387,7 @@ contract McdWrapper is McdAddressesR17, RaySupport {
     }
 
     /**
-     * @notice  Transfer exact amount of erc20 tokens, approved beforehand
+     * @dev     Transfer exact amount of erc20 tokens, approved beforehand
      * @param   ilk     collateral type
      * @param   from    address of spender
      * @param   to      address of recepient
@@ -398,7 +398,7 @@ contract McdWrapper is McdAddressesR17, RaySupport {
     }
 
     /**
-     * @notice  Transfer Cdp ownership to guy's proxy
+     * @dev     Transfer Cdp ownership to guy's proxy
      * @param   cdp     cdp ID
      * @param   guy     address, ownership should be transfered to
      */
@@ -411,7 +411,7 @@ contract McdWrapper is McdAddressesR17, RaySupport {
     }
 
     /**
-     * @notice  Get balance of dai tokens
+     * @dev     Get balance of dai tokens
      * @param   addr      address
      */
     function _balanceDai(address addr) internal view returns(uint) {
@@ -419,7 +419,7 @@ contract McdWrapper is McdAddressesR17, RaySupport {
     }
 
     /**
-     * @notice  Transfer exact amount of erc20 tokens, approved beforehand
+     * @dev     Transfer exact amount of erc20 tokens, approved beforehand
      * @param   ilk     collateral type
      * @return  token adapter address
      * @return  token erc20 contract address

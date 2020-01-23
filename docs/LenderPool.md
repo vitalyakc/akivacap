@@ -68,7 +68,7 @@ modifier onlyStatus(enum LenderPool.Statuses _status) internal
 
 | Name        | Type           | Description  |
 | ------------- |------------- | -----|
-| _status | enum LenderPool.Statuses | status should be checked with | 
+| _status | enum LenderPool.Statuses |  | 
 
 ## Functions
 
@@ -134,6 +134,7 @@ function setTargetAgreement(address _addr) public nonpayable onlyAdmin
 ### deposit
 
 Deposit dai tokens to pool
+         Transfer from pooler's account dai tokens to pool contract. Pooler should approve the amount to this contract beforehand
 
 ```js
 function deposit(uint256 _amount) public nonpayable onlyStatus 
@@ -161,6 +162,8 @@ function withdraw() public nonpayable
 ### withdrawTo
 
 Function is aimed to adjust the total dai, deposited to contract, with the goal
+         Admin can refund some amount of dai tokens to pooler, but no more than pooler's balance
+         can be called only when pending
 
 ```js
 function withdrawTo(address _to, uint256 _amount) public nonpayable onlyAdmin onlyStatus 
@@ -176,6 +179,7 @@ function withdrawTo(address _to, uint256 _amount) public nonpayable onlyAdmin on
 ### matchAgreement
 
 Do match with target agreement
+         Pool status becomes Matched
 
 ```js
 function matchAgreement() public nonpayable onlyAdmin onlyStatus 
@@ -189,6 +193,7 @@ function matchAgreement() public nonpayable onlyAdmin onlyStatus
 ### refundFromAgreement
 
 Refund dai from target agreement after it is closed (terminated, liquidated, cancelled, blocked)
+         Pool status becomes Closed
 
 ```js
 function refundFromAgreement() public nonpayable onlyAdmin onlyStatus 
@@ -217,6 +222,8 @@ returns(bool)
 ### availableForWithdrawal
 
 Calculate the amount of dai available for withdrawal for exact pooler now
+         if pool has Closed status the share is calculated according to dai refunded with savings from agreement
+         if pool has Depositing status but deposit time is expired - the share is equal to pooler's balance (deposited amount)
 
 ```js
 function availableForWithdrawal(address _pooler) public view
@@ -246,6 +253,7 @@ function _setAgreement(address _addr) internal nonpayable
 ### _deposit
 
 Deposit, change depositer (pooler) balance and total deposited dai
+         Transfer from pooler's account dai tokens to pool contract. Pooler should approve the amount to this contract beforehand
 
 ```js
 function _deposit(address _pooler, uint256 _amount) internal nonpayable
