@@ -335,20 +335,6 @@ contract McdWrapper is McdAddressesR17, RaySupport {
     }
 
     /**
-     * @notice  recovers remaining ETH from cdp (pays remaining debt if exists)
-     * @param   ilk     collateral type in bytes32 format
-     * @param   cdp cdp ID
-     */
-    function _freeETH(bytes32 ilk, uint cdp) internal {
-        (address collateralJoinAddr,) = _getCollateralAddreses(ilk);
-        proxy().execute(
-            proxyLibEnd,
-            abi.encodeWithSignature(
-                "freeETH(address,address,address,uint)",
-                cdpManagerAddr, collateralJoinAddr, mcdEndAddr, cdp));
-    }
-
-    /**
      * @notice  Approve exact amount of dai tokens for transferFrom
      * @param   to      address allowed to call transferFrom
      * @param   amount  tokens amount for approval
@@ -370,7 +356,7 @@ contract McdWrapper is McdAddressesR17, RaySupport {
     }
 
     /**
-     * @notice  transfer exact amount of dai tokens
+     * @notice  Transfer exact amount of dai tokens
      * @param   to      address of recepient
      * @param   amount  tokens amount
      */
@@ -380,7 +366,7 @@ contract McdWrapper is McdAddressesR17, RaySupport {
     }
 
     /**
-     * @notice  transfer exact amount of erc20 tokens
+     * @notice  Transfer exact amount of erc20 tokens
      * @param   ilk     collateral type
      * @param   to      address of recepient
      * @param   amount  tokens amount
@@ -391,7 +377,7 @@ contract McdWrapper is McdAddressesR17, RaySupport {
     }
 
     /**
-     * @notice  transfer exact amount of dai tokens, approved beforehand
+     * @notice  Transfer exact amount of dai tokens, approved beforehand
      * @param   from    address of spender
      * @param   to      address of recepient
      * @param   amount  tokens amount
@@ -401,20 +387,7 @@ contract McdWrapper is McdAddressesR17, RaySupport {
     }
 
     /**
-     * @notice  try transfer exact amount of dai tokens, approved beforehand
-     * @param   from    address of spender
-     * @param   to      address of recepient
-     * @param   amount  tokens amount
-     */
-    function _callTransferFromDai(address from, address to, uint amount) internal returns(bool) {
-        if ((IERC20(mcdDaiAddr).allowance(from, to) >= amount) && (IERC20(mcdDaiAddr).balanceOf(from) >= amount)) {
-            return _transferFromDai(from, to, amount);
-        }
-        return false;
-    }
-
-    /**
-     * @notice  transfer exact amount of erc20 tokens, approved beforehand
+     * @notice  Transfer exact amount of erc20 tokens, approved beforehand
      * @param   ilk     collateral type
      * @param   from    address of spender
      * @param   to      address of recepient
@@ -446,7 +419,7 @@ contract McdWrapper is McdAddressesR17, RaySupport {
     }
 
     /**
-     * @notice  transfer exact amount of erc20 tokens, approved beforehand
+     * @notice  Transfer exact amount of erc20 tokens, approved beforehand
      * @param   ilk     collateral type
      * @return  token adapter address
      * @return  token erc20 contract address

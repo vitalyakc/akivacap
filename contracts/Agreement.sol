@@ -118,14 +118,14 @@ contract Agreement is IAgreement, ClaimableIni, McdWrapper {
     uint public injectedTotal;
 
     /**
-     * delta shows user's debt
+     * Delta shows user's debt
      * if delta < 0 - it is borrower's debt to lender
      * if delta > 0 - it is lender's debt to borrower
      */
     int public delta;
-    
+
     /**
-     * @notice Grants access only to agreement's borrower
+     * @notice  Grants access only to agreement's borrower
      */
     modifier onlyBorrower() {
         require(msg.sender == borrower, "Agreement: Accessible only for borrower");
@@ -133,8 +133,8 @@ contract Agreement is IAgreement, ClaimableIni, McdWrapper {
     }
 
     /**
-     * @notice Grants access only if agreement has appropriate status
-     * @param _status status should be checked with
+     * @notice  Grants access only if agreement has appropriate status
+     * @param   _status status should be checked with
      */
     modifier hasStatus(Statuses _status) {
         require(status == _status, "Agreement: Agreement status is incorrect");
@@ -142,8 +142,8 @@ contract Agreement is IAgreement, ClaimableIni, McdWrapper {
     }
 
     /**
-     * @notice Grants access only if agreement has status before requested one
-     * @param _status check before status
+     * @notice  Grants access only if agreement has status before requested one
+     * @param   _status check before status
      */
     modifier beforeStatus(Statuses _status) {
         require(status < _status, "Agreement: Agreement status is not before requested one");
@@ -151,22 +151,15 @@ contract Agreement is IAgreement, ClaimableIni, McdWrapper {
     }
 
     /**
-    * @notice Save timestamp for current status
-    */
-    function _doStatusSnapshot() internal {
-        statusSnapshots[uint(status)] = now;
-    }
-
-    /**
-     * @notice Initialize new agreement
-     * @param _borrower borrower address
-     * @param _collateralAmount value of borrower's collateral amount put into the contract as collateral or approved to transferFrom
-     * @param _debtValue value of debt
-     * @param _duration number of seconds which agreement should be terminated after
-     * @param _interestRate percent of interest rate, should be passed like RAY
-     * @param _collateralType type of collateral, should be passed as bytes32
-     * @param _isETH true if ether and false if erc-20 token
-     * @param _configAddr config contract address
+     * @notice  Initialize new agreement
+     * @param   _borrower       borrower address
+     * @param   _collateralAmount value of borrower's collateral amount put into the contract as collateral or approved to transferFrom
+     * @param   _debtValue      value of debt
+     * @param   _duration       number of seconds which agreement should be terminated after
+     * @param   _interestRate   percent of interest rate, should be passed like RAY
+     * @param   _collateralType type of collateral, should be passed as bytes32
+     * @param   _isETH          true if ether and false if erc-20 token
+     * @param   _configAddr     config contract address
      */
     function initAgreement(
         address payable _borrower,
@@ -182,15 +175,17 @@ contract Agreement is IAgreement, ClaimableIni, McdWrapper {
 
         require(Config(_configAddr).isCollateralEnabled(_collateralType), "Agreement: collateral type is currencly disabled");
         require(_debtValue > 0, "Agreement: debt is zero");
-        require((_collateralAmount > Config(_configAddr).minCollateralAmount()) &&
+        require(
+            (_collateralAmount > Config(_configAddr).minCollateralAmount()) &&
             (_collateralAmount < Config(_configAddr).maxCollateralAmount()), "Agreement: collateral value does not match min and max");
-        require((_interestRate > ONE) && 
+        require(
+            (_interestRate > ONE) &&
             (_interestRate <= ONE * 2), "Agreement: interestRate should be between 0 and 100 %");
-        require((_duration > Config(_configAddr).minDuration()) &&
+        require(
+            (_duration > Config(_configAddr).minDuration()) &&
             (_duration < Config(_configAddr).maxDuration()), "Agreement: duration value does not match min and max");
-        if (_isETH) {
-            require(msg.value == _collateralAmount, "Agreement: Actual ehter sent value is not correct");
-        }
+        require(!_isETH || msg.value == _collateralAmount, "Agreement: Actual ehter sent value is not correct");
+    
         configAddr = _configAddr;
         isETH = _isETH;
         borrower = _borrower;
@@ -199,14 +194,14 @@ contract Agreement is IAgreement, ClaimableIni, McdWrapper {
         interestRate = _interestRate;
         collateralAmount = _collateralAmount;
         collateralType = _collateralType;
-        
+
         _nextStatus();
         _initMcdWrapper(collateralType, isETH);
         emit AgreementInitiated(borrower, collateralAmount, debtValue, duration, interestRate);
 
         _monitorRisky();
     }
-    
+
     /**
      * @notice Approve the agreement. Only for contract owner (FraFactory)
      * @return Operation success
@@ -217,7 +212,7 @@ contract Agreement is IAgreement, ClaimableIni, McdWrapper {
 
         return true;
     }
-    
+
     /**
      * @notice Match lender to the agreement.
      * @return Operation success
@@ -239,7 +234,7 @@ contract Agreement is IAgreement, ClaimableIni, McdWrapper {
         }
         uint drawnDai = _balanceDai(address(this));
         // due to the lack of preceision in mcd cdp contracts drawn dai can be less by 1 dai wei
-        
+
         emit AgreementMatched(lender, expireDate, cdpId, collateralAmount, debtValue, drawnDai);
         _pushDaiAsset(borrower, debtValue < drawnDai ? debtValue : drawnDai);
 
@@ -247,10 +242,10 @@ contract Agreement is IAgreement, ClaimableIni, McdWrapper {
     }
 
     /**
-     * @notice Update agreement state
-     * @dev Calls needed function according to the expireDate
-     * (terminates or liquidated or updates the agreement)
-     * @return Operation success
+     * @notice  Update agreement state
+     * @dev     Calls needed function according to the expireDate
+     *          (terminates or liquidated or updates the agreement)
+     * @return  Operation success
      */
     function updateAgreement() external onlyContractOwner hasStatus(Statuses.Active) returns(bool _success) {
         if (now > expireDate) {
@@ -268,8 +263,8 @@ contract Agreement is IAgreement, ClaimableIni, McdWrapper {
     }
 
     /**
-     * @notice Cancel agreement by borrower before it is matched, change status to the correspondant one, refund
-     * @return Operation success
+     * @notice  Cancel agreement by borrower before it is matched, change status to the correspondant one, refund
+     * @return  Operation success
      */
     function cancelAgreement() external onlyBorrower beforeStatus(Statuses.Active) returns(bool _success)  {
         _closeAgreement(ClosedTypes.Cancelled);
@@ -279,8 +274,8 @@ contract Agreement is IAgreement, ClaimableIni, McdWrapper {
     }
 
     /**
-     * @notice Reject agreement by admin or cron job before it is matched, change status to the correspondant one, refund
-     * @return Operation success
+     * @notice  Reject agreement by admin or cron job before it is matched, change status to the correspondant one, refund
+     * @return  Operation success
      */
     function rejectAgreement() external onlyContractOwner beforeStatus(Statuses.Active) returns(bool _success)  {
         _closeAgreement(ClosedTypes.Cancelled);
@@ -290,8 +285,8 @@ contract Agreement is IAgreement, ClaimableIni, McdWrapper {
     }
 
     /**
-     * @notice Block active agreement, change status to the correspondant one, refund
-     * @return Operation success
+     * @notice  Block active agreement, change status to the correspondant one, refund
+     * @return  Operation success
      */
     function blockAgreement() external hasStatus(Statuses.Active) onlyContractOwner returns(bool _success)  {
         _closeAgreement(ClosedTypes.Blocked);
@@ -300,8 +295,8 @@ contract Agreement is IAgreement, ClaimableIni, McdWrapper {
     }
 
     /**
-     * @notice Lock additional ether as collateral to agreement cdp contract
-     * @return Operation success
+     * @notice  Lock additional ether as collateral to agreement cdp contract
+     * @return  Operation success
      */
     function lockAdditionalCollateral(uint _amount) external payable onlyBorrower beforeStatus(Statuses.Closed) returns(bool _success)  {
         if (!isETH) {
@@ -322,8 +317,8 @@ contract Agreement is IAgreement, ClaimableIni, McdWrapper {
     }
 
     /**
-     * @notice withdraw dai to user's external wallet
-     * @param _amount dai amount for withdrawal
+     * @notice  withdraw dai to user's external wallet
+     * @param   _amount dai amount for withdrawal
      */
     function withdrawDai(uint _amount) external {
         _popDaiAsset(msg.sender, _amount);
@@ -462,6 +457,13 @@ contract Agreement is IAgreement, ClaimableIni, McdWrapper {
      */
     function getDaiAddress() public view returns(address) {
         return mcdDaiAddr;
+    }
+
+    /**
+    * @notice Save timestamp for current status
+    */
+    function _doStatusSnapshot() internal {
+        statusSnapshots[uint(status)] = now;
     }
 
     /**

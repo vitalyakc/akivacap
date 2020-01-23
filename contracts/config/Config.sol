@@ -27,7 +27,7 @@ contract Config is ClaimableBase {
     }
 
     /**
-     * @dev     set sonfig according to parameters
+     * @dev     Set all config parameters
      * @param   _approveLimit      max duration available for approve after creation, if expires - agreement should be closed
      * @param   _matchLimit        max duration available for match after approve, if expires - agreement should be closed
      * @param   _injectionThreshold     minimal threshold permitted for injection
@@ -62,7 +62,7 @@ contract Config is ClaimableBase {
     }
 
     /**
-     * @dev     set config parameter
+     * @dev     Set config parameter
      * @param   _riskyMargin        risky Margin %
      */
     function setRiskyMargin(uint _riskyMargin) public onlyContractOwner {
@@ -70,7 +70,7 @@ contract Config is ClaimableBase {
     }
 
     /**
-     * @dev     set config parameter
+     * @dev     Set config parameter
      * @param   _approveLimit        max duration available for approve after creation, if expires - agreement should be closed
      */
     function setApproveLimit(uint _approveLimit) public onlyContractOwner {
@@ -78,7 +78,7 @@ contract Config is ClaimableBase {
     }
 
     /**
-     * @dev     set config parameter
+     * @dev     Set config parameter
      * @param   _matchLimit        max duration available for match after approve, if expires - agreement should be closed
      */
     function setMatchLimit(uint _matchLimit) public onlyContractOwner {
@@ -86,7 +86,7 @@ contract Config is ClaimableBase {
     }
 
     /**
-     * @dev     set config parameter
+     * @dev     Set config parameter
      * @param   _injectionThreshold     minimal threshold permitted for injection
      */
     function setInjectionThreshold(uint _injectionThreshold) public onlyContractOwner {
@@ -94,7 +94,7 @@ contract Config is ClaimableBase {
     }
 
     /**
-     * @dev     enable colateral type
+     * @dev     Enable colateral type
      * @param   _ilk     bytes32 collateral type
      */
     function enableCollateral(bytes32 _ilk) public onlyContractOwner {
@@ -102,7 +102,7 @@ contract Config is ClaimableBase {
     }
 
     /**
-     * @dev     disable colateral type
+     * @dev     Disable colateral type
      * @param   _ilk     bytes32 collateral type
      */
     function disableCollateral(bytes32 _ilk) public onlyContractOwner {
@@ -110,7 +110,7 @@ contract Config is ClaimableBase {
     }
 
     /**
-     * @dev     check if colateral is enabled
+     * @dev     Check if colateral is enabled
      * @param   _ilk     bytes32 collateral type
      */
     function isCollateralEnabled(bytes32 _ilk) public view returns(bool) {

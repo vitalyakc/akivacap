@@ -3,7 +3,7 @@ pragma solidity 0.5.12;
 import "./ClaimableBase.sol";
 
 /**
- * @title   Administrable contract
+ * @title   Administrable contract, multiadmins managing
  * @dev     Inherit Claimable contract with usual initialization in constructor
  */
 contract Administrable is ClaimableBase {

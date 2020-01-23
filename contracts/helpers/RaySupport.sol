@@ -3,7 +3,7 @@ pragma solidity 0.5.12;
 import "./SafeMath.sol";
 
 /**
- * @title   RaySupport contract for ray preceision calculations
+ * @title   RaySupport contract for ray (10^27) preceision calculations
  */
 contract RaySupport {
     using SafeMath for uint256;

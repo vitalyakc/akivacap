@@ -77,7 +77,7 @@ contract LenderPool is Administrable {
     }
 
     /**
-     * @notice Set target agreement address and check for restrictions of target agreement
+     * @notice  Set target agreement address and check for restrictions of target agreement
      * @param   _addr   address of target agreement
      */
     function setTargetAgreement(address _addr) public onlyAdmin() {
@@ -182,8 +182,8 @@ contract LenderPool is Administrable {
     }
 
     /**
-     * @notice Set target agreement address
-     * @param _addr  address of target agreement
+     * @notice  Set target agreement address
+     * @param   _addr  address of target agreement
      */
     function _setAgreement(address _addr) internal {
         require(_addr != address(0), "LenderPool: target agreement address is null");
@@ -198,7 +198,7 @@ contract LenderPool is Administrable {
 
     /**
      * @notice  Deposit, change depositer (pooler) balance and total deposited dai
-     * @dev     transfer from pooler's account dai tokens to pool contract. Pooler should approve the amount to this contract beforehand
+     * @dev     Transfer from pooler's account dai tokens to pool contract. Pooler should approve the amount to this contract beforehand
      * @param   _pooler     depositer address
      * @param   _amount     amount of dai tokens for depositing
      */
@@ -225,10 +225,10 @@ contract LenderPool is Administrable {
     }
 
     /**
-     * @notice Set restrictions to main parameters of target agreement, in irder to prevent match with unprofitable agreement
-     * @param _minInterestRate  min percent of interest rate, should be passed like RAY
-     * @param _minDuration      min available agreement duration in secs
-     * @param _maxDuration      mav available agreement duration in secs
+     * @notice  Set restrictions to main parameters of target agreement, in irder to prevent match with unprofitable agreement
+     * @param   _minInterestRate  min percent of interest rate, should be passed like RAY
+     * @param   _minDuration      min available agreement duration in secs
+     * @param   _maxDuration      mav available agreement duration in secs
      */
     function _setAgreementRestrictions(uint _minInterestRate, uint _minDuration, uint _maxDuration) internal {
         minInterestRate = _minInterestRate;
@@ -261,7 +261,7 @@ contract LenderPool is Administrable {
     }
 
     /**
-    * @notice   Do Agreement match
+    * @notice   Do match with agreement
     */
     function _matchAgreement() internal {
         IAgreement(targetAgreement).matchAgreement();
