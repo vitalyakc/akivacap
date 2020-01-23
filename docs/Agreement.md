@@ -203,7 +203,8 @@ Operation success
 
 ⤾ overrides [IAgreement.updateAgreement](IAgreement.md#updateagreement)
 
-Update agreement state
+Calls needed function according to the expireDate
+         (terminates or liquidated or updates the agreement)
 
 ```js
 function updateAgreement() external nonpayable onlyContractOwner hasStatus 
@@ -302,7 +303,7 @@ Operation success
 
 ⤾ overrides [IAgreement.withdrawDai](IAgreement.md#withdrawdai)
 
-withdraw dai to user's external wallet
+Withdraw dai to user's external wallet
 
 ```js
 function withdrawDai(uint256 _amount) external nonpayable
@@ -316,7 +317,7 @@ function withdrawDai(uint256 _amount) external nonpayable
 
 ### withdrawCollateral
 
-withdraw collateral to user's (msg.sender) external wallet from internal wallet
+Withdraw collateral to user's (msg.sender) external wallet from internal wallet
 
 ```js
 function withdrawCollateral(uint256 _amount) external nonpayable
@@ -326,7 +327,7 @@ function withdrawCollateral(uint256 _amount) external nonpayable
 
 | Name        | Type           | Description  |
 | ------------- |------------- | -----|
-| _amount | uint256 | collateral amount for withdrawal | 
+| _amount | uint256 |  | 
 
 ### withdrawRemainingEth
 
@@ -340,7 +341,7 @@ function withdrawRemainingEth(address payable _to) external nonpayable hasStatus
 
 | Name        | Type           | Description  |
 | ------------- |------------- | -----|
-| _to | address payable | address should be withdrawn to | 
+| _to | address payable |  | 
 
 ### getInfo
 
