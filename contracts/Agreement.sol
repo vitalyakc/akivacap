@@ -483,7 +483,7 @@ contract Agreement is IAgreement, ClaimableIni, McdWrapper {
      * @param   _isLastUpdate true if the agreement is going to be terminated, false otherwise
      * @return  Operation success
      */
-    function _updateAgreementState(bool _isLastUpdate) public returns(bool _success) {
+    function _updateAgreementState(bool _isLastUpdate) internal returns(bool _success) {
         // if it is last update take the time interval up to expireDate, otherwise up to current time
         uint timeInterval = (_isLastUpdate ? expireDate : now).sub(lastCheckTime);
         uint injectionAmount;
