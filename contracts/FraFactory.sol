@@ -104,7 +104,7 @@ contract FraFactory is Administrable {
     * @dev Multi approve
     * @param _addresses agreements addresses array
     */
-    function batchApproveAgreements(address[] memory _addresses) public onlyAdmin() {
+    function batchApproveAgreements(address[] memory _addresses) external onlyAdmin() {
         require(_addresses.length <= 256, "FraMain: batch count is greater than 256");
         for (uint256 i = 0; i < _addresses.length; i++) {
             if (IAgreement(_addresses[i]).isStatus(IAgreement.Statuses.Pending)) {
@@ -118,7 +118,7 @@ contract FraFactory is Administrable {
      * @param _address agreement address
      * @return operation success
      */
-    function rejectAgreement(address _address) public onlyAdmin() returns(bool _success) {
+    function rejectAgreement(address _address) external onlyAdmin() returns(bool _success) {
         return IAgreement(_address).rejectAgreement();
     }
 
@@ -126,7 +126,7 @@ contract FraFactory is Administrable {
     * @dev Multi reject
     * @param _addresses agreements addresses array
     */
-    function batchRejectAgreements(address[] memory _addresses) public onlyAdmin() {
+    function batchRejectAgreements(address[] memory _addresses) external onlyAdmin() {
         require(_addresses.length <= 256, "FraMain: batch count is greater than 256");
         for (uint256 i = 0; i < _addresses.length; i++) {
             if (IAgreement(_addresses[i]).isBeforeStatus(IAgreement.Statuses.Active)) {
@@ -138,7 +138,7 @@ contract FraFactory is Administrable {
     /**
      * @dev Function for cron autoreject (close agreements if matchLimit expired)
      */
-    function autoRejectAgreements() public onlyAdmin() {
+    function autoRejectAgreements() external onlyAdmin() {
         uint _approveLimit = Config(configAddr).approveLimit();
         uint _matchLimit = Config(configAddr).matchLimit();
         uint _len = agreementList.length;
@@ -157,7 +157,7 @@ contract FraFactory is Administrable {
      * @param _address agreement address
      * @return operation success
      */
-    function updateAgreement(address _address) public onlyAdmin() returns(bool _success) {
+    function updateAgreement(address _address) external onlyAdmin() returns(bool _success) {
         return IAgreement(_address).updateAgreement();
     }
 
@@ -165,7 +165,7 @@ contract FraFactory is Administrable {
      * @dev Update the states of all agreemnets
      * @return operation success
      */
-    function updateAgreements() public onlyAdmin() {
+    function updateAgreements() external onlyAdmin() {
         for (uint256 i = 0; i < agreementList.length; i++) {
             if (IAgreement(agreementList[i]).isStatus(IAgreement.Statuses.Active)) {
                 IAgreement(agreementList[i]).updateAgreement();
@@ -177,7 +177,7 @@ contract FraFactory is Administrable {
     * @dev Update state of exact agreements
     * @param _addresses agreements addresses array
     */
-    function batchUpdateAgreements(address[] memory _addresses) public onlyAdmin() {
+    function batchUpdateAgreements(address[] memory _addresses) external onlyAdmin() {
         require(_addresses.length <= 256, "FraMain: batch count is greater than 256");
         for (uint256 i = 0; i < _addresses.length; i++) {
             // check in order to prevent revert
@@ -192,7 +192,7 @@ contract FraFactory is Administrable {
      * @param _address agreement address
      * @return operation success
      */
-    function blockAgreement(address _address) public onlyAdmin() returns(bool _success) {
+    function blockAgreement(address _address) external onlyAdmin() returns(bool _success) {
         return IAgreement(_address).blockAgreement();
     }
 
@@ -200,7 +200,7 @@ contract FraFactory is Administrable {
      * @dev Remove agreement from list,
      * doesn't affect real agreement contract, just removes handle control
      */
-    function removeAgreement(uint _ind) public onlyAdmin() {
+    function removeAgreement(uint _ind) external onlyAdmin() {
         agreementList[_ind] = agreementList[agreementList.length-1];
         agreementList.length--; // Implicitly recovers gas from last element storage
     }
@@ -208,21 +208,21 @@ contract FraFactory is Administrable {
     /**
      * @dev transfer agreement ownership to Fra Factory owner (admin)
      */
-    function transferAgreementOwnership(address _address) public onlyAdmin() {
+    function transferAgreementOwnership(address _address) external onlyAdmin() {
         IAgreement(_address).transferOwnership(owner);
     }
 
     /**
      * @dev accept agreement ownership by Fra Factory contract
      */
-    function claimAgreementOwnership(address _address) public onlyAdmin() {
+    function claimAgreementOwnership(address _address) external onlyAdmin() {
         IAgreement(_address).claimOwnership();
     }
 
     /**
      * @dev Returns a full list of existing agreements
      */
-    function getAgreementList() public view returns(address[] memory _agreementList) {
+    function getAgreementList() external view returns(address[] memory _agreementList) {
         return agreementList;
     }
 }
