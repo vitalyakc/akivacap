@@ -104,7 +104,7 @@ contract FraFactory is Administrable {
     * @dev Multi approve
     * @param _addresses agreements addresses array
     */
-    function batchApproveAgreements(address[] memory _addresses) external onlyAdmin() {
+    function batchApproveAgreements(address[] calldata _addresses) external onlyAdmin() {
         require(_addresses.length <= 256, "FraMain: batch count is greater than 256");
         for (uint256 i = 0; i < _addresses.length; i++) {
             if (IAgreement(_addresses[i]).isStatus(IAgreement.Statuses.Pending)) {
@@ -126,7 +126,7 @@ contract FraFactory is Administrable {
     * @dev Multi reject
     * @param _addresses agreements addresses array
     */
-    function batchRejectAgreements(address[] memory _addresses) external onlyAdmin() {
+    function batchRejectAgreements(address[] calldata _addresses) external onlyAdmin() {
         require(_addresses.length <= 256, "FraMain: batch count is greater than 256");
         for (uint256 i = 0; i < _addresses.length; i++) {
             if (IAgreement(_addresses[i]).isBeforeStatus(IAgreement.Statuses.Active)) {
@@ -177,7 +177,7 @@ contract FraFactory is Administrable {
     * @dev Update state of exact agreements
     * @param _addresses agreements addresses array
     */
-    function batchUpdateAgreements(address[] memory _addresses) external onlyAdmin() {
+    function batchUpdateAgreements(address[] calldata _addresses) external onlyAdmin() {
         require(_addresses.length <= 256, "FraMain: batch count is greater than 256");
         for (uint256 i = 0; i < _addresses.length; i++) {
             // check in order to prevent revert
