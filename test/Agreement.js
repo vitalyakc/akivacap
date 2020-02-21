@@ -380,8 +380,8 @@ contract('Agreement', async (accounts) => {
       assert.equal(await agreement.lender.call(), LENDER);
 
       assert.equal(result.logs.length, 2);
-      assert.equal(result.logs[1].event, 'AgreementMatched');
-      assert.equal(result.logs[1].args._lender, LENDER);
+      assert.equal(result.logs[0].event, 'AgreementMatched');
+      assert.equal(result.logs[0].args._lender, LENDER);
     });
 
     it('should not be possible to match initialized but not approved agreement by lender', async () => {
