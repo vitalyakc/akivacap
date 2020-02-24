@@ -40,11 +40,11 @@ contract('IntegrationPool', async (accounts) => {
   describe('Agreement lifesycle complete flow with pooling lender system integration test', async () => {
     it('', async () => {
       const localAgreementAddress =
-      await fraFactory.initAgreementETH.call(toBN(20000000000000000000), 90, fromPercentToRey(3),
-        ETH_A, {from: BORROWER, value: toBN(250000000000000000)});
+      await fraFactory.initAgreementETH.call(toBN(22000000000000000000), 90, fromPercentToRey(3),
+        ETH_A, {from: BORROWER, value: toBN(300000000000000000)});
 
-      await fraFactory.initAgreementETH(toBN(20000000000000000000),
-        120, fromPercentToRey(3), ETH_A, {from: BORROWER, value: toBN(250000000000000000)});
+      await fraFactory.initAgreementETH(toBN(22000000000000000000),
+        120, fromPercentToRey(3), ETH_A, {from: BORROWER, value: toBN(300000000000000000)});
 
       console.log('Agreement initialized with address ' + localAgreementAddress);
 
@@ -57,21 +57,20 @@ contract('IntegrationPool', async (accounts) => {
 
       console.log('lenderPool created ' + lenderPool.address);
 
-      await daiToken.approve(lenderPool.address, toBN(10000000000000000000), {from: LENDER});
-      await daiToken.approve(lenderPool.address, toBN(10000000000000000000), {from: OWNER});
+      await daiToken.approve(lenderPool.address, toBN(11000000000000000000), {from: LENDER});
+      await daiToken.approve(lenderPool.address, toBN(11000000000000000000), {from: OWNER});
 
-      const resultDeposited1 = await lenderPool.deposit(toBN(10000000000000000000), {from: LENDER});
-      const resultDeposited2 = await lenderPool.deposit(toBN(10000000000000000000), {from: OWNER});
+      const resultDeposited1 = await lenderPool.deposit(toBN(11000000000000000000), {from: LENDER});
+      const resultDeposited2 = await lenderPool.deposit(toBN(11000000000000000000), {from: OWNER});
 
       assert.equal(resultDeposited1.logs[0].event, 'Deposited');
       assert.equal(resultDeposited2.logs[0].event, 'Deposited');
 
       console.log('user1 and user2 deposited to the pool contract');
-      assert.equal((await lenderPool.daiTotal()).toString(), '20000000000000000000');
+      assert.equal((await lenderPool.daiTotal()).toString(), '22000000000000000000');
 
-      const resultMatched = await lenderPool.matchAgreement({from: LENDER});
+      await lenderPool.matchAgreement({from: LENDER});
 
-      assert.equal(resultMatched.logs[1].event, 'MatchedAgreement');
       console.log('Pool matched to agreement');
 
       const localAgreement = await Agreement.at(localAgreementAddress);
@@ -90,21 +89,21 @@ contract('IntegrationPool', async (accounts) => {
       const resultWithdrawn2 = await lenderPool.withdraw({from: OWNER});
 
       assert.isTrue(toBN(resultWithdrawn1.logs[0].args
-      .amountWithSavings) > toBN(10000000000000000000));
+      .amountWithSavings) > toBN(11000000000000000000));
       assert.isTrue(toBN(resultWithdrawn2.logs[0].args
-      .amountWithSavings) > toBN(10000000000000000000));
+      .amountWithSavings) > toBN(11000000000000000000));
 
       assert.equal(resultWithdrawn1.logs[0].event, 'Withdrawn');
       assert.equal(resultWithdrawn1.logs[0].args.caller, LENDER);
       assert.equal(resultWithdrawn1.logs[0].args.pooler, LENDER);
-      assert.equal(resultWithdrawn1.logs[0].args.amount, '10000000000000000000');
+      assert.equal(resultWithdrawn1.logs[0].args.amount, '11000000000000000000');
       console.log(resultWithdrawn1.logs[0].args
       .amountWithSavings + ' tokens where taken from contract by user1');
 
       assert.equal(resultWithdrawn2.logs[0].event, 'Withdrawn');
       assert.equal(resultWithdrawn2.logs[0].args.caller, OWNER);
       assert.equal(resultWithdrawn2.logs[0].args.pooler, OWNER);
-      assert.equal(resultWithdrawn2.logs[0].args.amount, '10000000000000000000');
+      assert.equal(resultWithdrawn2.logs[0].args.amount, '11000000000000000000');
       console.log(resultWithdrawn2.logs[0].args
       .amountWithSavings + ' tokens where taken from contract by user2');
     });
