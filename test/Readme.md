@@ -24,7 +24,7 @@ Further key-pair to PRIVATEKEY1 will be address1, PRIVATEKEY2 - address2, PRIVAT
 For successful passing of the integration tests you need to have next amounts of funds on accounts:
 address1 - about 4 ETH, and at least 11 dai tokens.
 address2 - about 1 eth.
-address3 - some ETH and at least 25 dai tokens.
+address3 - 0.5 ETH and at least 25 dai tokens.
 * dai tokens must belong to token contract at address `0x4F96Fe3b7A6Cf9725f59d353F723c1bDb64CA6Aa`.(17th release of dai token)
 After all tests passes address2 will contain a lot of dai tokens.
 
