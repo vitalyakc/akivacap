@@ -84,15 +84,189 @@ contract ClaimableBase is Claimable {
     }
 }
 
-// File: contracts/config/Config.sol
+// File: contracts/helpers/SafeMath.sol
+
+pragma solidity 0.5.12;
+
+/**
+ * @title SafeMath
+ * @dev Math operations with safety checks that throw on error
+ */
+library SafeMath {
+
+    int256 constant INT256_MIN = int256((uint256(1) << 255));
+
+    int256 constant INT256_MAX = int256(~((uint256(1) << 255)));
+
+    /**
+    * @dev  Multiplies two numbers, throws on overflow.
+    */
+    function mul(uint256 a, uint256 b) internal pure returns (uint256) {
+        if (a == 0) {
+            return 0;
+        }
+        uint256 c = a * b;
+        require(c / a == b, "SafeMath: multiplication overflow");
+        return c;
+    }
+
+    /**
+    * @dev  Integer division of two numbers, truncating the quotient.
+    */
+    function div(uint256 a, uint256 b) internal pure returns (uint256) {
+        // require(b > 0); // Solidity automatically throws when dividing by 0
+        uint256 c = a / b;
+        // require(a == b * c + a % b); // There is no case in which this doesn't hold
+        return c;
+    }
+
+    /**
+    * @dev  Substracts two numbers, throws on overflow (i.e. if subtrahend is greater than minuend).
+    */
+    function sub(uint256 a, uint256 b) internal pure returns (uint256) {
+        require(b <= a, "SafeMath: subtraction overflow");
+        return a - b;
+    }
+
+    /**
+    * @dev  Adds two numbers, throws on overflow.
+    */
+    function add(uint256 a, uint256 b) internal pure returns (uint256) {
+        uint256 c = a + b;
+        require(c >= a, "SafeMath: addition overflow");
+        return c;
+    }
+
+    /**
+    * @dev  Multiplies two int numbers, throws on overflow.
+    */
+    function mul(int256 a, int256 b) internal pure returns (int256) {
+        if (a == 0) {
+            return 0;
+        }
+        int256 c = a * b;
+        require(c / a == b, "SafeMath: multiplication overflow");
+        return c;
+    }
+
+    /**
+    * @dev  Division of two int numbers, truncating the quotient.
+    */
+    function div(int256 a, int256 b) internal pure returns (int256) {
+        // require(b > 0); // Solidity automatically throws when dividing by 0
+        int256 c = a / b;
+        // require(a == b * c + a % b); // There is no case in which this doesn't hold
+        return c;
+    }
+
+    /**
+    * @dev  Substracts two int numbers, throws on overflow (i.e. if subtrahend is greater than minuend).
+    */
+    function sub(int256 a, int256 b) internal pure returns (int256) {
+        require(!(a > 0 && b > INT256_MIN - a), "SafeMath: subtraction underflow");  // underflow
+        require(!(a < 0 && b < INT256_MAX - a), "SafeMath: subtraction overflow");  // overflow
+
+        return a - b;
+    }
+
+    /**
+    * @dev  Adds two int numbers, throws on overflow.
+    */
+    function add(int256 a, int256 b) internal pure returns (int256) {
+        require(!(a > 0 && b > INT256_MAX - a), "SafeMath: addition underflow");  // overflow
+        require(!(a < 0 && b < INT256_MIN - a), "SafeMath: addition overflow");  // underflow
+
+        return a + b;
+    }
+}
+
+// File: contracts/helpers/RaySupport.sol
 
 pragma solidity 0.5.12;
 
 
 /**
+ * @title   RaySupport contract for ray (10^27) preceision calculations
+ */
+contract RaySupport {
+    using SafeMath for uint256;
+    using SafeMath for int256;
+    uint constant public ONE = 10 ** 27;
+    uint constant public HUNDRED = 100;
+
+    /**
+     * @dev     Convert uint value to Ray format
+     * @param   _val    uint value should be converted
+     */
+    function toRay(uint _val) public pure returns(uint) {
+        return _val.mul(ONE);
+    }
+
+    /**
+     * @dev     Convert uint value from Ray format
+     * @param   _val    uint value should be converted
+     */
+    function fromRay(uint _val) public pure returns(uint) {
+        return _val / ONE;
+    }
+
+    /**
+     * @dev     Convert int value to Ray format
+     * @param   _val    int value should be converted
+     */
+    function toRay(int _val) public pure returns(int) {
+        return _val.mul(int(ONE));
+    }
+
+    /**
+     * @dev     Convert int value from Ray format
+     * @param   _val    int value should be converted
+     */
+    function fromRay(int _val) public pure returns(int) {
+        return _val / int(ONE);
+    }
+
+    /**
+     * @dev     Calculate x pow n by base
+     * @param   x   value should be powered
+     * @param   n   power degree
+     * @param   base    base value
+     */
+    function rpow(uint x, uint n, uint base) public pure returns (uint z) {
+        assembly {
+            switch x case 0 {switch n case 0 {z := base} default {z := 0}}
+            default {
+                switch mod(n, 2) case 0 { z := base } default { z := x }
+                let half := div(base, 2)  // for rounding.
+                for { n := div(n, 2) } n { n := div(n,2) } {
+                    let xx := mul(x, x)
+                    if iszero(eq(div(xx, x), x)) { revert(0,0) }
+                    let xxRound := add(xx, half)
+                    if lt(xxRound, xx) { revert(0,0) }
+                    x := div(xxRound, base)
+                    if mod(n,2) {
+                        let zx := mul(z, x)
+                        if and(iszero(iszero(x)), iszero(eq(div(zx, x), z))) { revert(0,0) }
+                        let zxRound := add(zx, half)
+                        if lt(zxRound, zx) { revert(0,0) }
+                        z := div(zxRound, base)
+                    }
+                }
+            }
+        }
+    }
+}
+
+// File: contracts/config/Config.sol
+
+pragma solidity 0.5.12;
+
+
+
+/**
  * @title Config for Agreement contract
  */
-contract Config is ClaimableBase {
+contract Config is ClaimableBase, RaySupport {
     mapping(bytes32 => bool) public collateralsEnabled;
 
     uint public approveLimit; // max duration in secs available for approve after creation, if expires - agreement should be closed
@@ -103,18 +277,23 @@ contract Config is ClaimableBase {
     uint public minDuration;
     uint public maxDuration;
     uint public riskyMargin;
+    uint public acapFee; // per second %
 
     /**
      * @dev     Set default config
      */
     constructor() public {
-        setGeneral(7 days, 1 days, 0.01 ether, 0.2 ether, 10000 ether, 1 minutes, 365 days, 20);
+        // last parameter: fee is 0.5% annual in per-second compounding 
+        setGeneral(7 days, 1 days, 0.01 ether, 0.2 ether, 10000 ether, 1 minutes, 365 days, 20, 1000000000158153903837946257);
         enableCollateral("ETH-A");
         enableCollateral("BAT-A");
+        enableCollateral("WBTC-A");
+        enableCollateral("USDC-A");
+        enableCollateral("USDC-B");
     }
 
     /**
-     * @dev     set sonfig according to parameters
+     * @dev     Set all config parameters
      * @param   _approveLimit      max duration available for approve after creation, if expires - agreement should be closed
      * @param   _matchLimit        max duration available for match after approve, if expires - agreement should be closed
      * @param   _injectionThreshold     minimal threshold permitted for injection
@@ -123,6 +302,7 @@ contract Config is ClaimableBase {
      * @param   _minDuration        min agreement length
      * @param   _maxDuration        max agreement length
      * @param   _riskyMargin        risky Margin %
+     * @param   _acapFee            Fee for Acap service, %
      */
     function setGeneral(
         uint _approveLimit,
@@ -132,7 +312,8 @@ contract Config is ClaimableBase {
         uint _maxCollateralAmount,
         uint _minDuration,
         uint _maxDuration,
-        uint _riskyMargin
+        uint _riskyMargin,
+        uint _acapFee
     ) public onlyContractOwner {
         approveLimit = _approveLimit;
         matchLimit = _matchLimit;
@@ -146,10 +327,19 @@ contract Config is ClaimableBase {
         maxDuration = _maxDuration;
 
         riskyMargin = _riskyMargin;
+        acapFee     = _acapFee;
     }
 
     /**
-     * @dev     set config parameter
+     * @dev     Set config parameter
+     * @param   _acapFee        fee in % per second
+     */
+    function setAcapFee(uint _acapFee) public onlyContractOwner {
+        acapFee = _acapFee;
+    }
+
+    /**
+     * @dev     Set config parameter
      * @param   _riskyMargin        risky Margin %
      */
     function setRiskyMargin(uint _riskyMargin) public onlyContractOwner {
@@ -157,7 +347,7 @@ contract Config is ClaimableBase {
     }
 
     /**
-     * @dev     set config parameter
+     * @dev     Set config parameter
      * @param   _approveLimit        max duration available for approve after creation, if expires - agreement should be closed
      */
     function setApproveLimit(uint _approveLimit) public onlyContractOwner {
@@ -165,7 +355,7 @@ contract Config is ClaimableBase {
     }
 
     /**
-     * @dev     set config parameter
+     * @dev     Set config parameter
      * @param   _matchLimit        max duration available for match after approve, if expires - agreement should be closed
      */
     function setMatchLimit(uint _matchLimit) public onlyContractOwner {
@@ -173,7 +363,7 @@ contract Config is ClaimableBase {
     }
 
     /**
-     * @dev     set config parameter
+     * @dev     Set config parameter
      * @param   _injectionThreshold     minimal threshold permitted for injection
      */
     function setInjectionThreshold(uint _injectionThreshold) public onlyContractOwner {
@@ -181,7 +371,7 @@ contract Config is ClaimableBase {
     }
 
     /**
-     * @dev     enable colateral type
+     * @dev     Enable colateral type
      * @param   _ilk     bytes32 collateral type
      */
     function enableCollateral(bytes32 _ilk) public onlyContractOwner {
@@ -189,7 +379,7 @@ contract Config is ClaimableBase {
     }
 
     /**
-     * @dev     disable colateral type
+     * @dev     Disable colateral type
      * @param   _ilk     bytes32 collateral type
      */
     function disableCollateral(bytes32 _ilk) public onlyContractOwner {
@@ -197,7 +387,7 @@ contract Config is ClaimableBase {
     }
 
     /**
-     * @dev     check if colateral is enabled
+     * @dev     Check if colateral is enabled
      * @param   _ilk     bytes32 collateral type
      */
     function isCollateralEnabled(bytes32 _ilk) public view returns(bool) {
@@ -236,7 +426,7 @@ interface IAgreement {
     enum Statuses {All, Pending, Open, Active, Closed}
     enum ClosedTypes {Ended, Liquidated, Blocked, Cancelled}
 
-    function initAgreement(address payable, uint256, uint256, uint256, uint256, bytes32, bool, address) external payable;
+    function initAgreement(address payable, uint256, uint256, uint256, uint256, bytes32, bytes32, bool, address) external payable;
 
     function transferOwnership(address) external;
     function claimOwnership() external;
@@ -285,7 +475,7 @@ pragma solidity 0.5.12;
 
 
 /**
- * @title   Administrable contract
+ * @title   Administrable contract, multiadmins managing
  * @dev     Inherit Claimable contract with usual initialization in constructor
  */
 contract Administrable is ClaimableBase {
@@ -537,8 +727,8 @@ pragma solidity 0.5.12;
 
 
 /**
- * @title Fra Factory
- * @notice Handler of all agreements
+ * @title   Fra Factory
+ * @dev     Handler of all agreements
  */
 contract FraFactory is Administrable {
     address[] public agreementList;
@@ -546,7 +736,7 @@ contract FraFactory is Administrable {
     address public configAddr;
 
     /**
-     * @notice Set config and agreement implementation
+     * @dev Set config and agreement implementation
      * @param _agreementImpl address of agreement implementation contract
      * @param _configAddr address of config contract
      */
@@ -556,29 +746,31 @@ contract FraFactory is Administrable {
     }
 
     /**
-     * @notice Requests agreement on ETH collateralType
+     * @dev Requests agreement on ETH collateralType
      * @param _debtValue value of borrower's ETH put into the contract as collateral
      * @param _duration number of minutes which agreement should be terminated after
      * @param _interestRate percent of interest rate, should be passed like RAY
      * @param _collateralType type of collateral, should be passed as bytes32
+     * @param _ilkIndex index of collateral in Maker structures
      * @return agreement address
      */
     function initAgreementETH (
         uint256 _debtValue,
         uint256 _duration,
         uint256 _interestRate,
-        bytes32 _collateralType
+        bytes32 _collateralType, 
+        bytes32 _ilkIndex
     ) external payable returns(address _newAgreement) {
         address payable agreementProxyAddr = address(new UpgradeabilityProxy(agreementImpl, ""));
         IAgreement(agreementProxyAddr).
-            initAgreement.value(msg.value)(msg.sender, msg.value, _debtValue, _duration, _interestRate, _collateralType, true, configAddr);
+            initAgreement.value(msg.value)(msg.sender, msg.value, _debtValue, _duration, _interestRate, _collateralType, _ilkIndex, true, configAddr);
         
         agreementList.push(agreementProxyAddr);
         return agreementProxyAddr; //address(agreement);
     }
 
     /**
-     * @notice Requests agreement on ERC-20 collateralType
+     * @dev Requests agreement on ERC-20 collateralType
      * @param _debtValue value of borrower's collateral
      * @param _duration number of minutes which agreement should be terminated after
      * @param _interestRate percent of interest rate, should be passed like
@@ -590,11 +782,12 @@ contract FraFactory is Administrable {
         uint256 _debtValue,
         uint256 _duration,
         uint256 _interestRate,
-        bytes32 _collateralType
+        bytes32 _collateralType, 
+        bytes32 _ilkIndex
     ) external returns(address _newAgreement) {
         address payable agreementProxyAddr = address(new UpgradeabilityProxy(agreementImpl, ""));
         IAgreement(agreementProxyAddr).
-            initAgreement(msg.sender, _collateralValue, _debtValue, _duration, _interestRate, _collateralType, false, configAddr);
+            initAgreement(msg.sender, _collateralValue, _debtValue, _duration, _interestRate, _collateralType, _ilkIndex, false, configAddr);
 
         IAgreement(agreementProxyAddr).erc20TokenContract(_collateralType).transferFrom(
             msg.sender, address(agreementProxyAddr), _collateralValue);
@@ -604,7 +797,7 @@ contract FraFactory is Administrable {
     }
 
     /**
-     * @notice Set the new agreement implememntation adresss
+     * @dev Set the new agreement implememntation adresss
      * @param _agreementImpl address of agreement implementation contract
      */
     function setAgreementImpl(address payable _agreementImpl) public onlyAdmin() {
@@ -613,7 +806,7 @@ contract FraFactory is Administrable {
     }
 
     /**
-     * @notice Set the new config adresss
+     * @dev Set the new config adresss
      * @param _configAddr address of config contract
      */
     function setConfigAddr(address _configAddr) public onlyAdmin() {
@@ -622,7 +815,7 @@ contract FraFactory is Administrable {
     }
 
     /**
-     * @notice Makes the specific agreement valid
+     * @dev Makes the specific agreement valid
      * @param _address agreement address
      * @return operation success
      */
@@ -631,10 +824,10 @@ contract FraFactory is Administrable {
     }
 
     /**
-    * @notice Multi approve
+    * @dev Multi approve
     * @param _addresses agreements addresses array
     */
-    function batchApproveAgreements(address[] memory _addresses) public onlyAdmin() {
+    function batchApproveAgreements(address[] calldata _addresses) external onlyAdmin() {
         require(_addresses.length <= 256, "FraMain: batch count is greater than 256");
         for (uint256 i = 0; i < _addresses.length; i++) {
             if (IAgreement(_addresses[i]).isStatus(IAgreement.Statuses.Pending)) {
@@ -644,19 +837,19 @@ contract FraFactory is Administrable {
     }
 
     /**
-     * @notice Reject specific agreement
+     * @dev Reject specific agreement
      * @param _address agreement address
      * @return operation success
      */
-    function rejectAgreement(address _address) public onlyAdmin() returns(bool _success) {
+    function rejectAgreement(address _address) external onlyAdmin() returns(bool _success) {
         return IAgreement(_address).rejectAgreement();
     }
 
     /**
-    * @notice Multi reject
+    * @dev Multi reject
     * @param _addresses agreements addresses array
     */
-    function batchRejectAgreements(address[] memory _addresses) public onlyAdmin() {
+    function batchRejectAgreements(address[] calldata _addresses) external onlyAdmin() {
         require(_addresses.length <= 256, "FraMain: batch count is greater than 256");
         for (uint256 i = 0; i < _addresses.length; i++) {
             if (IAgreement(_addresses[i]).isBeforeStatus(IAgreement.Statuses.Active)) {
@@ -666,9 +859,9 @@ contract FraFactory is Administrable {
     }
 
     /**
-     * @notice Function for cron autoreject (close agreements if matchLimit expired)
+     * @dev Function for cron autoreject (close agreements if matchLimit expired)
      */
-    function autoRejectAgreements() public onlyAdmin() {
+    function autoRejectAgreements() external onlyAdmin() {
         uint _approveLimit = Config(configAddr).approveLimit();
         uint _matchLimit = Config(configAddr).matchLimit();
         uint _len = agreementList.length;
@@ -683,19 +876,19 @@ contract FraFactory is Administrable {
     }
 
     /**
-     * @notice Update the state of specific agreement
+     * @dev Update the state of specific agreement
      * @param _address agreement address
      * @return operation success
      */
-    function updateAgreement(address _address) public onlyAdmin() returns(bool _success) {
+    function updateAgreement(address _address) external onlyAdmin() returns(bool _success) {
         return IAgreement(_address).updateAgreement();
     }
 
     /**
-     * @notice Update the states of all agreemnets
+     * @dev Update the states of all agreemnets
      * @return operation success
      */
-    function updateAgreements() public onlyAdmin() {
+    function updateAgreements() external onlyAdmin() {
         for (uint256 i = 0; i < agreementList.length; i++) {
             if (IAgreement(agreementList[i]).isStatus(IAgreement.Statuses.Active)) {
                 IAgreement(agreementList[i]).updateAgreement();
@@ -704,10 +897,10 @@ contract FraFactory is Administrable {
     }
 
     /**
-    * @notice Update state of exact agreements
+    * @dev Update state of exact agreements
     * @param _addresses agreements addresses array
     */
-    function batchUpdateAgreements(address[] memory _addresses) public onlyAdmin() {
+    function batchUpdateAgreements(address[] calldata _addresses) external onlyAdmin() {
         require(_addresses.length <= 256, "FraMain: batch count is greater than 256");
         for (uint256 i = 0; i < _addresses.length; i++) {
             // check in order to prevent revert
@@ -718,41 +911,41 @@ contract FraFactory is Administrable {
     }
 
     /**
-     * @notice Block specific agreement
+     * @dev Block specific agreement
      * @param _address agreement address
      * @return operation success
      */
-    function blockAgreement(address _address) public onlyAdmin() returns(bool _success) {
+    function blockAgreement(address _address) external onlyAdmin() returns(bool _success) {
         return IAgreement(_address).blockAgreement();
     }
 
     /**
-     * @notice Remove agreement from list,
+     * @dev Remove agreement from list,
      * doesn't affect real agreement contract, just removes handle control
      */
-    function removeAgreement(uint _ind) public onlyAdmin() {
+    function removeAgreement(uint _ind) external onlyAdmin() {
         agreementList[_ind] = agreementList[agreementList.length-1];
         agreementList.length--; // Implicitly recovers gas from last element storage
     }
 
     /**
-     * @notice transfer agreement ownership to Fra Factory owner (admin)
+     * @dev transfer agreement ownership to Fra Factory owner (admin)
      */
-    function transferAgreementOwnership(address _address) public onlyAdmin() {
+    function transferAgreementOwnership(address _address) external onlyAdmin() {
         IAgreement(_address).transferOwnership(owner);
     }
 
     /**
-     * @notice accept agreement ownership by Fra Factory contract
+     * @dev accept agreement ownership by Fra Factory contract
      */
-    function claimAgreementOwnership(address _address) public onlyAdmin() {
+    function claimAgreementOwnership(address _address) external onlyAdmin() {
         IAgreement(_address).claimOwnership();
     }
 
     /**
-     * @notice Returns a full list of existing agreements
+     * @dev Returns a full list of existing agreements
      */
-    function getAgreementList() public view returns(address[] memory _agreementList) {
+    function getAgreementList() external view returns(address[] memory _agreementList) {
         return agreementList;
     }
 }

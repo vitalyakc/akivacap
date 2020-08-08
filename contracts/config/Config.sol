@@ -1,11 +1,12 @@
 pragma solidity 0.5.12;
 
 import "../helpers/ClaimableBase.sol";
+import "../helpers/RaySupport.sol";
 
 /**
  * @title Config for Agreement contract
  */
-contract Config is ClaimableBase {
+contract Config is ClaimableBase, RaySupport {
     mapping(bytes32 => bool) public collateralsEnabled;
 
     uint public approveLimit; // max duration in secs available for approve after creation, if expires - agreement should be closed
@@ -16,14 +17,19 @@ contract Config is ClaimableBase {
     uint public minDuration;
     uint public maxDuration;
     uint public riskyMargin;
+    uint public acapFee; // per second %
 
     /**
      * @dev     Set default config
      */
     constructor() public {
-        setGeneral(7 days, 1 days, 0.01 ether, 0.2 ether, 10000 ether, 1 minutes, 365 days, 20);
+        // last parameter: fee is 0.5% annual in per-second compounding 
+        setGeneral(7 days, 1 days, 0.01 ether, 0.2 ether, 10000 ether, 1 minutes, 365 days, 20, 1000000000158153903837946257);
         enableCollateral("ETH-A");
         enableCollateral("BAT-A");
+        enableCollateral("WBTC-A");
+        enableCollateral("USDC-A");
+        enableCollateral("USDC-B");
     }
 
     /**
@@ -36,6 +42,7 @@ contract Config is ClaimableBase {
      * @param   _minDuration        min agreement length
      * @param   _maxDuration        max agreement length
      * @param   _riskyMargin        risky Margin %
+     * @param   _acapFee            Fee for Acap service, %
      */
     function setGeneral(
         uint _approveLimit,
@@ -45,7 +52,8 @@ contract Config is ClaimableBase {
         uint _maxCollateralAmount,
         uint _minDuration,
         uint _maxDuration,
-        uint _riskyMargin
+        uint _riskyMargin,
+        uint _acapFee
     ) public onlyContractOwner {
         approveLimit = _approveLimit;
         matchLimit = _matchLimit;
@@ -59,6 +67,15 @@ contract Config is ClaimableBase {
         maxDuration = _maxDuration;
 
         riskyMargin = _riskyMargin;
+        acapFee     = _acapFee;
+    }
+
+    /**
+     * @dev     Set config parameter
+     * @param   _acapFee        fee in % per second
+     */
+    function setAcapFee(uint _acapFee) public onlyContractOwner {
+        acapFee = _acapFee;
     }
 
     /**

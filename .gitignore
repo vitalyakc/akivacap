@@ -1,5 +1,7 @@
 node_modules/
+flatten/
 build/
 .env
 .DS_Store
 .idea
+.vscode

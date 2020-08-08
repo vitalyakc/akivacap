@@ -31,17 +31,19 @@ contract FraFactory is Administrable {
      * @param _duration number of minutes which agreement should be terminated after
      * @param _interestRate percent of interest rate, should be passed like RAY
      * @param _collateralType type of collateral, should be passed as bytes32
+     * @param _ilkIndex index of collateral in Maker structures
      * @return agreement address
      */
     function initAgreementETH (
         uint256 _debtValue,
         uint256 _duration,
         uint256 _interestRate,
-        bytes32 _collateralType
+        bytes32 _collateralType, 
+        bytes32 _ilkIndex
     ) external payable returns(address _newAgreement) {
         address payable agreementProxyAddr = address(new UpgradeabilityProxy(agreementImpl, ""));
         IAgreement(agreementProxyAddr).
-            initAgreement.value(msg.value)(msg.sender, msg.value, _debtValue, _duration, _interestRate, _collateralType, true, configAddr);
+            initAgreement.value(msg.value)(msg.sender, msg.value, _debtValue, _duration, _interestRate, _collateralType, _ilkIndex, true, configAddr);
         
         agreementList.push(agreementProxyAddr);
         return agreementProxyAddr; //address(agreement);
@@ -60,11 +62,12 @@ contract FraFactory is Administrable {
         uint256 _debtValue,
         uint256 _duration,
         uint256 _interestRate,
-        bytes32 _collateralType
+        bytes32 _collateralType, 
+        bytes32 _ilkIndex
     ) external returns(address _newAgreement) {
         address payable agreementProxyAddr = address(new UpgradeabilityProxy(agreementImpl, ""));
         IAgreement(agreementProxyAddr).
-            initAgreement(msg.sender, _collateralValue, _debtValue, _duration, _interestRate, _collateralType, false, configAddr);
+            initAgreement(msg.sender, _collateralValue, _debtValue, _duration, _interestRate, _collateralType, _ilkIndex, false, configAddr);
 
         IAgreement(agreementProxyAddr).erc20TokenContract(_collateralType).transferFrom(
             msg.sender, address(agreementProxyAddr), _collateralValue);

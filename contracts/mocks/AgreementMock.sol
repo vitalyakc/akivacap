@@ -83,11 +83,12 @@ contract AgreementMock is Agreement {
       uint256 _duration,
       uint256 _interestRatePercent,
       bytes32 _collateralType,
+      bytes32 _ilkIndex,
       bool _isETH,
       address _configAddr
     ) public payable {
       Agreement.initAgreement(_borrower, _collateralAmount, _debtValue,
-        _duration, _interestRatePercent, _collateralType, _isETH, _configAddr);
+        _duration, _interestRatePercent, _collateralType, _ilkIndex, _isETH, _configAddr);
       
       setErc20Token(ConfigMock(_configAddr).getErc20collToken());
     }

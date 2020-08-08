@@ -9,7 +9,7 @@ interface IAgreement {
     enum Statuses {All, Pending, Open, Active, Closed}
     enum ClosedTypes {Ended, Liquidated, Blocked, Cancelled}
 
-    function initAgreement(address payable, uint256, uint256, uint256, uint256, bytes32, bool, address) external payable;
+    function initAgreement(address payable, uint256, uint256, uint256, uint256, bytes32, bytes32, bool, address) external payable;
 
     function transferOwnership(address) external;
     function claimOwnership() external;

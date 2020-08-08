@@ -47,6 +47,15 @@ contract McdWrapper is McdAddressesR17, RaySupport {
     }
 
     /**
+     * @dev     get collateral cost
+     * @return  Duty (base rate plus risk premium) in multiplier format, per-second accrual.
+     */
+    function getIlkDuty(bytes32 _ilkIndex) public view returns (uint) {
+        (, uint _duty) = JugLike(mcdJugAddr).ilks(_ilkIndex);
+        return _duty;
+    }
+
+    /**
      * @dev     Get the equivalent of exact dai amount in terms of collateral type.
      * @dev     Add one more collateral token unit in case if calculated value doesn't cover dai amount
      * @param   ilk         collateral type in bytes32 format
@@ -186,7 +195,7 @@ contract McdWrapper is McdAddressesR17, RaySupport {
             "lockETH(address,address,uint256)",
             cdpManagerAddr, collateralJoinAddr, cdp);
         (bool success,) = proxyAddress.call.value(wadC)(abi.encodeWithSignature("execute(address,bytes)", proxyLib, data));
-        require(success);
+        require(success, "failed to lock eth");
     }
 
     /**
@@ -291,7 +300,6 @@ contract McdWrapper is McdAddressesR17, RaySupport {
                 "draw(address,address,address,uint256,uint256)",
                 cdpManagerAddr, mcdJugAddr, mcdJoinDaiAddr, cdp, drawnDai));
     }
-
     /**
      * @dev     lock dai tokens to dsr(pot) contract.
      * @dev     approves this amount of dai tokens to proxy before locking
@@ -420,16 +428,32 @@ contract McdWrapper is McdAddressesR17, RaySupport {
 
     /**
      * @dev     Transfer exact amount of erc20 tokens, approved beforehand
-     * @param   ilk     collateral type
+     * @param   ilk     collateral type 
      * @return  token adapter address
      * @return  token erc20 contract address
      */
-    function _getCollateralAddreses(bytes32 ilk) internal pure returns(address, address payable) {
+    function _getCollateralAddreses(bytes32 ilk) internal view returns(address, address payable) {
+
         if (ilk == "ETH-A") {
             return (mcdJoinEthaAddr, wethAddr);
         }
         if (ilk == "BAT-A") {
             return (mcdJoinBataAddr, batAddr);
         }
+        if (ilk == "WBTC-A") {
+            return (mcdJoinWbtcaAddr, wbtcAddr);
+        }
+        if (ilk == "USDC-A") {
+            return (mcdJoinUsdcaAddr, usdcAddr);
+        }
+        if (ilk == "USDC-B") {
+            return (mcdJoinUsdcbAddr, usdcAddr);
+        }
+
+        // actual registry
+        address _gem = IlkRegistryLike(mcdIlkRegAddr).gem(ilk);
+        address payable _join = IlkRegistryLike(mcdIlkRegAddr).join(ilk);
+        return (_gem, _join);        
     }
+    
 }

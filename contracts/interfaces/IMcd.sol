@@ -59,3 +59,9 @@ contract DSProxyLike {
     function execute(address, bytes memory) public payable returns (bytes memory);
     function setOwner(address) public;
 }
+
+contract IlkRegistryLike {
+    function pos(bytes32 ilk) public view returns (uint); 
+    function gem(bytes32) public view returns (address);
+    function join(bytes32) public view returns (address payable);
+}

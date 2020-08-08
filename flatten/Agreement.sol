@@ -84,15 +84,189 @@ contract ClaimableBase is Claimable {
     }
 }
 
-// File: contracts/config/Config.sol
+// File: contracts/helpers/SafeMath.sol
+
+pragma solidity 0.5.12;
+
+/**
+ * @title SafeMath
+ * @dev Math operations with safety checks that throw on error
+ */
+library SafeMath {
+
+    int256 constant INT256_MIN = int256((uint256(1) << 255));
+
+    int256 constant INT256_MAX = int256(~((uint256(1) << 255)));
+
+    /**
+    * @dev  Multiplies two numbers, throws on overflow.
+    */
+    function mul(uint256 a, uint256 b) internal pure returns (uint256) {
+        if (a == 0) {
+            return 0;
+        }
+        uint256 c = a * b;
+        require(c / a == b, "SafeMath: multiplication overflow");
+        return c;
+    }
+
+    /**
+    * @dev  Integer division of two numbers, truncating the quotient.
+    */
+    function div(uint256 a, uint256 b) internal pure returns (uint256) {
+        // require(b > 0); // Solidity automatically throws when dividing by 0
+        uint256 c = a / b;
+        // require(a == b * c + a % b); // There is no case in which this doesn't hold
+        return c;
+    }
+
+    /**
+    * @dev  Substracts two numbers, throws on overflow (i.e. if subtrahend is greater than minuend).
+    */
+    function sub(uint256 a, uint256 b) internal pure returns (uint256) {
+        require(b <= a, "SafeMath: subtraction overflow");
+        return a - b;
+    }
+
+    /**
+    * @dev  Adds two numbers, throws on overflow.
+    */
+    function add(uint256 a, uint256 b) internal pure returns (uint256) {
+        uint256 c = a + b;
+        require(c >= a, "SafeMath: addition overflow");
+        return c;
+    }
+
+    /**
+    * @dev  Multiplies two int numbers, throws on overflow.
+    */
+    function mul(int256 a, int256 b) internal pure returns (int256) {
+        if (a == 0) {
+            return 0;
+        }
+        int256 c = a * b;
+        require(c / a == b, "SafeMath: multiplication overflow");
+        return c;
+    }
+
+    /**
+    * @dev  Division of two int numbers, truncating the quotient.
+    */
+    function div(int256 a, int256 b) internal pure returns (int256) {
+        // require(b > 0); // Solidity automatically throws when dividing by 0
+        int256 c = a / b;
+        // require(a == b * c + a % b); // There is no case in which this doesn't hold
+        return c;
+    }
+
+    /**
+    * @dev  Substracts two int numbers, throws on overflow (i.e. if subtrahend is greater than minuend).
+    */
+    function sub(int256 a, int256 b) internal pure returns (int256) {
+        require(!(a > 0 && b > INT256_MIN - a), "SafeMath: subtraction underflow");  // underflow
+        require(!(a < 0 && b < INT256_MAX - a), "SafeMath: subtraction overflow");  // overflow
+
+        return a - b;
+    }
+
+    /**
+    * @dev  Adds two int numbers, throws on overflow.
+    */
+    function add(int256 a, int256 b) internal pure returns (int256) {
+        require(!(a > 0 && b > INT256_MAX - a), "SafeMath: addition underflow");  // overflow
+        require(!(a < 0 && b < INT256_MIN - a), "SafeMath: addition overflow");  // underflow
+
+        return a + b;
+    }
+}
+
+// File: contracts/helpers/RaySupport.sol
 
 pragma solidity 0.5.12;
 
 
 /**
+ * @title   RaySupport contract for ray (10^27) preceision calculations
+ */
+contract RaySupport {
+    using SafeMath for uint256;
+    using SafeMath for int256;
+    uint constant public ONE = 10 ** 27;
+    uint constant public HUNDRED = 100;
+
+    /**
+     * @dev     Convert uint value to Ray format
+     * @param   _val    uint value should be converted
+     */
+    function toRay(uint _val) public pure returns(uint) {
+        return _val.mul(ONE);
+    }
+
+    /**
+     * @dev     Convert uint value from Ray format
+     * @param   _val    uint value should be converted
+     */
+    function fromRay(uint _val) public pure returns(uint) {
+        return _val / ONE;
+    }
+
+    /**
+     * @dev     Convert int value to Ray format
+     * @param   _val    int value should be converted
+     */
+    function toRay(int _val) public pure returns(int) {
+        return _val.mul(int(ONE));
+    }
+
+    /**
+     * @dev     Convert int value from Ray format
+     * @param   _val    int value should be converted
+     */
+    function fromRay(int _val) public pure returns(int) {
+        return _val / int(ONE);
+    }
+
+    /**
+     * @dev     Calculate x pow n by base
+     * @param   x   value should be powered
+     * @param   n   power degree
+     * @param   base    base value
+     */
+    function rpow(uint x, uint n, uint base) public pure returns (uint z) {
+        assembly {
+            switch x case 0 {switch n case 0 {z := base} default {z := 0}}
+            default {
+                switch mod(n, 2) case 0 { z := base } default { z := x }
+                let half := div(base, 2)  // for rounding.
+                for { n := div(n, 2) } n { n := div(n,2) } {
+                    let xx := mul(x, x)
+                    if iszero(eq(div(xx, x), x)) { revert(0,0) }
+                    let xxRound := add(xx, half)
+                    if lt(xxRound, xx) { revert(0,0) }
+                    x := div(xxRound, base)
+                    if mod(n,2) {
+                        let zx := mul(z, x)
+                        if and(iszero(iszero(x)), iszero(eq(div(zx, x), z))) { revert(0,0) }
+                        let zxRound := add(zx, half)
+                        if lt(zxRound, zx) { revert(0,0) }
+                        z := div(zxRound, base)
+                    }
+                }
+            }
+        }
+    }
+}
+
+// File: contracts/config/Config.sol
+
+pragma solidity 0.5.12;
+
+
+
+/**
  * @title Config for Agreement contract
  */
-contract Config is ClaimableBase {
+contract Config is ClaimableBase, RaySupport {
     mapping(bytes32 => bool) public collateralsEnabled;
 
     uint public approveLimit; // max duration in secs available for approve after creation, if expires - agreement should be closed
@@ -103,18 +277,23 @@ contract Config is ClaimableBase {
     uint public minDuration;
     uint public maxDuration;
     uint public riskyMargin;
+    uint public acapFee; // per second %
 
     /**
      * @dev     Set default config
      */
     constructor() public {
-        setGeneral(7 days, 1 days, 0.01 ether, 0.2 ether, 10000 ether, 1 minutes, 365 days, 20);
+        // last parameter: fee is 0.5% annual in per-second compounding 
+        setGeneral(7 days, 1 days, 0.01 ether, 0.2 ether, 10000 ether, 1 minutes, 365 days, 20, 1000000000158153903837946257);
         enableCollateral("ETH-A");
         enableCollateral("BAT-A");
+        enableCollateral("WBTC-A");
+        enableCollateral("USDC-A");
+        enableCollateral("USDC-B");
     }
 
     /**
-     * @dev     set sonfig according to parameters
+     * @dev     Set all config parameters
      * @param   _approveLimit      max duration available for approve after creation, if expires - agreement should be closed
      * @param   _matchLimit        max duration available for match after approve, if expires - agreement should be closed
      * @param   _injectionThreshold     minimal threshold permitted for injection
@@ -123,6 +302,7 @@ contract Config is ClaimableBase {
      * @param   _minDuration        min agreement length
      * @param   _maxDuration        max agreement length
      * @param   _riskyMargin        risky Margin %
+     * @param   _acapFee            Fee for Acap service, %
      */
     function setGeneral(
         uint _approveLimit,
@@ -132,7 +312,8 @@ contract Config is ClaimableBase {
         uint _maxCollateralAmount,
         uint _minDuration,
         uint _maxDuration,
-        uint _riskyMargin
+        uint _riskyMargin,
+        uint _acapFee
     ) public onlyContractOwner {
         approveLimit = _approveLimit;
         matchLimit = _matchLimit;
@@ -146,10 +327,19 @@ contract Config is ClaimableBase {
         maxDuration = _maxDuration;
 
         riskyMargin = _riskyMargin;
+        acapFee     = _acapFee;
     }
 
     /**
-     * @dev     set config parameter
+     * @dev     Set config parameter
+     * @param   _acapFee        fee in % per second
+     */
+    function setAcapFee(uint _acapFee) public onlyContractOwner {
+        acapFee = _acapFee;
+    }
+
+    /**
+     * @dev     Set config parameter
      * @param   _riskyMargin        risky Margin %
      */
     function setRiskyMargin(uint _riskyMargin) public onlyContractOwner {
@@ -157,7 +347,7 @@ contract Config is ClaimableBase {
     }
 
     /**
-     * @dev     set config parameter
+     * @dev     Set config parameter
      * @param   _approveLimit        max duration available for approve after creation, if expires - agreement should be closed
      */
     function setApproveLimit(uint _approveLimit) public onlyContractOwner {
@@ -165,7 +355,7 @@ contract Config is ClaimableBase {
     }
 
     /**
-     * @dev     set config parameter
+     * @dev     Set config parameter
      * @param   _matchLimit        max duration available for match after approve, if expires - agreement should be closed
      */
     function setMatchLimit(uint _matchLimit) public onlyContractOwner {
@@ -173,7 +363,7 @@ contract Config is ClaimableBase {
     }
 
     /**
-     * @dev     set config parameter
+     * @dev     Set config parameter
      * @param   _injectionThreshold     minimal threshold permitted for injection
      */
     function setInjectionThreshold(uint _injectionThreshold) public onlyContractOwner {
@@ -181,7 +371,7 @@ contract Config is ClaimableBase {
     }
 
     /**
-     * @dev     enable colateral type
+     * @dev     Enable colateral type
      * @param   _ilk     bytes32 collateral type
      */
     function enableCollateral(bytes32 _ilk) public onlyContractOwner {
@@ -189,7 +379,7 @@ contract Config is ClaimableBase {
     }
 
     /**
-     * @dev     disable colateral type
+     * @dev     Disable colateral type
      * @param   _ilk     bytes32 collateral type
      */
     function disableCollateral(bytes32 _ilk) public onlyContractOwner {
@@ -197,7 +387,7 @@ contract Config is ClaimableBase {
     }
 
     /**
-     * @dev     check if colateral is enabled
+     * @dev     Check if colateral is enabled
      * @param   _ilk     bytes32 collateral type
      */
     function isCollateralEnabled(bytes32 _ilk) public view returns(bool) {
@@ -318,102 +508,6 @@ contract ClaimableIni is Claimable, Initializable, Context {
     }
 }
 
-// File: contracts/helpers/SafeMath.sol
-
-pragma solidity 0.5.12;
-
-/**
- * @title SafeMath
- * @dev Math operations with safety checks that throw on error
- */
-library SafeMath {
-
-    int256 constant INT256_MIN = int256((uint256(1) << 255));
-
-    int256 constant INT256_MAX = int256(~((uint256(1) << 255)));
-
-    /**
-    * @dev  Multiplies two numbers, throws on overflow.
-    */
-    function mul(uint256 a, uint256 b) internal pure returns (uint256) {
-        if (a == 0) {
-            return 0;
-        }
-        uint256 c = a * b;
-        require(c / a == b, "SafeMath: multiplication overflow");
-        return c;
-    }
-
-    /**
-    * @dev  Integer division of two numbers, truncating the quotient.
-    */
-    function div(uint256 a, uint256 b) internal pure returns (uint256) {
-        // require(b > 0); // Solidity automatically throws when dividing by 0
-        uint256 c = a / b;
-        // require(a == b * c + a % b); // There is no case in which this doesn't hold
-        return c;
-    }
-
-    /**
-    * @dev  Substracts two numbers, throws on overflow (i.e. if subtrahend is greater than minuend).
-    */
-    function sub(uint256 a, uint256 b) internal pure returns (uint256) {
-        require(b <= a, "SafeMath: subtraction overflow");
-        return a - b;
-    }
-
-    /**
-    * @dev  Adds two numbers, throws on overflow.
-    */
-    function add(uint256 a, uint256 b) internal pure returns (uint256) {
-        uint256 c = a + b;
-        require(c >= a, "SafeMath: addition overflow");
-        return c;
-    }
-
-    /**
-    * @dev  Multiplies two int numbers, throws on overflow.
-    */
-    function mul(int256 a, int256 b) internal pure returns (int256) {
-        if (a == 0) {
-            return 0;
-        }
-        int256 c = a * b;
-        require(c / a == b, "SafeMath: multiplication overflow");
-        return c;
-    }
-
-    /**
-    * @dev  Division of two int numbers, truncating the quotient.
-    */
-    function div(int256 a, int256 b) internal pure returns (int256) {
-        // require(b > 0); // Solidity automatically throws when dividing by 0
-        int256 c = a / b;
-        // require(a == b * c + a % b); // There is no case in which this doesn't hold
-        return c;
-    }
-
-    /**
-    * @dev  Substracts two int numbers, throws on overflow (i.e. if subtrahend is greater than minuend).
-    */
-    function sub(int256 a, int256 b) internal pure returns (int256) {
-        require(!(a > 0 && b > INT256_MIN - a), "SafeMath: subtraction underflow");  // underflow
-        require(!(a < 0 && b < INT256_MAX - a), "SafeMath: subtraction overflow");  // overflow
-
-        return a - b;
-    }
-
-    /**
-    * @dev  Adds two int numbers, throws on overflow.
-    */
-    function add(int256 a, int256 b) internal pure returns (int256) {
-        require(!(a > 0 && b > INT256_MAX - a), "SafeMath: addition underflow");  // overflow
-        require(!(a < 0 && b < INT256_MIN - a), "SafeMath: addition overflow");  // underflow
-
-        return a + b;
-    }
-}
-
 // File: contracts/mcd/McdAddressesR17.sol
 
 pragma solidity 0.5.12;
@@ -422,26 +516,52 @@ pragma solidity 0.5.12;
  */
 contract McdAddressesR17 {
     uint public constant RELEASE = 17;
+
     address public constant proxyRegistryAddrMD = 0x64A436ae831C1672AE81F674CAb8B6775df3475C; // used by MakerDao portal oasis
-    address constant proxyRegistryAddr = 0xda657E86db3e76BDa6d88e6a09798F0BBF5bDf75; // compatible with 5.12 solc
-    address constant proxyLib = 0xd1D24637b9109B7f61459176EdcfF9Be56283a7B;
+    address constant proxyRegistryAddr = 0x8877152FA31F00eC81b161774209308535af157a;
+    // * 0xda657E86db3e76BDa6d88e6a09798F0BBF5bDf75 "Compatible with 5.12 solc", deployed by 0x61de44946D6b809a30D8e6A236157966659f9640 May-16-2019 
+    // Argument: 0x13c5d6fa341aa30a006a3e1cc14c6074543d7560, deployed by 0x61de44946D6b809a30D8e6A236157966659f9640 on May-16-2019
+    // version: latest by then, compiled by solc 0.5.6. ProxyFactory needs to be deployed too and passed as parameter.
+    // * Existing proxy registry: at 0x64a436ae831c1672ae81f674cab8b6775df3475c;  uses solc ^0.4.23 deployed Jun-22-2018
+    // argument:  0xe11E3b391F7E8bC47247866aF32AF67Dd58Dc800
+    // newly deployed: 0x8877152fa31f00ec81b161774209308535af157a 
+
+    address constant proxyLib  = 0xd1D24637b9109B7f61459176EdcfF9Be56283a7B;  
     address constant proxyLibDsr = 0xc5CC1Dfb64A62B9C7Bb6Cbf53C2A579E2856bf92;
     address constant proxyLibEnd = 0x5652779B00e056d7DF87D03fe09fd656fBc322DF;
+    
     address constant cdpManagerAddr = 0x1476483dD8C35F25e568113C5f70249D3976ba21;
     address constant mcdDaiAddr = 0x4F96Fe3b7A6Cf9725f59d353F723c1bDb64CA6Aa;
     address constant mcdJoinDaiAddr = 0x5AA71a3ae1C0bd6ac27A1f28e1415fFFB6F15B8c;
     address constant mcdVatAddr = 0xbA987bDB501d131f766fEe8180Da5d81b34b69d9;
-    address constant mcdJoinEthaAddr = 0x775787933e92b709f2a3C70aa87999696e74A9F8;
-    address constant mcdJoinBataAddr = 0x2a4C485B1B8dFb46acCfbeCaF75b6188A59dBd0a;
 
-    address constant mcdPotAddr = 0xEA190DBDC7adF265260ec4dA6e9675Fd4f5A78bb;
+    address constant mcdJoinEthaAddr  = 0x775787933e92b709f2a3C70aa87999696e74A9F8;
+    address constant mcdJoinBataAddr  = 0x2a4C485B1B8dFb46acCfbeCaF75b6188A59dBd0a;
+    address constant mcdJoinUsdcaAddr = 0x4c514656E7dB7B859E994322D2b511d99105C1Eb;
+    address constant mcdJoinUsdcbAddr = 0xaca10483e7248453BB6C5afc3e403e8b7EeDF314;
+    address constant mcdJoinWbtcaAddr = 0xB879c7d51439F8e7AC6b2f82583746A0d336e63F;
+    address constant mcdJoinTusdaAddr = 0xe53f6755A031708c87d80f5B1B43c43892551c17;
+    address constant mcdJoinZrxaAddr  = 0x85D38fF6a6FCf98bD034FB5F9D72cF15e38543f2;
+    address constant mcdJoinKncaAddr  = 0xE42427325A0e4c8e194692FfbcACD92C2C381598;
+    address constant mcdJoinManaaAddr = 0xdC9Fe394B27525e0D9C827EE356303b49F607aaF;
+
+    address constant mcdPotAddr  = 0xEA190DBDC7adF265260ec4dA6e9675Fd4f5A78bb;
     address constant mcdSpotAddr = 0x3a042de6413eDB15F2784f2f97cC68C7E9750b2D;
-    address constant mcdCatAddr = 0x0511674A67192FE51e86fE55Ed660eB4f995BDd6;
-    address constant mcdJugAddr = 0xcbB7718c9F39d05aEEDE1c472ca8Bf804b2f1EaD;
-    address constant mcdEndAddr = 0x24728AcF2E2C403F5d2db4Df6834B8998e56aA5F;
+    address constant mcdCatAddr  = 0x0511674A67192FE51e86fE55Ed660eB4f995BDd6;
+    address constant mcdJugAddr  = 0xcbB7718c9F39d05aEEDE1c472ca8Bf804b2f1EaD;
+    address constant mcdEndAddr  = 0x24728AcF2E2C403F5d2db4Df6834B8998e56aA5F;
     
     address payable constant wethAddr = 0xd0A1E359811322d97991E03f863a0C30C2cF029C;
-    address payable constant batAddr = 0x9f8cFB61D3B2aF62864408DD703F9C3BEB55dff7;
+    address payable constant batAddr  = 0x9f8cFB61D3B2aF62864408DD703F9C3BEB55dff7;
+    address payable constant usdcAddr = 0xBD84be3C303f6821ab297b840a99Bd0d4c4da6b5;
+    address payable constant wbtcAddr = 0x7419f744bBF35956020C1687fF68911cD777f865;
+    address payable constant tusdAddr = 0xD6CE59F06Ff2070Dd5DcAd0866A7D8cd9270041a;
+    address payable constant zrxAddr  = 0xC2C08A566aD44129E69f8FC98684EAA28B01a6e7;
+    address payable constant kncAddr  = 0x9800a0a3c7e9682e1AEb7CAA3200854eFD4E9327;
+    address payable constant manaAddr = 0x221F4D62636b7B51b99e36444ea47Dc7831c2B2f;
+
+    address constant mcdIlkRegAddr = 0x6618BD7bBaBFacC518Fdec43542E4a73629B0819;
+
 }
 
 // File: contracts/interfaces/IMcd.sol
@@ -508,6 +628,12 @@ contract DSProxyLike {
     function setOwner(address) public;
 }
 
+contract IlkRegistryLike {
+    function pos(bytes32 ilk) public view returns (uint); 
+    function gem(bytes32) public view returns (address);
+    function join(bytes32) public view returns (address payable);
+}
+
 // File: contracts/interfaces/IERC20.sol
 
 pragma solidity 0.5.12;
@@ -527,83 +653,6 @@ interface IERC20 {
     event Approval(address indexed tokenOwner, address indexed spender, uint tokens);
 }
 
-// File: contracts/helpers/RaySupport.sol
-
-pragma solidity 0.5.12;
-
-
-/**
- * @title   RaySupport contract for ray preceision calculations
- */
-contract RaySupport {
-    using SafeMath for uint256;
-    using SafeMath for int256;
-    uint constant public ONE = 10 ** 27;
-    uint constant public HUNDRED = 100;
-
-    /**
-     * @dev     Convert uint value to Ray format
-     * @param   _val    uint value should be converted
-     */
-    function toRay(uint _val) public pure returns(uint) {
-        return _val.mul(ONE);
-    }
-
-    /**
-     * @dev     Convert uint value from Ray format
-     * @param   _val    uint value should be converted
-     */
-    function fromRay(uint _val) public pure returns(uint) {
-        return _val / ONE;
-    }
-
-    /**
-     * @dev     Convert int value to Ray format
-     * @param   _val    int value should be converted
-     */
-    function toRay(int _val) public pure returns(int) {
-        return _val.mul(int(ONE));
-    }
-
-    /**
-     * @dev     Convert int value from Ray format
-     * @param   _val    int value should be converted
-     */
-    function fromRay(int _val) public pure returns(int) {
-        return _val / int(ONE);
-    }
-
-    /**
-     * @dev     Calculate x pow n by base
-     * @param   x   value should be powered
-     * @param   n   power degree
-     * @param   base    base value
-     */
-    function rpow(uint x, uint n, uint base) public pure returns (uint z) {
-        assembly {
-            switch x case 0 {switch n case 0 {z := base} default {z := 0}}
-            default {
-                switch mod(n, 2) case 0 { z := base } default { z := x }
-                let half := div(base, 2)  // for rounding.
-                for { n := div(n, 2) } n { n := div(n,2) } {
-                    let xx := mul(x, x)
-                    if iszero(eq(div(xx, x), x)) { revert(0,0) }
-                    let xxRound := add(xx, half)
-                    if lt(xxRound, xx) { revert(0,0) }
-                    x := div(xxRound, base)
-                    if mod(n,2) {
-                        let zx := mul(z, x)
-                        if and(iszero(iszero(x)), iszero(eq(div(zx, x), z))) { revert(0,0) }
-                        let zxRound := add(zx, half)
-                        if lt(zxRound, zx) { revert(0,0) }
-                        z := div(zxRound, base)
-                    }
-                }
-            }
-        }
-    }
-}
-
 // File: contracts/mcd/McdWrapper.sol
 
 pragma solidity 0.5.12;
@@ -613,21 +662,21 @@ pragma solidity 0.5.12;
 
 
 /**
- * @title Agreement multicollateral dai wrapper for maker dao system interaction.
- * @notice delegates calls to proxy. Oriented to exact MCD release. Current version oriented to 17th release mcd cdp.
+ * @title   Agreement multicollateral dai wrapper for maker dao system interaction.
+ * @dev     delegates calls to proxy. Oriented to exact MCD release. Current version oriented to 17th release mcd cdp.
  */
 contract McdWrapper is McdAddressesR17, RaySupport {
     address payable public proxyAddress;
 
     /**
-     * @notice  Get registered proxy for current caller (msg.sender address)
+     * @dev     Get registered proxy for current caller (msg.sender address)
      */
     function proxy() public view returns (DSProxyLike) {
         return DSProxyLike(proxyAddress);
     }
 
     /**
-     * @notice  transfer exact amount of erc20 tokens, approved beforehand
+     * @dev     transfer exact amount of erc20 tokens, approved beforehand
      * @param   ilk     collateral type
      * @return  IERC20 instance
      */
@@ -637,7 +686,7 @@ contract McdWrapper is McdAddressesR17, RaySupport {
     }
 
     /**
-     * @notice  get amount of dai tokens currently locked in dsr(pot) contract.
+     * @dev     get amount of dai tokens currently locked in dsr(pot) contract.
      * @return  pie amount of all dai tokens locked in dsr
      */
     function getLockedDai() public view returns(uint256 pie, uint256 pieS) {
@@ -646,7 +695,7 @@ contract McdWrapper is McdAddressesR17, RaySupport {
     }
 
     /**
-     * @notice  get dai savings rate
+     * @dev     get dai savings rate
      * @return  dsr value in multiplier format defined by maker dao system. 100 * 10^25 - means 0% dsr. 103 * 10^25 means 3% dsr.
      */
     function getDsr() public view returns(uint) {
@@ -654,7 +703,16 @@ contract McdWrapper is McdAddressesR17, RaySupport {
     }
 
     /**
-     * @notice  Get the equivalent of exact dai amount in terms of collateral type.
+     * @dev     get collateral cost
+     * @return  Duty (base rate plus risk premium) in multiplier format, per-second accrual.
+     */
+    function getIlkDuty(bytes32 _ilkIndex) public view returns (uint) {
+        (, uint _duty) = JugLike(mcdJugAddr).ilks(_ilkIndex);
+        return _duty;
+    }
+
+    /**
+     * @dev     Get the equivalent of exact dai amount in terms of collateral type.
      * @dev     Add one more collateral token unit in case if calculated value doesn't cover dai amount
      * @param   ilk         collateral type in bytes32 format
      * @param   daiAmount   dai tokens amount
@@ -667,7 +725,7 @@ contract McdWrapper is McdAddressesR17, RaySupport {
     }
 
     /**
-     * @notice  Get current cdp main info: collateral amount, dai (debt) amount
+     * @dev     Get current cdp main info: collateral amount, dai (debt) amount
      * @param   ilk     collateral type in bytes32 format
      * @param   cdpId   cdp ID
      * @return  ink     collateral tokens amount
@@ -679,7 +737,7 @@ contract McdWrapper is McdAddressesR17, RaySupport {
     }
 
     /**
-     * @notice  Get collateral token price to USD
+     * @dev     Get collateral token price to USD
      * @param   ilk     collateral type in bytes32 format
      * @return  collateral to USD price
      */
@@ -688,7 +746,7 @@ contract McdWrapper is McdAddressesR17, RaySupport {
     }
 
     /**
-     * @notice  Get collateral token safe price to USD. Equals current origin price devided by liquidation ratio
+     * @dev     Get collateral token safe price to USD. Equals current origin price devided by liquidation ratio
      * @param   ilk     collateral type in bytes32 format
      * @return  collateral to USD price
      */
@@ -698,7 +756,7 @@ contract McdWrapper is McdAddressesR17, RaySupport {
     }
 
     /**
-     * @notice  Get collateral liquidation ratio. Percent of overcollateralization. If collateral / debt < liauidation ratio - cdp should be autoliquidated
+     * @dev     Get collateral liquidation ratio. Percent of overcollateralization. If collateral / debt < liauidation ratio - cdp should be autoliquidated
      * @param   ilk     collateral type in bytes32 format
      * @return  liquidation ratio  150 * 10^25 - means 150%
      */
@@ -708,7 +766,7 @@ contract McdWrapper is McdAddressesR17, RaySupport {
     }
 
     /**
-     * @notice  Check is cdp is unsafe already
+     * @dev     Check is cdp is unsafe already
      * @param   ilk     collateral type in bytes32 format
      * @param   cdpId   cdp ID
      * @return  true if unsafe
@@ -718,7 +776,7 @@ contract McdWrapper is McdAddressesR17, RaySupport {
     }
 
     /**
-     * @notice  Calculate available dai to be drawn in Cdp
+     * @dev     Calculate available dai to be drawn in Cdp
      * @param   ilk     collateral type in bytes32 format
      * @param   cdpId   cdp ID
      * @return  dai amount available to be drawn
@@ -730,7 +788,7 @@ contract McdWrapper is McdAddressesR17, RaySupport {
     }
 
     /**
-     * @notice  Calculate current cdp collateralization ratio
+     * @dev     Calculate current cdp collateralization ratio
      * @param   ilk     collateral type in bytes32 format
      * @param   cdpId   cdp ID
      * @return  collateralization ratio
@@ -743,7 +801,7 @@ contract McdWrapper is McdAddressesR17, RaySupport {
     }
 
     /**
-     * @notice  Get minimal collateralization ratio for collateral type
+     * @dev     Get minimal collateralization ratio for collateral type
      * @param   ilk     collateral type in bytes32 format
      * @return  minimal collateralization ratio
      */
@@ -753,7 +811,7 @@ contract McdWrapper is McdAddressesR17, RaySupport {
     }
 
     /**
-     * @notice init mcd Wrapper, build proxy
+     * @dev    init mcd Wrapper, build proxy
      * @param   ilk     collateral type in bytes32 format
      * @param   isEther  true if ether and false if erc-20 token
      */
@@ -766,14 +824,14 @@ contract McdWrapper is McdAddressesR17, RaySupport {
     }
 
     /**
-     * @notice Build proxy for current caller (msg.sender address)
+     * @dev    Build proxy for current caller (msg.sender address)
      */
     function _buildProxy() internal {
         proxyAddress = ProxyRegistryLike(proxyRegistryAddr).build();
     }
 
     /**
-     * @notice  Change proxy owner to a new one
+     * @dev     Change proxy owner to a new one
      * @param   newOwner new owner address
      */
     function _setOwnerProxy(address newOwner) internal {
@@ -781,7 +839,7 @@ contract McdWrapper is McdAddressesR17, RaySupport {
     }
 
     /**
-     * @notice  Lock additional ether as collateral
+     * @dev     Lock additional ether as collateral
      * @param   ilk     collateral type in bytes32 format
      * @param   cdp     cdp id
      * @param   wadC    collateral amount to be locked in cdp contract
@@ -793,11 +851,11 @@ contract McdWrapper is McdAddressesR17, RaySupport {
             "lockETH(address,address,uint256)",
             cdpManagerAddr, collateralJoinAddr, cdp);
         (bool success,) = proxyAddress.call.value(wadC)(abi.encodeWithSignature("execute(address,bytes)", proxyLib, data));
-        require(success);
+        require(success, "failed to lock eth");
     }
 
     /**
-     * @notice  Lock additional erc-20 tokens as collateral
+     * @dev     Lock additional erc-20 tokens as collateral
      * @param   ilk     collateral type in bytes32 format
      * @param   cdp     cdp id
      * @param   wadC    collateral amount to be locked in cdp contract
@@ -813,7 +871,7 @@ contract McdWrapper is McdAddressesR17, RaySupport {
     }
 
     /**
-     * @notice  Create new cdp with Ether as collateral, lock collateral and draw dai
+     * @dev     Create new cdp with Ether as collateral, lock collateral and draw dai
      * @dev     build new Proxy for a caller before cdp creation
      * @param   ilk     collateral type in bytes32 format
      * @param   wadC    collateral amount to be locked in cdp contract
@@ -847,7 +905,7 @@ contract McdWrapper is McdAddressesR17, RaySupport {
     }
 
     /**
-     * @notice  Create new cdp with ERC-20 tokens as collateral, lock collateral and draw dai
+     * @dev     Create new cdp with ERC-20 tokens as collateral, lock collateral and draw dai
      * @dev     build new Proxy for a caller before cdp creation and approve transferFrom collateral token from Agrrement by Proxy
      * @param   ilk     collateral type in bytes32 format
      * @param   wadC    collateral amount to be locked in cdp contract
@@ -868,7 +926,7 @@ contract McdWrapper is McdAddressesR17, RaySupport {
     }
 
     /**
-     * @notice  inject(wipe) some amount of dai to cdp from agreement (pay off some amount of dai to cdp)
+     * @dev     inject(wipe) some amount of dai to cdp from agreement (pay off some amount of dai to cdp)
      * @param   cdp   cdp ID
      * @param   wad   amount of dai tokens
      */
@@ -882,7 +940,7 @@ contract McdWrapper is McdAddressesR17, RaySupport {
     }
 
     /**
-     * @notice  draw dai into cdp contract, if not enough - draw max available dai
+     * @dev     draw dai into cdp contract, if not enough - draw max available dai
      * @param   ilk   collateral type in bytes32 format
      * @param   cdp   cdp ID
      * @param   wad   amount of dai tokens
@@ -898,9 +956,8 @@ contract McdWrapper is McdAddressesR17, RaySupport {
                 "draw(address,address,address,uint256,uint256)",
                 cdpManagerAddr, mcdJugAddr, mcdJoinDaiAddr, cdp, drawnDai));
     }
-
     /**
-     * @notice  lock dai tokens to dsr(pot) contract.
+     * @dev     lock dai tokens to dsr(pot) contract.
      * @dev     approves this amount of dai tokens to proxy before locking
      * @param   wad amount of dai tokens
      */
@@ -913,7 +970,7 @@ contract McdWrapper is McdAddressesR17, RaySupport {
     }
 
     /**
-     * @notice  unlock dai tokens from dsr(pot) contract.
+     * @dev     unlock dai tokens from dsr(pot) contract.
      * @param   wad amount of dai tokens
      * @return  actually unlocked amount of dai
      */
@@ -928,7 +985,7 @@ contract McdWrapper is McdAddressesR17, RaySupport {
     }
 
     /**
-     * @notice  unlock all dai tokens from dsr(pot) contract.
+     * @dev     unlock all dai tokens from dsr(pot) contract.
      * @return  pie amount of all dai tokens was unlocked in fact
      */
     function _unlockAllDai() internal returns(uint pie) {
@@ -942,21 +999,7 @@ contract McdWrapper is McdAddressesR17, RaySupport {
     }
 
     /**
-     * @notice  recovers remaining ETH from cdp (pays remaining debt if exists)
-     * @param   ilk     collateral type in bytes32 format
-     * @param   cdp cdp ID
-     */
-    function _freeETH(bytes32 ilk, uint cdp) internal {
-        (address collateralJoinAddr,) = _getCollateralAddreses(ilk);
-        proxy().execute(
-            proxyLibEnd,
-            abi.encodeWithSignature(
-                "freeETH(address,address,address,uint)",
-                cdpManagerAddr, collateralJoinAddr, mcdEndAddr, cdp));
-    }
-
-    /**
-     * @notice  Approve exact amount of dai tokens for transferFrom
+     * @dev     Approve exact amount of dai tokens for transferFrom
      * @param   to      address allowed to call transferFrom
      * @param   amount  tokens amount for approval
      */
@@ -966,7 +1009,7 @@ contract McdWrapper is McdAddressesR17, RaySupport {
     }
 
     /**
-     * @notice  Approve exact amount of erc20 tokens for transferFrom
+     * @dev     Approve exact amount of erc20 tokens for transferFrom
      * @param   ilk     collateral type
      * @param   to      address allowed to call transferFrom
      * @param   amount  tokens amount for approval
@@ -977,7 +1020,7 @@ contract McdWrapper is McdAddressesR17, RaySupport {
     }
 
     /**
-     * @notice  transfer exact amount of dai tokens
+     * @dev     Transfer exact amount of dai tokens
      * @param   to      address of recepient
      * @param   amount  tokens amount
      */
@@ -987,7 +1030,7 @@ contract McdWrapper is McdAddressesR17, RaySupport {
     }
 
     /**
-     * @notice  transfer exact amount of erc20 tokens
+     * @dev     Transfer exact amount of erc20 tokens
      * @param   ilk     collateral type
      * @param   to      address of recepient
      * @param   amount  tokens amount
@@ -998,7 +1041,7 @@ contract McdWrapper is McdAddressesR17, RaySupport {
     }
 
     /**
-     * @notice  transfer exact amount of dai tokens, approved beforehand
+     * @dev     Transfer exact amount of dai tokens, approved beforehand
      * @param   from    address of spender
      * @param   to      address of recepient
      * @param   amount  tokens amount
@@ -1008,20 +1051,7 @@ contract McdWrapper is McdAddressesR17, RaySupport {
     }
 
     /**
-     * @notice  try transfer exact amount of dai tokens, approved beforehand
-     * @param   from    address of spender
-     * @param   to      address of recepient
-     * @param   amount  tokens amount
-     */
-    function _callTransferFromDai(address from, address to, uint amount) internal returns(bool) {
-        if ((IERC20(mcdDaiAddr).allowance(from, to) >= amount) && (IERC20(mcdDaiAddr).balanceOf(from) >= amount)) {
-            return _transferFromDai(from, to, amount);
-        }
-        return false;
-    }
-
-    /**
-     * @notice  transfer exact amount of erc20 tokens, approved beforehand
+     * @dev     Transfer exact amount of erc20 tokens, approved beforehand
      * @param   ilk     collateral type
      * @param   from    address of spender
      * @param   to      address of recepient
@@ -1032,7 +1062,7 @@ contract McdWrapper is McdAddressesR17, RaySupport {
     }
 
     /**
-     * @notice  Transfer Cdp ownership to guy's proxy
+     * @dev     Transfer Cdp ownership to guy's proxy
      * @param   cdp     cdp ID
      * @param   guy     address, ownership should be transfered to
      */
@@ -1045,7 +1075,7 @@ contract McdWrapper is McdAddressesR17, RaySupport {
     }
 
     /**
-     * @notice  Get balance of dai tokens
+     * @dev     Get balance of dai tokens
      * @param   addr      address
      */
     function _balanceDai(address addr) internal view returns(uint) {
@@ -1053,19 +1083,35 @@ contract McdWrapper is McdAddressesR17, RaySupport {
     }
 
     /**
-     * @notice  transfer exact amount of erc20 tokens, approved beforehand
-     * @param   ilk     collateral type
+     * @dev     Transfer exact amount of erc20 tokens, approved beforehand
+     * @param   ilk     collateral type 
      * @return  token adapter address
      * @return  token erc20 contract address
      */
-    function _getCollateralAddreses(bytes32 ilk) internal pure returns(address, address payable) {
+    function _getCollateralAddreses(bytes32 ilk) internal view returns(address, address payable) {
+
         if (ilk == "ETH-A") {
             return (mcdJoinEthaAddr, wethAddr);
         }
         if (ilk == "BAT-A") {
             return (mcdJoinBataAddr, batAddr);
         }
+        if (ilk == "WBTC-A") {
+            return (mcdJoinWbtcaAddr, wbtcAddr);
+        }
+        if (ilk == "USDC-A") {
+            return (mcdJoinUsdcaAddr, usdcAddr);
+        }
+        if (ilk == "USDC-B") {
+            return (mcdJoinUsdcbAddr, usdcAddr);
+        }
+
+        // actual registry
+        address _gem = IlkRegistryLike(mcdIlkRegAddr).gem(ilk);
+        address payable _join = IlkRegistryLike(mcdIlkRegAddr).join(ilk);
+        return (_gem, _join);        
     }
+    
 }
 
 // File: contracts/interfaces/IAgreement.sol
@@ -1080,7 +1126,7 @@ interface IAgreement {
     enum Statuses {All, Pending, Open, Active, Closed}
     enum ClosedTypes {Ended, Liquidated, Blocked, Cancelled}
 
-    function initAgreement(address payable, uint256, uint256, uint256, uint256, bytes32, bool, address) external payable;
+    function initAgreement(address payable, uint256, uint256, uint256, uint256, bytes32, bytes32, bool, address) external payable;
 
     function transferOwnership(address) external;
     function claimOwnership() external;
@@ -1135,7 +1181,7 @@ pragma solidity 0.5.12;
 
 /**
  * @title Base Agreement contract
- * @notice Contract will be deployed only once as logic(implementation), proxy will be deployed by FraFactory for each agreement as storage
+ * @dev Contract will be deployed only once as logic(implementation), proxy will be deployed by FraFactory for each agreement as storage
  */
 contract Agreement is IAgreement, ClaimableIni, McdWrapper {
     using SafeMath for uint;
@@ -1208,6 +1254,11 @@ contract Agreement is IAgreement, ClaimableIni, McdWrapper {
      */
     bytes32 public collateralType;
 
+    /** 
+     * uint ilk index in Jug and IlkRegistry
+     */
+    bytes32 ilkIndex;
+
     /**
      * Collateral amount
      */
@@ -1244,14 +1295,14 @@ contract Agreement is IAgreement, ClaimableIni, McdWrapper {
     uint public injectedTotal;
 
     /**
-     * delta shows user's debt
+     * Delta shows user's debt
      * if delta < 0 - it is borrower's debt to lender
      * if delta > 0 - it is lender's debt to borrower
      */
     int public delta;
-    
+
     /**
-     * @notice Grants access only to agreement's borrower
+     * @dev  Grants access only to agreement's borrower
      */
     modifier onlyBorrower() {
         require(msg.sender == borrower, "Agreement: Accessible only for borrower");
@@ -1259,8 +1310,8 @@ contract Agreement is IAgreement, ClaimableIni, McdWrapper {
     }
 
     /**
-     * @notice Grants access only if agreement has appropriate status
-     * @param _status status should be checked with
+     * @dev  Grants access only if agreement has appropriate status
+     * @param   _status status should be checked with
      */
     modifier hasStatus(Statuses _status) {
         require(status == _status, "Agreement: Agreement status is incorrect");
@@ -1268,8 +1319,8 @@ contract Agreement is IAgreement, ClaimableIni, McdWrapper {
     }
 
     /**
-     * @notice Grants access only if agreement has status before requested one
-     * @param _status check before status
+     * @dev  Grants access only if agreement has status before requested one
+     * @param   _status check before status
      */
     modifier beforeStatus(Statuses _status) {
         require(status < _status, "Agreement: Agreement status is not before requested one");
@@ -1277,22 +1328,15 @@ contract Agreement is IAgreement, ClaimableIni, McdWrapper {
     }
 
     /**
-    * @notice Save timestamp for current status
-    */
-    function _doStatusSnapshot() internal {
-        statusSnapshots[uint(status)] = now;
-    }
-
-    /**
-     * @notice Initialize new agreement
-     * @param _borrower borrower address
-     * @param _collateralAmount value of borrower's collateral amount put into the contract as collateral or approved to transferFrom
-     * @param _debtValue value of debt
-     * @param _duration number of seconds which agreement should be terminated after
-     * @param _interestRate percent of interest rate, should be passed like RAY
-     * @param _collateralType type of collateral, should be passed as bytes32
-     * @param _isETH true if ether and false if erc-20 token
-     * @param _configAddr config contract address
+     * @dev  Initialize new agreement
+     * @param   _borrower       borrower address
+     * @param   _collateralAmount value of borrower's collateral amount put into the contract as collateral or approved to transferFrom
+     * @param   _debtValue      value of debt
+     * @param   _duration       number of seconds which agreement should be terminated after
+     * @param   _interestRate   percent of interest rate, should be passed like RAY
+     * @param   _collateralType type of collateral, should be passed as bytes32
+     * @param   _isETH          true if ether and false if erc-20 token
+     * @param   _configAddr     config contract address
      */
     function initAgreement(
         address payable _borrower,
@@ -1301,22 +1345,25 @@ contract Agreement is IAgreement, ClaimableIni, McdWrapper {
         uint256 _duration,
         uint256 _interestRate,
         bytes32 _collateralType,
-        bool _isETH,
+        bytes32 _ilkIndex,
+        bool    _isETH,
         address _configAddr
     ) public payable initializer {
         ClaimableIni.initialize();
 
         require(Config(_configAddr).isCollateralEnabled(_collateralType), "Agreement: collateral type is currencly disabled");
         require(_debtValue > 0, "Agreement: debt is zero");
-        require((_collateralAmount > Config(_configAddr).minCollateralAmount()) &&
+        require(
+            (_collateralAmount > Config(_configAddr).minCollateralAmount()) &&
             (_collateralAmount < Config(_configAddr).maxCollateralAmount()), "Agreement: collateral value does not match min and max");
-        require((_interestRate > ONE) && 
+        require(
+            (_interestRate > ONE) &&
             (_interestRate <= ONE * 2), "Agreement: interestRate should be between 0 and 100 %");
-        require((_duration > Config(_configAddr).minDuration()) &&
+        require(
+            (_duration > Config(_configAddr).minDuration()) &&
             (_duration < Config(_configAddr).maxDuration()), "Agreement: duration value does not match min and max");
-        if (_isETH) {
-            require(msg.value == _collateralAmount, "Agreement: Actual ehter sent value is not correct");
-        }
+        require(!_isETH || msg.value == _collateralAmount, "Agreement: Actual ehter sent value is not correct");
+    
         configAddr = _configAddr;
         isETH = _isETH;
         borrower = _borrower;
@@ -1325,16 +1372,17 @@ contract Agreement is IAgreement, ClaimableIni, McdWrapper {
         interestRate = _interestRate;
         collateralAmount = _collateralAmount;
         collateralType = _collateralType;
-        
+        ilkIndex = _ilkIndex;
+
         _nextStatus();
         _initMcdWrapper(collateralType, isETH);
         emit AgreementInitiated(borrower, collateralAmount, debtValue, duration, interestRate);
 
         _monitorRisky();
     }
-    
+
     /**
-     * @notice Approve the agreement. Only for contract owner (FraFactory)
+     * @dev Approve the agreement. Only for contract owner (FraFactory)
      * @return Operation success
      */
     function approveAgreement() external onlyContractOwner hasStatus(Statuses.Pending) returns(bool _success) {
@@ -1343,9 +1391,9 @@ contract Agreement is IAgreement, ClaimableIni, McdWrapper {
 
         return true;
     }
-    
+
     /**
-     * @notice Match lender to the agreement.
+     * @dev Match lender to the agreement.
      * @return Operation success
      */
     function matchAgreement() external hasStatus(Statuses.Open) returns(bool _success) {
@@ -1365,7 +1413,7 @@ contract Agreement is IAgreement, ClaimableIni, McdWrapper {
         }
         uint drawnDai = _balanceDai(address(this));
         // due to the lack of preceision in mcd cdp contracts drawn dai can be less by 1 dai wei
-        
+
         emit AgreementMatched(lender, expireDate, cdpId, collateralAmount, debtValue, drawnDai);
         _pushDaiAsset(borrower, debtValue < drawnDai ? debtValue : drawnDai);
 
@@ -1373,10 +1421,9 @@ contract Agreement is IAgreement, ClaimableIni, McdWrapper {
     }
 
     /**
-     * @notice Update agreement state
-     * @dev Calls needed function according to the expireDate
-     * (terminates or liquidated or updates the agreement)
-     * @return Operation success
+     * @dev     Update Agreement state. Calls needed function according to the expireDate
+     *          (terminates or liquidated or updates the agreement)
+     * @return  Operation success
      */
     function updateAgreement() external onlyContractOwner hasStatus(Statuses.Active) returns(bool _success) {
         if (now > expireDate) {
@@ -1394,8 +1441,8 @@ contract Agreement is IAgreement, ClaimableIni, McdWrapper {
     }
 
     /**
-     * @notice Cancel agreement by borrower before it is matched, change status to the correspondant one, refund
-     * @return Operation success
+     * @dev  Cancel agreement by borrower before it is matched, change status to the correspondant one, refund
+     * @return  Operation success
      */
     function cancelAgreement() external onlyBorrower beforeStatus(Statuses.Active) returns(bool _success)  {
         _closeAgreement(ClosedTypes.Cancelled);
@@ -1405,8 +1452,8 @@ contract Agreement is IAgreement, ClaimableIni, McdWrapper {
     }
 
     /**
-     * @notice Reject agreement by admin or cron job before it is matched, change status to the correspondant one, refund
-     * @return Operation success
+     * @dev  Reject agreement by admin or cron job before it is matched, change status to the correspondant one, refund
+     * @return  Operation success
      */
     function rejectAgreement() external onlyContractOwner beforeStatus(Statuses.Active) returns(bool _success)  {
         _closeAgreement(ClosedTypes.Cancelled);
@@ -1416,8 +1463,8 @@ contract Agreement is IAgreement, ClaimableIni, McdWrapper {
     }
 
     /**
-     * @notice Block active agreement, change status to the correspondant one, refund
-     * @return Operation success
+     * @dev  Block active agreement, change status to the correspondant one, refund
+     * @return  Operation success
      */
     function blockAgreement() external hasStatus(Statuses.Active) onlyContractOwner returns(bool _success)  {
         _closeAgreement(ClosedTypes.Blocked);
@@ -1426,8 +1473,9 @@ contract Agreement is IAgreement, ClaimableIni, McdWrapper {
     }
 
     /**
-     * @notice Lock additional ether as collateral to agreement cdp contract
-     * @return Operation success
+     * @dev  Lock additional ether as collateral to agreement cdp contract
+     * @param   _amount collateral amount for additional lock
+     * @return  Operation success
      */
     function lockAdditionalCollateral(uint _amount) external payable onlyBorrower beforeStatus(Statuses.Closed) returns(bool _success)  {
         if (!isETH) {
@@ -1448,8 +1496,8 @@ contract Agreement is IAgreement, ClaimableIni, McdWrapper {
     }
 
     /**
-     * @notice withdraw dai to user's external wallet
-     * @param _amount dai amount for withdrawal
+     * @dev  Withdraw dai to user's external wallet
+     * @param   _amount dai amount for withdrawal
      */
     function withdrawDai(uint _amount) external {
         _popDaiAsset(msg.sender, _amount);
@@ -1457,8 +1505,8 @@ contract Agreement is IAgreement, ClaimableIni, McdWrapper {
     }
 
     /**
-     * @notice withdraw collateral to user's (msg.sender) external wallet from internal wallet
-     * @param _amount collateral amount for withdrawal
+     * @dev  Withdraw collateral to user's (msg.sender) external wallet from internal wallet
+     * @param   _amount collateral amount for withdrawal
      */
     function withdrawCollateral(uint _amount) external {
         _popCollateralAsset(msg.sender, _amount);
@@ -1470,9 +1518,9 @@ contract Agreement is IAgreement, ClaimableIni, McdWrapper {
     }
 
     /**
-     * @notice Withdraw accidentally locked ether in the contract, can be called only after agreement is closed and all assets are refunded
-     * @dev Check the current balance is more than users ether assets, and withdraw the remaining ether
-     * @param _to address should be withdrawn to
+     * @dev     Withdraw accidentally locked ether in the contract, can be called only after agreement is closed and all assets are refunded
+     *          Check the current balance is more than users ether assets, and withdraw the remaining ether
+     * @param   _to address should be withdrawn to
      */
     function withdrawRemainingEth(address payable _to) external hasStatus(Statuses.Closed) onlyContractOwner {
         uint _remainingEth = isETH ?
@@ -1483,7 +1531,7 @@ contract Agreement is IAgreement, ClaimableIni, McdWrapper {
     }
 
     /**
-     * @notice Get agreement main info
+     * @dev     Get agreement main info
      */
     function getInfo() external view returns(
         address _addr,
@@ -1512,51 +1560,51 @@ contract Agreement is IAgreement, ClaimableIni, McdWrapper {
     }
 
     /**
-     * @notice Get user assets available for withdrawal
-     * @param _holder address of lender or borrower
-     * @return collateral amount
-     * @return dai amount
+     * @dev     Get user assets available for withdrawal
+     * @param   _holder address of lender or borrower
+     * @return  collateral amount
+     * @return  dai amount
      */
     function getAssets(address _holder) public view returns(uint,uint) {
         return (assets[_holder].collateral, assets[_holder].dai);
     }
 
     /**
-     * @notice Check if agreement has appropriate status
-     * @param _status status should be checked with
+     * @dev     Check if agreement has appropriate status
+     * @param   _status status should be checked with
      */
     function isStatus(Statuses _status) public view returns(bool) {
         return status == _status;
     }
 
     /**
-     * @notice Check if agreement has status before requested one
-     * @param _status check before status
+     * @dev     Check if agreement has status before requested one
+     * @param   _status check before status
      */
     function isBeforeStatus(Statuses _status) public view returns(bool) {
         return status < _status;
     }
 
     /**
-     * @notice Check if agreement is closed with appropriate type
-     * @param _type type should be checked with
+     * @dev     Check if agreement is closed with appropriate type
+     * @param   _type type should be checked with
      */
     function isClosedWithType(ClosedTypes _type) public view returns(bool) {
         return isStatus(Statuses.Closed) && (closedType == _type);
     }
 
     /**
-     * @notice Borrower debt according to FRA
+     * @dev     Borrower debt according to FRA
      */
     function borrowerFraDebt() public view returns(uint) {
         return (delta < 0) ? uint(fromRay(-delta)) : 0;
     }
 
     /**
-     * @notice check whether pending or open agreement should be canceled automatically by cron
-     * @param _approveLimit approve limit secods
-     * @param _matchLimit match limit secods
-     * @return true if should be cancelled
+     * @dev     check whether pending or open agreement should be canceled automatically by cron
+     * @param   _approveLimit approve limit secods
+     * @param   _matchLimit match limit secods
+     * @return  true if should be cancelled
      */
     function checkTimeToCancel(uint _approveLimit, uint _matchLimit) public view returns(bool){
         if ((isStatus(Statuses.Pending) && now > statusSnapshots[uint(Statuses.Pending)].add(_approveLimit)) ||
@@ -1567,33 +1615,40 @@ contract Agreement is IAgreement, ClaimableIni, McdWrapper {
     }
 
     /**
-     * @notice get collateralization ratio, if cdp is already opened - get cdp CR, if no - calculate according to agreement initial parameters
-     * @return collateralization ratio in RAY
+     * @dev     get collateralization ratio, if cdp is already opened - get cdp CR, if no - calculate according to agreement initial parameters
+     * @return  collateralization ratio in RAY
      */
     function getCR() public view returns(uint) {
         return cdpId > 0 ? getCdpCR(collateralType, cdpId) : collateralAmount.mul(getPrice(collateralType)).div(debtValue);
     }
 
     /**
-     * @notice get collateralization ratio buffer (difference between current CR and minimal one)
-     * @return buffer percents
+     * @dev     get collateralization ratio buffer (difference between current CR and minimal one)
+     * @return  buffer percents
      */
     function getCRBuffer() public view returns(uint) {
         return getCR() <= getMCR(collateralType) ? 0 : getCR().sub(getMCR(collateralType)).mul(100).div(ONE);
     }
 
     /**
-     * @notice get address of Dai token contract
-     * @return dai address
+     * @dev     get address of Dai token contract
+     * @return  dai address
      */
     function getDaiAddress() public view returns(address) {
         return mcdDaiAddr;
     }
 
     /**
-     * @notice Close agreement
+    * @dev      Save timestamp for current status
+    */
+    function _doStatusSnapshot() internal {
+        statusSnapshots[uint(status)] = now;
+    }
+
+    /**
+     * @dev     Close agreement
      * @param   _closedType closing type
-     * @return Operation success
+     * @return  Operation success
      */
     function _closeAgreement(ClosedTypes _closedType) internal returns(bool _success) {
         _switchStatusClosedWithType(_closedType);
@@ -1603,22 +1658,29 @@ contract Agreement is IAgreement, ClaimableIni, McdWrapper {
     }
 
     /**
-     * @notice Updates the state of Agreement
-     * @param _isLastUpdate true if the agreement is going to be terminated, false otherwise
-     * @return Operation success
+     * @dev     Updates the state of Agreement
+     * @param   _isLastUpdate true if the agreement is going to be terminated, false otherwise
+     * @return  Operation success
      */
-    function _updateAgreementState(bool _isLastUpdate) public returns(bool _success) {
+    function _updateAgreementState(bool _isLastUpdate) internal returns(bool _success) {
         // if it is last update take the time interval up to expireDate, otherwise up to current time
         uint timeInterval = (_isLastUpdate ? expireDate : now).sub(lastCheckTime);
         uint injectionAmount;
         uint drawnDai;
-        uint currentDsrAnnual = rpow(getDsr(), YEAR_SECS, ONE);
+        uint currentDsrAnnual  = rpow(getDsr(), YEAR_SECS, ONE);
+        uint currentDutyAnnual = rpow(getIlkDuty(ilkIndex), YEAR_SECS, ONE);
+        uint ourFeeAnnual      = rpow(Config(configAddr).acapFee(), YEAR_SECS, ONE);
 
         // calculate savings difference between dsr and interest rate during time interval
-        int savingsDifference = int(debtValue.mul(timeInterval)).mul((int(currentDsrAnnual)).sub(int(interestRate))).div(int(YEAR_SECS));
+
+        // todo debt value used not updated
+        int savingsDifference =      int(   debtValue.mul(timeInterval) )
+                                    .mul(  (int(currentDsrAnnual)).sub(int(interestRate))  ) 
+                                    .div(   int(YEAR_SECS) );
+         
+        
         delta = delta.add(savingsDifference);
         lastCheckTime = now;
-
         uint currentDebt = uint(fromRay(delta < 0 ? -delta : delta));
 
         // check the current debt is above threshold
@@ -1646,7 +1708,7 @@ contract Agreement is IAgreement, ClaimableIni, McdWrapper {
     }
 
     /**
-     * @notice Monitor and set up or set down risky marker
+     * @dev     Monitor and set up or set down risky marker
      */
     function _monitorRisky() internal {
         bool _isRisky = getCRBuffer() <= Config(configAddr).riskyMargin();
@@ -1657,8 +1719,8 @@ contract Agreement is IAgreement, ClaimableIni, McdWrapper {
     }
 
     /**
-     * @notice Refund agreement, push dai to lender assets, transfer cdp ownership to borrower if debt is payed
-     * @return Operation success
+     * @dev     Refund agreement, push dai to lender assets, transfer cdp ownership to borrower if debt is payed
+     * @return  Operation success
      */
     function _refund() internal {
         _pushDaiAsset(lender, _unlockAllDai());
@@ -1667,15 +1729,15 @@ contract Agreement is IAgreement, ClaimableIni, McdWrapper {
     }
 
     /**
-     * @notice Serial status transition
+     * @dev     Serial status transition
      */
     function _nextStatus() internal {
         _switchStatus(Statuses(uint(status) + 1));
     }
 
     /**
-    * @notice switch to exact status
-    * @param _next status that should be switched to
+    * @dev      switch to exact status
+    * @param    _next status that should be switched to
     */
     function _switchStatus(Statuses _next) internal {
         status = _next;
@@ -1683,8 +1745,8 @@ contract Agreement is IAgreement, ClaimableIni, McdWrapper {
     }
 
     /**
-    * @notice switch status to closed with exact type
-    * @param _closedType closing type
+    * @dev      switch status to closed with exact type
+    * @param    _closedType closing type
     */
     function _switchStatusClosedWithType(ClosedTypes _closedType) internal {
         _switchStatus(Statuses.Closed);
@@ -1692,9 +1754,9 @@ contract Agreement is IAgreement, ClaimableIni, McdWrapper {
     }
 
     /**
-     * @notice Add collateral to user's internal wallet
-     * @param _holder user's address
-     * @param _amount collateral amount to push
+     * @dev     Add collateral to user's internal wallet
+     * @param   _holder user's address
+     * @param   _amount collateral amount to push
      */
     function _pushCollateralAsset(address _holder, uint _amount) internal {
         assets[_holder].collateral = assets[_holder].collateral.add(_amount);
@@ -1702,9 +1764,9 @@ contract Agreement is IAgreement, ClaimableIni, McdWrapper {
     }
 
     /**
-     * @notice Add dai to user's internal wallet
-     * @param _holder user's address
-     * @param _amount dai amount to push
+     * @dev     Add dai to user's internal wallet
+     * @param   _holder user's address
+     * @param   _amount dai amount to push
      */
     function _pushDaiAsset(address _holder, uint _amount) internal {
         assets[_holder].dai = assets[_holder].dai.add(_amount);
@@ -1712,9 +1774,9 @@ contract Agreement is IAgreement, ClaimableIni, McdWrapper {
     }
 
     /**
-     * @notice Take away collateral from user's internal wallet
-     * @param _holder user's address
-     * @param _amount collateral amount to pop
+     * @dev     Take away collateral from user's internal wallet
+     * @param   _holder user's address
+     * @param   _amount collateral amount to pop
      */
     function _popCollateralAsset(address _holder, uint _amount) internal {
         assets[_holder].collateral = assets[_holder].collateral.sub(_amount);
@@ -1722,9 +1784,9 @@ contract Agreement is IAgreement, ClaimableIni, McdWrapper {
     }
 
     /**
-     * @notice Take away dai from user's internal wallet
-     * @param _holder user's address
-     * @param _amount dai amount to pop
+     * @dev     Take away dai from user's internal wallet
+     * @param   _holder user's address
+     * @param   _amount dai amount to pop
      */
     function _popDaiAsset(address _holder, uint _amount) internal {
         assets[_holder].dai = assets[_holder].dai.sub(_amount);

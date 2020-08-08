@@ -82,6 +82,11 @@ contract Agreement is IAgreement, ClaimableIni, McdWrapper {
      */
     bytes32 public collateralType;
 
+    /** 
+     * uint ilk index in Jug and IlkRegistry
+     */
+    bytes32 ilkIndex;
+
     /**
      * Collateral amount
      */
@@ -168,7 +173,8 @@ contract Agreement is IAgreement, ClaimableIni, McdWrapper {
         uint256 _duration,
         uint256 _interestRate,
         bytes32 _collateralType,
-        bool _isETH,
+        bytes32 _ilkIndex,
+        bool    _isETH,
         address _configAddr
     ) public payable initializer {
         ClaimableIni.initialize();
@@ -194,6 +200,7 @@ contract Agreement is IAgreement, ClaimableIni, McdWrapper {
         interestRate = _interestRate;
         collateralAmount = _collateralAmount;
         collateralType = _collateralType;
+        ilkIndex = _ilkIndex;
 
         _nextStatus();
         _initMcdWrapper(collateralType, isETH);
@@ -488,13 +495,20 @@ contract Agreement is IAgreement, ClaimableIni, McdWrapper {
         uint timeInterval = (_isLastUpdate ? expireDate : now).sub(lastCheckTime);
         uint injectionAmount;
         uint drawnDai;
-        uint currentDsrAnnual = rpow(getDsr(), YEAR_SECS, ONE);
+        uint currentDsrAnnual  = rpow(getDsr(), YEAR_SECS, ONE);
+        uint currentDutyAnnual = rpow(getIlkDuty(ilkIndex), YEAR_SECS, ONE);
+        uint ourFeeAnnual      = rpow(Config(configAddr).acapFee(), YEAR_SECS, ONE);
 
         // calculate savings difference between dsr and interest rate during time interval
-        int savingsDifference = int(debtValue.mul(timeInterval)).mul((int(currentDsrAnnual)).sub(int(interestRate))).div(int(YEAR_SECS));
+
+        // todo debt value used not updated
+        int savingsDifference =      int(   debtValue.mul(timeInterval) )
+                                    .mul(  (int(currentDsrAnnual)).sub(int(interestRate))  ) 
+                                    .div(   int(YEAR_SECS) );
+         
+        
         delta = delta.add(savingsDifference);
         lastCheckTime = now;
-
         uint currentDebt = uint(fromRay(delta < 0 ? -delta : delta));
 
         // check the current debt is above threshold

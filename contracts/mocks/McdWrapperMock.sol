@@ -47,7 +47,7 @@ contract McdWrapperMock is McdWrapper {
         _transferCdpOwnershipToProxy(cdp, guy);
     }
 
-    function getCollateralAddreses(bytes32 ilk) public pure returns(address mcdJoinEthaAddr, address payable wethAddr) {
+    function getCollateralAddreses(bytes32 ilk) public view returns(address, address payable) {
         return _getCollateralAddreses(ilk);
     }
 
