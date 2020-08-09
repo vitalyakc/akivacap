@@ -36,7 +36,7 @@ interface IAgreement {
     function withdrawDai(uint) external;
     function getDaiAddress() external view returns(address);
 
-    function getInfo() external view returns (address,uint,uint,uint,address,address,bytes32,uint,uint,uint,bool);
+    function getInfo() external view returns (address,uint,uint,uint,address,address,bytes32,bytes32,uint,uint,uint,bool);
 
     event AgreementInitiated(address _borrower, uint _collateralValue, uint _debtValue, uint _expireDate, uint _interestRate);
     event AgreementApproved();

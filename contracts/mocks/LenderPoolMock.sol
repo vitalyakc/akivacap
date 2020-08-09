@@ -7,7 +7,7 @@ import "../interfaces/IAgreement.sol";
 contract LenderPoolMock is LenderPool {
 
     uint debtValue = 20000000;
-    uint interestRate = 1030000000000000000000000000;
+    uint interestRate = 1000000000937303470807876289;  // per sec 3%
     uint duration = 10000;
     bool isStatusMock = true;
     uint daiAsset;

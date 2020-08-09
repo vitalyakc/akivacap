@@ -30,8 +30,8 @@ contract FraFactory is Administrable {
      * @param _debtValue value of borrower's ETH put into the contract as collateral
      * @param _duration number of minutes which agreement should be terminated after
      * @param _interestRate percent of interest rate, should be passed like RAY
-     * @param _collateralType type of collateral, should be passed as bytes32
-     * @param _ilkIndex index of collateral in Maker structures
+     * @param _collateralType type of collateral, should be passed as bytes32 - useless
+     * @param _ilkIndex index of collateral in Maker structures - useless
      * @return agreement address
      */
     function initAgreementETH (
@@ -53,8 +53,9 @@ contract FraFactory is Administrable {
      * @dev Requests agreement on ERC-20 collateralType
      * @param _debtValue value of borrower's collateral
      * @param _duration number of minutes which agreement should be terminated after
-     * @param _interestRate percent of interest rate, should be passed like
+     * @param _interestRate percent of interest rate, should be passed like RAY 
      * @param _collateralType type of collateral, should be passed as bytes32
+     * @param _ilkIndex ilk id from ilk registry 
      * @return agreement address
      */
     function initAgreementERC20 (
@@ -66,6 +67,9 @@ contract FraFactory is Administrable {
         bytes32 _ilkIndex
     ) external returns(address _newAgreement) {
         address payable agreementProxyAddr = address(new UpgradeabilityProxy(agreementImpl, ""));
+
+        // recalculate interest rate 
+        // 
         IAgreement(agreementProxyAddr).
             initAgreement(msg.sender, _collateralValue, _debtValue, _duration, _interestRate, _collateralType, _ilkIndex, false, configAddr);
 

@@ -85,7 +85,7 @@ contract Agreement is IAgreement, ClaimableIni, McdWrapper {
     /** 
      * uint ilk index in Jug and IlkRegistry
      */
-    bytes32 ilkIndex;
+    bytes32 public ilkIndex;
 
     /**
      * Collateral amount
@@ -93,9 +93,9 @@ contract Agreement is IAgreement, ClaimableIni, McdWrapper {
     uint256 public collateralAmount;
 
     /**
-     * Dai debt amount
+     * Dai debt amount of CDP at the last update
      */
-    uint256 public debtValue;
+    uint256 public cdpDebtValue;
 
     /**
      * Fixed intereast rate %
@@ -123,11 +123,21 @@ contract Agreement is IAgreement, ClaimableIni, McdWrapper {
     uint public injectedTotal;
 
     /**
-     * Delta shows user's debt
+     * Delta shows user's debt (ray units)
      * if delta < 0 - it is borrower's debt to lender
      * if delta > 0 - it is lender's debt to borrower
      */
     int public delta;
+
+    /**
+     * shows borrower's unpaid fee debt, in RAY 
+     */
+    uint public feeAccum;
+
+    /**
+     * shows paid fee in DAI
+     */
+    uint public feePaidTotal;
 
     /**
      * @dev  Grants access only to agreement's borrower
@@ -195,7 +205,7 @@ contract Agreement is IAgreement, ClaimableIni, McdWrapper {
         configAddr = _configAddr;
         isETH = _isETH;
         borrower = _borrower;
-        debtValue = _debtValue;
+        cdpDebtValue = _debtValue;
         duration = _duration;
         interestRate = _interestRate;
         collateralAmount = _collateralAmount;
@@ -204,7 +214,7 @@ contract Agreement is IAgreement, ClaimableIni, McdWrapper {
 
         _nextStatus();
         _initMcdWrapper(collateralType, isETH);
-        emit AgreementInitiated(borrower, collateralAmount, debtValue, duration, interestRate);
+        emit AgreementInitiated(borrower, collateralAmount, cdpDebtValue, duration, interestRate);
 
         _monitorRisky();
     }
@@ -231,19 +241,19 @@ contract Agreement is IAgreement, ClaimableIni, McdWrapper {
         lastCheckTime = now;
 
         // transfer dai from lender to agreement & lock lender's dai to dsr
-        _transferFromDai(msg.sender, address(this), debtValue);
-        _lockDai(debtValue);
+        _transferFromDai(msg.sender, address(this), cdpDebtValue);
+        _lockDai(cdpDebtValue);
 
         if (isETH) {
-            cdpId = _openLockETHAndDraw(collateralType, collateralAmount, debtValue);
+            cdpId = _openLockETHAndDraw(collateralType, collateralAmount, cdpDebtValue);
         } else {
-            cdpId = _openLockERC20AndDraw(collateralType, collateralAmount, debtValue, true);
+            cdpId = _openLockERC20AndDraw(collateralType, collateralAmount, cdpDebtValue, true);
         }
         uint drawnDai = _balanceDai(address(this));
         // due to the lack of preceision in mcd cdp contracts drawn dai can be less by 1 dai wei
 
-        emit AgreementMatched(lender, expireDate, cdpId, collateralAmount, debtValue, drawnDai);
-        _pushDaiAsset(borrower, debtValue < drawnDai ? debtValue : drawnDai);
+        emit AgreementMatched(lender, expireDate, cdpId, collateralAmount, cdpDebtValue, drawnDai);
+        _pushDaiAsset(borrower, cdpDebtValue < drawnDai ? cdpDebtValue : drawnDai);
 
         return true;
     }
@@ -369,9 +379,10 @@ contract Agreement is IAgreement, ClaimableIni, McdWrapper {
         address _borrower,
         address _lender,
         bytes32 _collateralType,
+        bytes32 _ilkIndex,
         uint _collateralAmount,
         uint _debtValue,
-        uint _interestRate,
+        uint _interestRate, // per sec
         bool _isRisky
     ) {
         _addr = address(this);
@@ -381,8 +392,9 @@ contract Agreement is IAgreement, ClaimableIni, McdWrapper {
         _borrower = borrower;
         _lender = lender;
         _collateralType = collateralType;
+        _ilkIndex = ilkIndex;
         _collateralAmount = collateralAmount;
-        _debtValue = debtValue;
+        _debtValue = cdpDebtValue;
         _interestRate = interestRate;
         _isRisky = isRisky;
     }
@@ -447,7 +459,7 @@ contract Agreement is IAgreement, ClaimableIni, McdWrapper {
      * @return  collateralization ratio in RAY
      */
     function getCR() public view returns(uint) {
-        return cdpId > 0 ? getCdpCR(collateralType, cdpId) : collateralAmount.mul(getPrice(collateralType)).div(debtValue);
+        return cdpId > 0 ? getCdpCR(collateralType, cdpId) : collateralAmount.mul(getPrice(collateralType)).div(cdpDebtValue);
     }
 
     /**
@@ -495,40 +507,51 @@ contract Agreement is IAgreement, ClaimableIni, McdWrapper {
         uint timeInterval = (_isLastUpdate ? expireDate : now).sub(lastCheckTime);
         uint injectionAmount;
         uint drawnDai;
-        uint currentDsrAnnual  = rpow(getDsr(), YEAR_SECS, ONE);
-        uint currentDutyAnnual = rpow(getIlkDuty(ilkIndex), YEAR_SECS, ONE);
-        uint ourFeeAnnual      = rpow(Config(configAddr).acapFee(), YEAR_SECS, ONE);
+        uint currentDebt; 
+        // uint currDuty     = getIlkDuty(ilkIndex); // warn about change in pricing
 
-        // calculate savings difference between dsr and interest rate during time interval
-
-        // todo debt value used not updated
-        int savingsDifference =      int(   debtValue.mul(timeInterval) )
-                                    .mul(  (int(currentDsrAnnual)).sub(int(interestRate))  ) 
-                                    .div(   int(YEAR_SECS) );
-         
+        // calculate savings difference between dsr and fixed interest rate during time interval
+        int256 irDiff = int256(getDsr()).sub( int256(interestRate) );
+        int irSign = irDiff > 0? int(1) : int(-1);
+        irDiff = (irDiff > 0? irDiff : -irDiff); 
+        int savingsDifference = irSign.mul(int(cdpDebtValue.mul( rpow( uint(irDiff), timeInterval,ONE))));
+        delta    = delta.add(  savingsDifference );
+        feeAccum = feeAccum.add(cdpDebtValue.mul( rpow(Config(configAddr).acapFee(), timeInterval, ONE)));
         
-        delta = delta.add(savingsDifference);
-        lastCheckTime = now;
-        uint currentDebt = uint(fromRay(delta < 0 ? -delta : delta));
-
         // check the current debt is above threshold
-        if (currentDebt >= (_isLastUpdate ? 1 : Config(configAddr).injectionThreshold())) {
-            if (delta < 0) {
-                // if delta < 0 - currentDebt is borrower's debt to lender
+        currentDebt = uint(fromRay(delta < 0 ? -delta : delta));
+        if (currentDebt >= (_isLastUpdate ? 1 : Config(configAddr).injectionThreshold())) {    
+            if (delta < 0) {  // if delta < 0 - currentDebt is borrower's debt to lender
                 drawnDai = _drawDaiToCdp(collateralType, cdpId, currentDebt);
                 delta = delta.add(int(toRay(drawnDai)));
                 drawnTotal = drawnTotal.add(drawnDai);
-            } else {
-                // delta > 0 - currentDebt is lender's debt to borrower
+                if (drawnDai > 0) 
+                    _pushDaiAsset(lender, drawnDai);
+            } else {          // delta > 0 - currentDebt is lender's debt to borrower
                 injectionAmount = _injectToCdpFromDsr(cdpId, currentDebt);
                 delta = delta.sub(int(toRay(injectionAmount)));
                 injectedTotal = injectedTotal.add(injectionAmount);
             }
-        }
+        }        
+
+        emit AgreementUpdated(savingsDifference, delta, getDsr(), timeInterval, drawnDai, injectionAmount);       
         
-        emit AgreementUpdated(savingsDifference, delta, currentDsrAnnual, timeInterval, drawnDai, injectionAmount);
-        if (drawnDai > 0)
-            _pushDaiAsset(lender, drawnDai);
+        uint daiFee = fromRay(feeAccum);
+        if ( daiFee > Config(configAddr).injectionThreshold()) 
+            {
+                drawnDai = _drawDaiToCdp(collateralType, cdpId, daiFee);
+                if (drawnDai > 0) 
+                {   
+                    _transferDai(Config(configAddr).acapAddr(), drawnDai );
+                    feeAccum     = feeAccum.sub(drawnDai);
+                    feePaidTotal = feePaidTotal.add(drawnDai); 
+                }
+            }   
+
+         // for the next iteration, last debt value and time
+        lastCheckTime = now;
+        (, cdpDebtValue) = getCdpInfo(ilkIndex, cdpId); // update new starting debt value for the next update
+
         _monitorRisky();
         if (_isLastUpdate)
             _refund();
@@ -551,7 +574,14 @@ contract Agreement is IAgreement, ClaimableIni, McdWrapper {
      * @return  Operation success
      */
     function _refund() internal {
-        _pushDaiAsset(lender, _unlockAllDai());
+        
+        uint resfee = uint(fromRay(feeAccum)); 
+        _pushDaiAsset(lender, _unlockAllDai().sub(resfee));
+        if ( resfee > 0)
+        {
+            _transferDai(Config(configAddr).acapAddr(), resfee );
+            feePaidTotal = feePaidTotal.add(resfee);
+        }
         _transferCdpOwnershipToProxy(cdpId, borrower);
         emit CdpOwnershipTransferred(borrower, cdpId);
     }

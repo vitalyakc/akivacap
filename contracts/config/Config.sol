@@ -17,19 +17,24 @@ contract Config is ClaimableBase, RaySupport {
     uint public minDuration;
     uint public maxDuration;
     uint public riskyMargin;
-    uint public acapFee; // per second %
+    uint public acapFee;   // per second %
+    address payable public acapAddr;  // 
 
     /**
      * @dev     Set default config
      */
     constructor() public {
         // last parameter: fee is 0.5% annual in per-second compounding 
-        setGeneral(7 days, 1 days, 0.01 ether, 0.2 ether, 10000 ether, 1 minutes, 365 days, 20, 1000000000158153903837946257);
+        setGeneral(7 days, 1 days, 0.01 ether, 0.2 ether, 10000 ether, 1 minutes, 1000 days, 20);
         enableCollateral("ETH-A");
         enableCollateral("BAT-A");
         enableCollateral("WBTC-A");
         enableCollateral("USDC-A");
         enableCollateral("USDC-B");
+
+        acapFee  = 1000000000158153903837946257; 
+        acapAddr = 0xF79179D06C687342a3f5C1daE5A7253AFC03C7A8; 
+
     }
 
     /**
@@ -42,7 +47,6 @@ contract Config is ClaimableBase, RaySupport {
      * @param   _minDuration        min agreement length
      * @param   _maxDuration        max agreement length
      * @param   _riskyMargin        risky Margin %
-     * @param   _acapFee            Fee for Acap service, %
      */
     function setGeneral(
         uint _approveLimit,
@@ -52,8 +56,7 @@ contract Config is ClaimableBase, RaySupport {
         uint _maxCollateralAmount,
         uint _minDuration,
         uint _maxDuration,
-        uint _riskyMargin,
-        uint _acapFee
+        uint _riskyMargin
     ) public onlyContractOwner {
         approveLimit = _approveLimit;
         matchLimit = _matchLimit;
@@ -67,15 +70,22 @@ contract Config is ClaimableBase, RaySupport {
         maxDuration = _maxDuration;
 
         riskyMargin = _riskyMargin;
-        acapFee     = _acapFee;
     }
 
     /**
      * @dev     Set config parameter
-     * @param   _acapFee        fee in % per second
+     * @param   _acapFee  fee in % per second
      */
     function setAcapFee(uint _acapFee) public onlyContractOwner {
         acapFee = _acapFee;
+    }
+
+    /**
+     * @dev     Set config parameter
+     * @param   _a  address for drip fees
+     */
+    function setAcapAddr(address payable _a) public onlyContractOwner {
+        acapAddr = _a;
     }
 
     /**

@@ -1,0 +1,44 @@
+{
+  "name": "blockchain",
+  "version": "1.0.0",
+  "main": "truffle-config.js",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "private-network": "ganache-cli --time 1970-01-01T00:00:00Z",
+    "test": "truffle test",
+    "test-local": "ganache-cli --time 1970-01-01T00:00:00Z -q & truffle test --network development test/*.js",
+    "test-integration": "truffle test --network kovan test/integration/*.js",
+    "compile": "truffle compile",
+    "validate-tests": "eslint *.js test/*.js test/helpers/*.js test/mcdWrapperTest test/integration/*.js --fix",
+    "validate-sol": "solium --dir contracts --fix"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://gitlab.s-pro.io/akiva/blockchain.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "bignumber.js": "^9.0.0",
+    "dotenv": "^8.1.0",
+    "eslint-config-google": "^0.14.0",
+    "ganache-cli": "^6.7.0",
+    "solidity-coverage": "^0.6.7",
+    "solium": "^1.2.5",
+    "solmd": "^0.4.0",
+    "truffle": "^5.0.40",
+    "truffle-assertions": "^0.9.2",
+    "truffle-flattener": "^1.4.4",
+    "truffle-hdwallet-provider": "^1.0.17",
+    "web3": "^1.2.11",
+    "zos": "^2.4.2",
+    "zos-lib": "^2.4.3"
+  },
+  "devDependencies": {
+    "eslint": "^6.5.1",
+    "truffle-plugin-solhint": "0.0.6"
+  }
+}
