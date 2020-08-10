@@ -306,7 +306,7 @@ contract LenderPool is Administrable {
     * @dev      Get Agreement debt dai amount
     */
     function _getAgreementDebtValue() internal view returns (uint) {
-        return IAgreement(targetAgreement).debtValue();
+        return IAgreement(targetAgreement).cdpDebtValue();
     }
 
     /**

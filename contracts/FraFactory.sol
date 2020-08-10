@@ -4,7 +4,7 @@ import "./config/Config.sol";
 import "./interfaces/IERC20.sol";
 import "./interfaces/IAgreement.sol";
 import "./helpers/Administrable.sol";
-import "zos-lib/contracts/upgradeability/UpgradeabilityProxy.sol";
+import "../node_modules/zos-lib/contracts/upgradeability/UpgradeabilityProxy.sol";
 
 /**
  * @title   Fra Factory

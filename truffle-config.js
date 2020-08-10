@@ -25,6 +25,9 @@ require('dotenv').config(); // Store environment-specific variable from '.env' t
 // const fs = require('fs');
 // const mnemonic = fs.readFileSync(".secret").toString().trim();
 
+const mnemonic = require('fs').readFileSync(".secret").toString().trim();
+
+
 module.exports = {
   /**
    * Networks define how you connect to your ethereum client and let you set the
@@ -83,7 +86,8 @@ module.exports = {
 
     kovan: {
       provider: () => new HDWalletProvider(
-        [process.env.PRIVATEKEY1, process.env.PRIVATEKEY2, process.env.PRIVATEKEY3],
+        // [process.env.PRIVATEKEY1, process.env.PRIVATEKEY2, process.env.PRIVATEKEY3],
+        mnemonic,
         'https://kovan.infura.io/v3/' + process.env.INFURA_API_KEY, 0, 3),
       network_id: 42,
       gasPrice: 1000000000,
