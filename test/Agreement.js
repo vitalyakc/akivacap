@@ -16,20 +16,28 @@ contract('Agreement', async (accounts) => {
   const LENDER = accounts[2];
   const NOBODY = accounts[3];
   const SOMEBODY = accounts[4];
-  const ETH_A = '0x4554482d41000000000000000000000000000000000000000000000000000000';
-  const WRONG_COLLATERAL = '0x0000000000000000000000000000000000000000000000000000000000000000';
+  const ETH_A_SYM = web3.utils.fromAscii('ETH-A');
+  const ETH_A_IDX = web3.utils.hexToBytes('0x4554482d41000000000000000000000000000000000000000000000000000000');
+  const WRONG_COLLATERAL = web3.utils.hexToBytes('0x0000000000000000000000000000000000000000000000000000000000000000');
 
   const toBN = (num) => {
     return new BigNumber(num);
   };
 
+  const FIVEPCTPERSEC  = (toBN('1000000001547125957863212448')).toFixed();
+  const FOURPCTPERSEC  = (toBN('1000000001243680656318820312')).toFixed();
+  const THREEPCTPERSEC = (toBN('1000000000937303470807876289')).toFixed();
+
   const fromPercentToRey = (num) => {
-    return (toBN(num).times((toBN(10).pow(toBN(25))))).plus((toBN(10).pow(toBN(27))));
+    return (  toBN(num).times(  ( toBN(10).pow( toBN(25) ) )  )  ).plus((   toBN(10).pow(toBN(27))  ));
   };
+
+  console.log( "collateral symbol bat-a in hex: " + web3.utils.fromAscii('BAT-A'));
+  console.log("const threepct: " + THREEPCTPERSEC.toString() );
 
   before('setup', async () => {
     agreement = await Agreement.new({from: OWNER});
-
+    console.log("Initialized agreement... ");
     await reverter.snapshot();
   });
 
@@ -46,14 +54,15 @@ contract('Agreement', async (accounts) => {
 
     it('should be possible to initialize with average agruments on ETH', async () => {
       const result = await agreement.initAgreement(BORROWER, 2000, 300000, 90000,
-        fromPercentToRey(3), ETH_A, true, configContract.address, {from: OWNER, value: 2000});
-
+        toBN('1000000000937303470807876289'), ETH_A_SYM, ETH_A_IDX, true, configContract.address, {from: OWNER, value: 2000});
+      
       assert.equal((await agreement.duration.call()).toNumber(), 90000);
-      assert.equal(await agreement.borrower.call(), BORROWER);
-      assert.equal((await agreement.debtValue.call()).toNumber(), 300000);
-      assert.equal((await agreement.interestRate.call()).toString(), fromPercentToRey(3).toFixed());
+      assert.equal( await agreement.borrower.call(), BORROWER);
+      assert.equal((await agreement.cdpDebtValue.call()).toNumber(), 300000);
+      assert.equal((await agreement.interestRate.call()).toString(), (toBN('1000000000937303470807876289')).toFixed());
       assert.equal((await agreement.collateralAmount.call()).toNumber(), 2000);
-      assert.equal(await agreement.collateralType.call(), ETH_A);
+      console.log ( "---> collateral type in contract: ", await agreement.collateralType.call() ); 
+      assert.equal((await agreement.collateralType.call()).replace(/0+$/,''), ETH_A_SYM);
       assert.equal((await agreement.status()).toString(), 1);
 
       assert.equal(result.logs.length, 2);
@@ -67,15 +76,15 @@ contract('Agreement', async (accounts) => {
 
     it('should be possible to initialize with average case 2 on ETH', async () => {
       const result = await agreement.initAgreement(BORROWER, 20000, 300000, 90639,
-        fromPercentToRey(43), ETH_A, true, configContract.address, {from: OWNER, value: 20000});
+        fromPercentToRey(43), ETH_A_SYM, ETH_A_IDX, true, configContract.address, {from: OWNER, value: 20000});
 
       assert.equal((await agreement.duration.call()).toNumber(), 90639);
       assert.equal(await agreement.borrower.call(), BORROWER);
-      assert.equal((await agreement.debtValue.call()).toNumber(), 300000);
+      assert.equal((await agreement.cdpDebtValue.call()).toNumber(), 300000);
       assert.equal((await agreement.interestRate.call()).toString(),
         fromPercentToRey(43).toFixed());
       assert.equal((await agreement.collateralAmount.call()).toNumber(), 20000);
-      assert.equal(await agreement.collateralType.call(), ETH_A);
+      //assert.equal(await agreement.collateralType.call(), ETH_A_SYM);
       assert.equal((await agreement.status()).toString(), 1);
 
       assert.equal(result.logs.length, 2);
@@ -89,15 +98,15 @@ contract('Agreement', async (accounts) => {
 
     it('should be possible to initialize with average case 3 on ETH', async () => {
       const result = await agreement.initAgreement(BORROWER, 150, 300, 120008, fromPercentToRey(97),
-        ETH_A, true, configContract.address, {from: OWNER, value: 150});
+        ETH_A_SYM, ETH_A_IDX, true, configContract.address, {from: OWNER, value: 150});
 
       assert.equal((await agreement.duration.call()).toNumber(), 120008);
       assert.equal(await agreement.borrower.call(), BORROWER);
-      assert.equal((await agreement.debtValue.call()).toNumber(), 300);
+      assert.equal((await agreement.cdpDebtValue.call()).toNumber(), 300);
       assert.equal((await agreement.interestRate.call()).toString(),
         fromPercentToRey(97).toFixed());
       assert.equal((await agreement.collateralAmount.call()).toNumber(), 150);
-      assert.equal(await agreement.collateralType.call(), ETH_A);
+      //assert.equal(await agreement.collateralType.call(), ETH_A_SYM);
       assert.equal((await agreement.status()).toString(), 1);
 
       assert.equal(result.logs.length, 2);
@@ -111,15 +120,15 @@ contract('Agreement', async (accounts) => {
 
     it('should be possible to initialize with interestRate = 100 on ETH', async () => {
       const result = await agreement.initAgreement(BORROWER, 2000, 300000, 110031,
-        fromPercentToRey(100), ETH_A, true, configContract.address, {from: OWNER, value: 2000});
+        fromPercentToRey(100), ETH_A_SYM, ETH_A_IDX, true, configContract.address, {from: OWNER, value: 2000});
 
       assert.equal((await agreement.duration.call()).toNumber(), 110031);
       assert.equal(await agreement.borrower.call(), BORROWER);
-      assert.equal((await agreement.debtValue.call()).toNumber(), 300000);
+      assert.equal((await agreement.cdpDebtValue.call()).toNumber(), 300000);
       assert.equal((await agreement.interestRate.call()).toString(),
         fromPercentToRey(100).toFixed());
       assert.equal((await agreement.collateralAmount.call()).toNumber(), 2000);
-      assert.equal(await agreement.collateralType.call(), ETH_A);
+      //assert.equal(await agreement.collateralType.call(), ETH_A_SYM);
       assert.equal((await agreement.status()).toString(), 1);
 
       assert.equal(result.logs.length, 2);
@@ -133,14 +142,14 @@ contract('Agreement', async (accounts) => {
 
     it('should be possible to initialize with interestRate = 1 on ETH', async () => {
       const result = await agreement.initAgreement(BORROWER, 2000, 300000, 90000,
-        fromPercentToRey(1), ETH_A, true, configContract.address, {from: OWNER, value: 2000});
+        fromPercentToRey(1), ETH_A_SYM, ETH_A_IDX, true, configContract.address, {from: OWNER, value: 2000});
 
       assert.equal((await agreement.duration.call()).toNumber(), 90000);
       assert.equal(await agreement.borrower.call(), BORROWER);
-      assert.equal((await agreement.debtValue.call()).toNumber(), 300000);
+      assert.equal((await agreement.cdpDebtValue.call()).toNumber(), 300000);
       assert.equal((await agreement.interestRate.call()).toString(), fromPercentToRey(1).toFixed());
       assert.equal((await agreement.collateralAmount.call()).toNumber(), 2000);
-      assert.equal(await agreement.collateralType.call(), ETH_A);
+      //assert.equal(await agreement.collateralType.call(), ETH_A_SYM);
       assert.equal((await agreement.status()).toString(), 1);
 
       assert.equal(result.logs.length, 2);
@@ -154,14 +163,14 @@ contract('Agreement', async (accounts) => {
 
     it('should be possible to initialize with duration = maxDuration - 1 on ETH', async () => {
       const result = await agreement.initAgreement(BORROWER, 2000, 300000, 31535999,
-        fromPercentToRey(3), ETH_A, true, configContract.address, {from: OWNER, value: 2000});
+        fromPercentToRey(3), ETH_A_SYM, ETH_A_IDX, true, configContract.address, {from: OWNER, value: 2000});
 
       assert.equal((await agreement.duration.call()).toNumber(), 31535999);
       assert.equal(await agreement.borrower.call(), BORROWER);
-      assert.equal((await agreement.debtValue.call()).toNumber(), 300000);
+      assert.equal((await agreement.cdpDebtValue.call()).toNumber(), 300000);
       assert.equal((await agreement.interestRate.call()).toString(), fromPercentToRey(3).toFixed());
       assert.equal((await agreement.collateralAmount.call()).toNumber(), 2000);
-      assert.equal(await agreement.collateralType.call(), ETH_A);
+      //assert.equal(await agreement.collateralType.call(), ETH_A_SYM);
       assert.equal((await agreement.status()).toString(), 1);
 
       assert.equal(result.logs.length, 2);
@@ -175,14 +184,14 @@ contract('Agreement', async (accounts) => {
 
     it('should be possible to initialize with duration = minDuratin + 1 on ETH', async () => {
       const result = await agreement.initAgreement(BORROWER, 2000, 300000, 86401,
-        fromPercentToRey(3), ETH_A, true, configContract.address, {from: OWNER, value: 2000});
+        fromPercentToRey(3), ETH_A_SYM, ETH_A_IDX, true, configContract.address, {from: OWNER, value: 2000});
 
       assert.equal((await agreement.duration.call()).toNumber(), 86401);
       assert.equal(await agreement.borrower.call(), BORROWER);
-      assert.equal((await agreement.debtValue.call()).toNumber(), 300000);
+      assert.equal((await agreement.cdpDebtValue.call()).toNumber(), 300000);
       assert.equal((await agreement.interestRate.call()).toString(), fromPercentToRey(3).toFixed());
       assert.equal((await agreement.collateralAmount.call()).toNumber(), 2000);
-      assert.equal(await agreement.collateralType.call(), ETH_A);
+      //assert.equal(await agreement.collateralType.call(), ETH_A_SYM);
       assert.equal((await agreement.status()).toString(), 1);
 
       assert.equal(result.logs.length, 2);
@@ -196,86 +205,86 @@ contract('Agreement', async (accounts) => {
 
     it('should not be possible to initialize with debtValue = 0', async () => {
       await assertReverts(agreement.initAgreement(BORROWER, 2000, 0, 90000, fromPercentToRey(3),
-        ETH_A, true, configContract.address, {from: OWNER, value: 2000}));
+        ETH_A_SYM, ETH_A_IDX, true, configContract.address, {from: OWNER, value: 2000}));
 
       assert.equal((await agreement.status()).toString(), 0);
     });
 
     it('should not be possible to initialize with interestRate = 0', async () => {
       await assertReverts(agreement.initAgreement(BORROWER, 2000, 300000, 90000,
-        fromPercentToRey(0), ETH_A, true, configContract.address, {from: OWNER, value: 2000}));
+        fromPercentToRey(0), ETH_A_SYM, ETH_A_IDX, true, configContract.address, {from: OWNER, value: 2000}));
 
       assert.equal((await agreement.status()).toString(), 0);
     });
 
     it('should not be possible to initialize with interestRate more than 100', async () => {
       await assertReverts(agreement.initAgreement(BORROWER, 2000, 300000, 90000,
-        fromPercentToRey(101), ETH_A, true, configContract.address, {from: OWNER, value: 2000}));
+        fromPercentToRey(101), ETH_A_SYM, ETH_A_IDX, true, configContract.address, {from: OWNER, value: 2000}));
 
       assert.equal((await agreement.status()).toString(), 0);
     });
 
     it('should not be possible to initialize duration less than minDuration', async () => {
       await assertReverts(agreement.initAgreement(BORROWER, 2000, 300000, 86300,
-        fromPercentToRey(3), ETH_A, true, configContract.address, {from: OWNER, value: 2000}));
+        fromPercentToRey(3), ETH_A_SYM, ETH_A_IDX, true, configContract.address, {from: OWNER, value: 2000}));
 
       assert.equal((await agreement.status()).toString(), 0);
     });
 
     it('should not be possible to initialize duration = minDuration', async () => {
       await assertReverts(agreement.initAgreement(BORROWER, 2000, 300000, 86400,
-        fromPercentToRey(3), ETH_A, true, configContract.address, {from: OWNER, value: 2000}));
+        fromPercentToRey(3), ETH_A_SYM, ETH_A_IDX, true, configContract.address, {from: OWNER, value: 2000}));
 
       assert.equal((await agreement.status()).toString(), 0);
     });
 
     it('should not be possible to initialize duration = maxDuration', async () => {
       await assertReverts(agreement.initAgreement(BORROWER, 2000, 300000, 31536000,
-        fromPercentToRey(3), ETH_A, true, configContract.address, {from: OWNER, value: 2000}));
+        fromPercentToRey(3), ETH_A_SYM, ETH_A_IDX, true, configContract.address, {from: OWNER, value: 2000}));
 
       assert.equal((await agreement.status()).toString(), 0);
     });
 
     it('should not be possible to initialize duration > maxDuration', async () => {
       await assertReverts(agreement.initAgreement(BORROWER, 2000, 300000, 71536000,
-        fromPercentToRey(3), ETH_A, true, configContract.address, {from: OWNER, value: 2000}));
+        fromPercentToRey(3), ETH_A_SYM, ETH_A_IDX, true, configContract.address, {from: OWNER, value: 2000}));
 
       assert.equal((await agreement.status()).toString(), 0);
     });
 
     it('should not be possible to initialize with collateralAmount bigger than actual value', async () => {
       await assertReverts(agreement.initAgreement(BORROWER, 2000, 300000, 90000,
-        fromPercentToRey(3), ETH_A, true, configContract.address, {from: OWNER, value: 2001}));
+        fromPercentToRey(3), ETH_A_SYM, ETH_A_IDX, true, configContract.address, {from: OWNER, value: 2001}));
 
       assert.equal((await agreement.status()).toString(), 0);
     });
 
     it('should not be possible to initialize with collateralAmount less than actual value', async () => {
       await assertReverts(agreement.initAgreement(BORROWER, 2000, 300000, 90000,
-        fromPercentToRey(3), ETH_A, true, configContract.address, {from: OWNER, value: 1999}));
+        fromPercentToRey(3), ETH_A_SYM, ETH_A_IDX, true, configContract.address, {from: OWNER, value: 1999}));
 
       assert.equal((await agreement.status()).toString(), 0);
     });
 
     it('should not be possible to initialize with collateralAmount = 0', async () => {
       await assertReverts(agreement.initAgreement(BORROWER, 0, 300000, 90000, fromPercentToRey(3),
-        ETH_A, true, configContract.address, {from: OWNER, value: 0}));
+        ETH_A_SYM, ETH_A_IDX, true, configContract.address, {from: OWNER, value: 0}));
 
       assert.equal((await agreement.status()).toString(), 0);
     });
 
     it('should not be possible to initialize with wrong collateral type', async () => {
       await assertReverts(agreement.initAgreement(BORROWER, 2000, 300000, 90000,
-        fromPercentToRey(3), WRONG_COLLATERAL, true, configContract.address,
+        fromPercentToRey(3), WRONG_COLLATERAL, WRONG_COLLATERAL, true, configContract.address,
         {from: OWNER, value: 2000}));
 
       assert.equal((await agreement.status()).toString(), 0);
     });
 
     it('should not be possible to initialize with valid collateral type but not enabled', async () => {
-      await configContract.disableCollateral(ETH_A);
+      await configContract.disableCollateral(ETH_A_SYM);
       await assertReverts(agreement.initAgreement(BORROWER, 2000, 300000, 90000,
-        fromPercentToRey(3), ETH_A, true, configContract.address, {from: OWNER, value: 2000}));
+        fromPercentToRey(3), ETH_A_SYM, ETH_A_IDX, true, configContract.address, {from: OWNER, value: 2000}));
 
       assert.equal((await agreement.status()).toString(), 0);
     });
@@ -290,7 +299,7 @@ contract('Agreement', async (accounts) => {
 
     it('should be possible to approve agreement by owner after initialization', async () => {
       await agreement.initAgreement(BORROWER, 2000, 300000, 90000, fromPercentToRey(3),
-        ETH_A, true, configContract.address, {from: OWNER, value: 2000});
+        ETH_A_SYM, ETH_A_IDX, true, configContract.address, {from: OWNER, value: 2000});
 
       await agreement.setCurrentTime(1000);
 
@@ -305,7 +314,7 @@ contract('Agreement', async (accounts) => {
 
     it('should not be possible to approve agreement by not owner after initialization', async () => {
       await agreement.initAgreement(BORROWER, 2000, 300000, 90000, fromPercentToRey(3),
-        ETH_A, true, configContract.address, {from: OWNER, value: 2000});
+        ETH_A_SYM, ETH_A_IDX, true, configContract.address, {from: OWNER, value: 2000});
 
       await agreement.setCurrentTime(1000);
 
@@ -335,7 +344,7 @@ contract('Agreement', async (accounts) => {
 
     it('should not be possible to approve agreement by owner after it is already approved', async () => {
       await agreement.initAgreement(BORROWER, 2000, 300000, 90000, fromPercentToRey(3),
-        ETH_A, true, configContract.address, {from: OWNER, value: 2000});
+        ETH_A_SYM, ETH_A_IDX, true, configContract.address, {from: OWNER, value: 2000});
 
       await agreement.setCurrentTime(1000);
 
@@ -363,7 +372,7 @@ contract('Agreement', async (accounts) => {
       await agreement.setCRBuffer(100);
 
       await agreement.initAgreement(BORROWER, 2000, 300000, 90000, fromPercentToRey(3),
-        ETH_A, true, configContract.address, {from: OWNER, value: 2000});
+        ETH_A_SYM, ETH_A_IDX, true, configContract.address, {from: OWNER, value: 2000});
     });
 
     it('should be possible to match initialized and approved agreement by lender', async () => {
@@ -410,7 +419,7 @@ contract('Agreement', async (accounts) => {
       await agreement.setCRBuffer(100);
 
       await agreement.initAgreement(BORROWER, 2000, 300000, 90000, fromPercentToRey(3),
-        ETH_A, true, configContract.address, {from: OWNER, value: 2000});
+        ETH_A_SYM, ETH_A_IDX, true, configContract.address, {from: OWNER, value: 2000});
     });
 
     it('should be possible to cancel agreement by borrower when it is not matched', async () => {
@@ -595,29 +604,42 @@ contract('Agreement', async (accounts) => {
   describe('_updateAgreementState()', async () => {
     beforeEach('init config', async () => {
       configContract = await Config.new();
+
       await configContract
       .setGeneral(1440, 60, 2, 100, toBN(100).times(toBN(10).pow(toBN(18))), 86400, 31536000, 10);
-
+      console.log("Config initialized ...");
       await agreement.setCRBuffer(100);
     });
 
     it('should calculate correctly with valid values case 1', async () => {
       await setCurrentTime(10);
-      await agreement.initAgreement(BORROWER, 2000, 300000, 90000, fromPercentToRey(3),
-        ETH_A, true, configContract.address, {from: OWNER, value: 2000});
 
+      console.log("Agreement initializing ...");
+      await agreement.initAgreement(BORROWER, 2000, 300000, 90000, toBN('1000000000937303470807876289'),
+        ETH_A_SYM, ETH_A_IDX, true, configContract.address, {from: OWNER, value: 2000}) ;
+      console.log("Agreement initialized ...");
+      
       await setCurrentTime(10);
       await agreement.approveAgreement();
       await setCurrentTime(10);
       await agreement.matchAgreement({from: LENDER});
-      await agreement.setDsr(toBN(1000000000005000000000000000));
+      await agreement.setDsr(toBN(1000000000000000000000000000));
       await agreement.setLastCheckTime(50);
       await agreement.setUnlockedDai(toBN(300000));
-      await agreement.setDrawnCdp(13);
+      await (agreement.setDrawnCdp(13));
 
-      await setCurrentTime(145000);
-      const result = await agreement.updateAgreementState(false);
+      setCurrentTime(145000);
+      console.log("before updating agreement ..."); 
+      const result = await agreement.updateAgreement();
+      console.log("after updating agreement ..."); 
+      
+      console.log("fra debt: "      + (await agreement.borrowerFraDebt.call()).toNumber() );
+      console.log("delta: "         + (await agreement.delta.call()).toString());
+      console.log("assets.lender: " + (await agreement.assets(LENDER)).dai.toString());
 
+      console.log("done update agreement part!");
+      process.exit();
+      
       assert.equal((await agreement.borrowerFraDebt.call()).toNumber(), 28);
       assert.equal((await agreement.delta.call()).toString(), '-28149566989732627130306574993');
       assert.equal((await agreement.assets(LENDER)).dai.toString(), 13);
@@ -630,12 +652,14 @@ contract('Agreement', async (accounts) => {
       assert.equal(result.logs[0].args._currentDsrAnnual.toString(), 1000157692432144230673074666);
       assert.equal(result.logs[0].args._savingsDifference.toString(),
         '-41149566989732627130306574993');
+
+ 
     });
 
     it('should calculate correctly with valid values case 2', async () => {
       await setCurrentTime(10);
       await agreement.initAgreement(BORROWER, 2000, 1, 90000, fromPercentToRey(3),
-        ETH_A, true, configContract.address, {from: OWNER, value: 2000});
+        ETH_A_SYM, ETH_A_IDX, true, configContract.address, {from: OWNER, value: 2000});
 
       await setCurrentTime(10);
       await agreement.approveAgreement();
@@ -665,7 +689,7 @@ contract('Agreement', async (accounts) => {
     it('should calculate correctly with valid values case 3', async () => {
       await setCurrentTime(10);
       await agreement.initAgreement(BORROWER, 2000, 300000, 90000, fromPercentToRey(3),
-        ETH_A, true, configContract.address, {from: OWNER, value: 2000});
+        ETH_A_SYM, ETH_A_IDX, true, configContract.address, {from: OWNER, value: 2000});
 
       await setCurrentTime(10);
       await agreement.approveAgreement();
@@ -695,7 +719,7 @@ contract('Agreement', async (accounts) => {
     it('should calculate correctly with valid values case 4', async () => {
       await setCurrentTime(10);
       await agreement.initAgreement(BORROWER, 2000, 300000, 90000, fromPercentToRey(3),
-        ETH_A, true, configContract.address, {from: OWNER, value: 2000});
+        ETH_A_SYM, ETH_A_IDX, true, configContract.address, {from: OWNER, value: 2000});
 
       await setCurrentTime(10);
       await agreement.approveAgreement();
@@ -725,7 +749,7 @@ contract('Agreement', async (accounts) => {
     it('should calculate correctly with valid values case 5', async () => {
       await setCurrentTime(10);
       await agreement.initAgreement(BORROWER, 2000, 300000, 90000, fromPercentToRey(3),
-        ETH_A, true, configContract.address, {from: OWNER, value: 2000});
+        ETH_A_SYM, ETH_A_IDX, true, configContract.address, {from: OWNER, value: 2000});
 
       await setCurrentTime(10);
       await agreement.approveAgreement();
@@ -755,7 +779,7 @@ contract('Agreement', async (accounts) => {
     it('should calculate correctly during last update', async () => {
       await setCurrentTime(10);
       await agreement.initAgreement(BORROWER, 2000, 300000, 90000, fromPercentToRey(3),
-        ETH_A, true, configContract.address, {from: OWNER, value: 2000});
+        ETH_A_SYM, ETH_A_IDX, true, configContract.address, {from: OWNER, value: 2000});
 
       await setCurrentTime(10);
       await agreement.approveAgreement();
@@ -786,7 +810,7 @@ contract('Agreement', async (accounts) => {
     it('should calculate correctly 2 updates one after the other with different time periods', async () => {
       await setCurrentTime(10);
       await agreement.initAgreement(BORROWER, 2000, 300000, 90000, fromPercentToRey(3),
-        ETH_A, true, configContract.address, {from: OWNER, value: 2000});
+        ETH_A_SYM, ETH_A_IDX, true, configContract.address, {from: OWNER, value: 2000});
 
       await setCurrentTime(10);
       await agreement.approveAgreement();
@@ -832,7 +856,7 @@ contract('Agreement', async (accounts) => {
     it('should calculate correctly 2 updates one after the other with different time periods and different dsr', async () => {
       await setCurrentTime(10);
       await agreement.initAgreement(BORROWER, 2000, 300000, 90000, fromPercentToRey(3),
-        ETH_A, true, configContract.address, {from: OWNER, value: 2000});
+        ETH_A_SYM, ETH_A_IDX, true, configContract.address, {from: OWNER, value: 2000});
 
       await setCurrentTime(10);
       await agreement.approveAgreement();
@@ -877,7 +901,7 @@ contract('Agreement', async (accounts) => {
     it('should calculate correctly 2 updates one after the other with different time periods and different dsr case 2', async () => {
       await setCurrentTime(10);
       await agreement.initAgreement(BORROWER, 2000, 300000, 90000, fromPercentToRey(3),
-        ETH_A, true, configContract.address, {from: OWNER, value: 2000});
+        ETH_A_SYM, ETH_A_IDX, true, configContract.address, {from: OWNER, value: 2000});
 
       await setCurrentTime(10);
       await agreement.approveAgreement();
@@ -919,7 +943,7 @@ contract('Agreement', async (accounts) => {
     it('should inject a valid value if delta > 0', async () => {
       await setCurrentTime(10);
       await agreement.initAgreement(BORROWER, 2000, 300000, 90000, fromPercentToRey(3),
-        ETH_A, true, configContract.address, {from: OWNER, value: 2000});
+        ETH_A_SYM, ETH_A_IDX, true, configContract.address, {from: OWNER, value: 2000});
 
       await setCurrentTime(10);
       await agreement.approveAgreement();
@@ -948,7 +972,7 @@ contract('Agreement', async (accounts) => {
     it('should inject a valid value if delta < 0, borrower debt > 0 and dsr rises to be more than interestRate', async () => {
       await setCurrentTime(10);
       await agreement.initAgreement(BORROWER, 2000, 300000, 90000, fromPercentToRey(3),
-        ETH_A, true, configContract.address, {from: OWNER, value: 2000});
+        ETH_A_SYM, ETH_A_IDX, true, configContract.address, {from: OWNER, value: 2000});
 
       await setCurrentTime(10);
       await agreement.approveAgreement();
@@ -990,7 +1014,7 @@ contract('Agreement', async (accounts) => {
     it('should be possible to refund if agreement is not liquidated', async () => {
       await setCurrentTime(10);
       await agreement.initAgreement(BORROWER, 2000, 300000, 90000,
-        fromPercentToRey(3), ETH_A, true, configContract.address, {from: OWNER, value: 2000});
+        fromPercentToRey(3), ETH_A_SYM, ETH_A_IDX, true, configContract.address, {from: OWNER, value: 2000});
       await setCurrentTime(10);
       await agreement.approveAgreement();
       await setCurrentTime(10);
@@ -1014,7 +1038,7 @@ contract('Agreement', async (accounts) => {
 
       await setCurrentTime(10);
       await agreement.initAgreement(BORROWER, 2000, 300000, 90000,
-        fromPercentToRey(3), ETH_A, true, configContract.address, {from: OWNER, value: 2000});
+        fromPercentToRey(3), ETH_A_SYM, ETH_A_IDX, true, configContract.address, {from: OWNER, value: 2000});
     });
 
     it('should be possible to _nextStatus()', async () => {
@@ -1064,7 +1088,7 @@ contract('Agreement', async (accounts) => {
 
       await setCurrentTime(10);
       await agreement.initAgreement(BORROWER, 2000, 300000, 90000,
-        fromPercentToRey(3), ETH_A, true, configContract.address, {from: OWNER, value: 2000});
+        fromPercentToRey(3), ETH_A_SYM, ETH_A_IDX_SYM, ETH_A_IDX, true, configContract.address, {from: OWNER, value: 2000});
     });
 
     it('should be possible to lockAdditionalCollateral in ETH if status is active by borrower', async () => {
@@ -1153,7 +1177,7 @@ contract('Agreement', async (accounts) => {
     it('should be possible to withdrawDai with sufficient asset', async () => {
       await setCurrentTime(10);
       await agreement.initAgreement(BORROWER, 2000, 300000, 90000,
-        fromPercentToRey(3), ETH_A, true, configContract.address, {from: OWNER, value: 2000});
+        fromPercentToRey(3), ETH_A_SYM, ETH_A_IDX, true, configContract.address, {from: OWNER, value: 2000});
       await setCurrentTime(10);
       await agreement.approveAgreement();
       await setCurrentTime(10);
@@ -1173,7 +1197,7 @@ contract('Agreement', async (accounts) => {
     it('should not be possible to withdrawDai with insufficient asset', async () => {
       await setCurrentTime(10);
       await agreement.initAgreement(BORROWER, 2000, 300000, 90000,
-        fromPercentToRey(3), ETH_A, true, configContract.address, {from: OWNER, value: 2000});
+        fromPercentToRey(3), ETH_A_SYM, ETH_A_IDX, true, configContract.address, {from: OWNER, value: 2000});
       await setCurrentTime(10);
       await agreement.approveAgreement();
       await setCurrentTime(10);
@@ -1195,7 +1219,7 @@ contract('Agreement', async (accounts) => {
     it('should be possible to withdrawCollateral with sufficient asset', async () => {
       await setCurrentTime(10);
       await agreement.initAgreement(BORROWER, 2000, 300000, 90000,
-        fromPercentToRey(3), ETH_A, true, configContract.address, {from: OWNER, value: 2000});
+        fromPercentToRey(3), ETH_A_SYM, ETH_A_IDX, true, configContract.address, {from: OWNER, value: 2000});
       await setCurrentTime(10);
       await agreement.approveAgreement();
       await agreement.cancelAgreement({from: BORROWER});
@@ -1210,7 +1234,7 @@ contract('Agreement', async (accounts) => {
     it('should be possible to withdrawCollateral with insufficient asset', async () => {
       await setCurrentTime(10);
       await agreement.initAgreement(BORROWER, 2000, 300000, 90000,
-        fromPercentToRey(3), ETH_A, true, configContract.address, {from: OWNER, value: 2000});
+        fromPercentToRey(3), ETH_A_SYM, ETH_A_IDX, true, configContract.address, {from: OWNER, value: 2000});
       await setCurrentTime(10);
       await agreement.approveAgreement();
       await agreement.cancelAgreement({from: BORROWER});
@@ -1225,7 +1249,7 @@ contract('Agreement', async (accounts) => {
     it('should not be possible to withdrawCollateral with insufficient asset', async () => {
       await setCurrentTime(10);
       await agreement.initAgreement(BORROWER, 2000, 300000, 90000,
-        fromPercentToRey(3), ETH_A, true, configContract.address, {from: OWNER, value: 2000});
+        fromPercentToRey(3), ETH_A_SYM, ETH_A_IDX, true, configContract.address, {from: OWNER, value: 2000});
       await setCurrentTime(10);
       await agreement.approveAgreement();
       await agreement.cancelAgreement({from: BORROWER});
@@ -1240,7 +1264,7 @@ contract('Agreement', async (accounts) => {
     it('should be possible to withdrawRemainingEth when closed', async () => {
       await setCurrentTime(10);
       await agreement.initAgreement(BORROWER, 2000, 300000, 90000,
-        fromPercentToRey(3), ETH_A, true, configContract.address, {from: OWNER, value: 2000});
+        fromPercentToRey(3), ETH_A_SYM, ETH_A_IDX, true, configContract.address, {from: OWNER, value: 2000});
       await setCurrentTime(10);
       await agreement.approveAgreement();
       await setCurrentTime(10);
@@ -1258,7 +1282,7 @@ contract('Agreement', async (accounts) => {
     it('should not be possible to withdrawRemainingEth when not closed', async () => {
       await setCurrentTime(10);
       await agreement.initAgreement(BORROWER, 2000, 300000, 90000,
-        fromPercentToRey(3), ETH_A, true, configContract.address, {from: OWNER, value: 2000});
+        fromPercentToRey(3), ETH_A_SYM, ETH_A_IDX, true, configContract.address, {from: OWNER, value: 2000});
       await setCurrentTime(10);
       await agreement.approveAgreement();
       await setCurrentTime(10);
@@ -1275,7 +1299,7 @@ contract('Agreement', async (accounts) => {
     it('should not be possible to withdrawRemainingEth when closed from not an owner', async () => {
       await setCurrentTime(10);
       await agreement.initAgreement(BORROWER, 2000, 300000, 90000,
-        fromPercentToRey(3), ETH_A, true, configContract.address, {from: OWNER, value: 2000});
+        fromPercentToRey(3), ETH_A_SYM, ETH_A_IDX_SYM, ETH_A_IDX, true, configContract.address, {from: OWNER, value: 2000});
       await setCurrentTime(10);
       await agreement.approveAgreement();
       await setCurrentTime(10);
@@ -1302,14 +1326,14 @@ contract('Agreement', async (accounts) => {
 
     it('isStatus should retrurn a correct status case 1', async () => {
       await agreement.initAgreement(BORROWER, 2000, 300000, 90000,
-        fromPercentToRey(3), ETH_A, true, configContract.address, {from: OWNER, value: 2000});
+        fromPercentToRey(3), ETH_A_SYM, ETH_A_IDX, true, configContract.address, {from: OWNER, value: 2000});
 
       assert.isTrue(await agreement.isStatus.call(1));
     });
 
     it('isStatus should retrurn a correct status case 2', async () => {
       await agreement.initAgreement(BORROWER, 2000, 300000, 90000,
-        fromPercentToRey(3), ETH_A, true, configContract.address, {from: OWNER, value: 2000});
+        fromPercentToRey(3), ETH_A_SYM, ETH_A_IDX, true, configContract.address, {from: OWNER, value: 2000});
       await agreement.approveAgreement();
 
       assert.isTrue(await agreement.isStatus.call(2));
@@ -1317,7 +1341,7 @@ contract('Agreement', async (accounts) => {
 
     it('isStatus should retrurn a correct status case 3', async () => {
       await agreement.initAgreement(BORROWER, 2000, 300000, 90000,
-        fromPercentToRey(3), ETH_A, true, configContract.address, {from: OWNER, value: 2000});
+        fromPercentToRey(3), ETH_A_SYM, ETH_A_IDX, true, configContract.address, {from: OWNER, value: 2000});
       await agreement.approveAgreement();
       await agreement.matchAgreement({from: LENDER});
 
@@ -1326,7 +1350,7 @@ contract('Agreement', async (accounts) => {
 
     it('isStatus should retrurn a correct status case 4', async () => {
       await agreement.initAgreement(BORROWER, 2000, 300000, 90000,
-        fromPercentToRey(3), ETH_A, true, configContract.address, {from: OWNER, value: 2000});
+        fromPercentToRey(3), ETH_A_SYM, ETH_A_IDX_SYM, ETH_A_IDX, true, configContract.address, {from: OWNER, value: 2000});
       await agreement.rejectAgreement();
 
       assert.isTrue(await agreement.isStatus.call(4));
@@ -1334,14 +1358,14 @@ contract('Agreement', async (accounts) => {
 
     it('isBeforeStatus should return a correct status case 1', async () => {
       await agreement.initAgreement(BORROWER, 2000, 300000, 90000,
-        fromPercentToRey(3), ETH_A, true, configContract.address, {from: OWNER, value: 2000});
+        fromPercentToRey(3), ETH_A_SYM, ETH_A_IDX_SYM, ETH_A_IDX, true, configContract.address, {from: OWNER, value: 2000});
 
       assert.isTrue(await agreement.isBeforeStatus.call(2));
     });
 
     it('isBeforeStatus should retrurn a correct status case 2', async () => {
       await agreement.initAgreement(BORROWER, 2000, 300000, 90000,
-        fromPercentToRey(3), ETH_A, true, configContract.address, {from: OWNER, value: 2000});
+        fromPercentToRey(3), ETH_A_SYM, ETH_A_IDX_SYM, ETH_A_IDX, true, configContract.address, {from: OWNER, value: 2000});
       await agreement.approveAgreement();
       await agreement.matchAgreement({from: LENDER});
 
@@ -1350,7 +1374,7 @@ contract('Agreement', async (accounts) => {
 
     it('isClosedWithType should retrurn a correct status case 1', async () => {
       await agreement.initAgreement(BORROWER, 2000, 300000, 90000,
-        fromPercentToRey(3), ETH_A, true, configContract.address, {from: OWNER, value: 2000});
+        fromPercentToRey(3), ETH_A_SYM, ETH_A_IDX_SYM, ETH_A_IDX, true, configContract.address, {from: OWNER, value: 2000});
       await agreement.approveAgreement();
       await agreement.cancelAgreement({from: BORROWER});
 
@@ -1359,7 +1383,7 @@ contract('Agreement', async (accounts) => {
 
     it('isClosedWithType should retrurn a correct status case 2', async () => {
       await agreement.initAgreement(BORROWER, 2000, 300000, 90000,
-        fromPercentToRey(3), ETH_A, true, configContract.address, {from: OWNER, value: 2000});
+        fromPercentToRey(3), ETH_A_SYM, ETH_A_IDX, true, configContract.address, {from: OWNER, value: 2000});
       await agreement.approveAgreement();
       await agreement.matchAgreement({from: LENDER});
       await agreement.blockAgreement();
@@ -1369,7 +1393,7 @@ contract('Agreement', async (accounts) => {
 
     it('checkTimeToCancel should retrurn a correct status case 1', async () => {
       await agreement.initAgreement(BORROWER, 2000, 300000, 90000,
-        fromPercentToRey(3), ETH_A, true, configContract.address, {from: OWNER, value: 2000});
+        fromPercentToRey(3), ETH_A_SYM, ETH_A_IDX, true, configContract.address, {from: OWNER, value: 2000});
 
       await setCurrentTime(100000000000);
       assert.isTrue(await agreement.checkTimeToCancel.call(10, 10));
@@ -1377,7 +1401,7 @@ contract('Agreement', async (accounts) => {
 
     it('checkTimeToCancel should retrurn a correct status case 2', async () => {
       await agreement.initAgreement(BORROWER, 2000, 300000, 90000,
-        fromPercentToRey(3), ETH_A, true, configContract.address, {from: OWNER, value: 2000});
+        fromPercentToRey(3), ETH_A_SYM, ETH_A_IDX, true, configContract.address, {from: OWNER, value: 2000});
       await agreement.approveAgreement();
 
       await setCurrentTime(100000000000);
@@ -1394,7 +1418,7 @@ contract('Agreement', async (accounts) => {
       await agreement.setCRBuffer(100);
 
       await agreement.initAgreement(BORROWER, 2000, 300000, 90000,
-        fromPercentToRey(3), ETH_A, true, configContract.address, {from: OWNER, value: 2000});
+        fromPercentToRey(3), ETH_A_SYM, ETH_A_IDX, true, configContract.address, {from: OWNER, value: 2000});
       await agreement.approveAgreement();
       await agreement.matchAgreement({from: LENDER});
     });
@@ -1410,7 +1434,7 @@ contract('Agreement', async (accounts) => {
       assert.equal(result.logs[0].event, 'AssetsCollateralPush');
       assert.equal(result.logs[0].args._holder, BORROWER);
       assert.equal(result.logs[0].args._amount, 101);
-      assert.equal(result.logs[0].args._collateralType, ETH_A);
+      //assert.equal(result.logs[0].args._collateralType, ETH_A_SYM);
     });
 
     it('should be possible to _pushDaiAsset', async () => {
@@ -1441,7 +1465,7 @@ contract('Agreement', async (accounts) => {
       assert.equal(result.logs[0].event, 'AssetsCollateralPop');
       assert.equal(result.logs[0].args._holder, BORROWER);
       assert.equal(result.logs[0].args._amount, 50);
-      assert.equal(result.logs[0].args._collateralType, ETH_A);
+      assert.equal(result.logs[0].args._collateralType, ETH_A_SYM);
     });
 
     it('should be possible to _popDaiAsset', async () => {
@@ -1472,7 +1496,7 @@ contract('Agreement', async (accounts) => {
 
       await setCurrentTime(10);
       await agreement.initAgreement(BORROWER, 2000, 300000, 900000,
-        fromPercentToRey(3), ETH_A, true, configContract.address, {from: OWNER, value: 2000});
+        fromPercentToRey(3), ETH_A_SYM, ETH_A_IDX, true, configContract.address, {from: OWNER, value: 2000});
       await setCurrentTime(10);
       await agreement.approveAgreement();
       await setCurrentTime(10);
@@ -1568,14 +1592,14 @@ contract('Agreement', async (accounts) => {
 
       await setCurrentTime(10);
       await agreement.initAgreement(BORROWER, 2000, 300000, 900000,
-        fromPercentToRey(3), ETH_A, true, configContract.address, {from: OWNER, value: 2000});
+        fromPercentToRey(3), ETH_A_SYM, ETH_A_IDX, true, configContract.address, {from: OWNER, value: 2000});
       await setCurrentTime(10);
       await agreement.approveAgreement();
       await setCurrentTime(10);
       await agreement.matchAgreement({from: LENDER});
     });
 
-    it('getInfo should work correctly', async () => {
+    it('VR getInfo should work correctly', async () => {
       const result = await agreement.getInfo();
 
       assert.equal(result._addr, agreement.address);
@@ -1584,7 +1608,7 @@ contract('Agreement', async (accounts) => {
       assert.equal(result._duration, 900000);
       assert.equal(result._borrower, BORROWER);
       assert.equal(result._lender, LENDER);
-      assert.equal(result._collateralType, ETH_A);
+      assert.equal(result._collateralType, ETH_A_SYM);
       assert.equal(result._collateralAmount, 2000);
       assert.equal(result._debtValue, 300000);
       assert.equal(result._interestRate.toString(), 1030000000000000000000000000);
@@ -1617,7 +1641,7 @@ contract('Agreement', async (accounts) => {
 
       await setCurrentTime(10);
       await agreement.initAgreement(BORROWER, 2000, 300000, 900000,
-        fromPercentToRey(3), ETH_A, true, configContract.address, {from: OWNER, value: 2000});
+        fromPercentToRey(3), ETH_A_SYM, ETH_A_IDX, true, configContract.address, {from: OWNER, value: 2000});
       await setCurrentTime(10);
       await agreement.approveAgreement();
       await setCurrentTime(10);

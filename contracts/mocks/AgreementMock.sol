@@ -16,6 +16,7 @@ contract AgreementMock is Agreement {
     uint256 drawnCdp;
     uint256 injectionWad;
     uint256 CR;
+    uint256 mcr;
     uint256 price;
 
     /**
@@ -170,6 +171,17 @@ contract AgreementMock is Agreement {
     function getCRBuffer() public view returns(uint256) {
         return CR;
     }
+
+
+  function setMCR(uint256 _mcr) public  {
+    mcr = _mcr;
+  }
+
+    function getMCR() public view returns(uint256) {
+      return mcr;  
+    }
+
+
 
     function monitorRisky() public {
         _monitorRisky();

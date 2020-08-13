@@ -28,7 +28,8 @@ contract('erc20 Transfers', async (accounts) => {
   const LENDER = accounts[2];
   const NOBODY = accounts[3];
   const ADDRESS_NULL = '0x0000000000000000000000000000000000000000';
-  const ETH_A = '0x4554482d41000000000000000000000000000000000000000000000000000000';
+  const ETH_A_SYM = "ETH-A"
+  const ETH_A_IDX = '0x4554482d41000000000000000000000000000000000000000000000000000000';
 
   before('setup', async () => {
     agreement = await Agreement.new({from: OWNER});
@@ -54,7 +55,7 @@ contract('erc20 Transfers', async (accounts) => {
       await erc20.approve(fraFactory.address, 2000, {from: BORROWER});
 
       await fraFactory.initAgreementERC20(2000, 1000, 90000, fromPercentToRey(3),
-        ETH_A, {from: BORROWER});
+        ETH_A_SYM, ETH_A_IDX, {from: BORROWER});
 
       assert.notEqual(await fraFactory.agreementList.call(0), ADDRESS_NULL);
 
@@ -69,7 +70,7 @@ contract('erc20 Transfers', async (accounts) => {
       await erc20.approve(fraFactory.address, 3000, {from: BORROWER});
 
       await fraFactory.initAgreementERC20(2000, 1000, 90000, fromPercentToRey(3),
-        ETH_A, {from: BORROWER});
+        ETH_A_SYM, ETH_A_IDX, {from: BORROWER});
 
       assert.notEqual(await fraFactory.agreementList.call(0), ADDRESS_NULL);
 
@@ -83,7 +84,7 @@ contract('erc20 Transfers', async (accounts) => {
       await erc20.mint(BORROWER, 2000);
 
       await assertReverts(fraFactory.initAgreementERC20(2000, 1000, 90000, fromPercentToRey(3),
-        ETH_A, {from: BORROWER}));
+        ETH_A_SYM, ETH_A_IDX, {from: BORROWER}));
     });
 
     it('should not be possible to initialize with less allovance', async () => {
@@ -91,7 +92,7 @@ contract('erc20 Transfers', async (accounts) => {
       await erc20.approve(fraFactory.address, 1999, {from: BORROWER});
 
       await assertReverts(fraFactory.initAgreementERC20(2000, 1000, 90000, 3,
-        ETH_A, {from: BORROWER}));
+        ETH_A_SYM, ETH_A_IDX, {from: BORROWER}));
     });
   });
 
@@ -104,7 +105,7 @@ contract('erc20 Transfers', async (accounts) => {
     //   await erc20.approve(fraFactory.address, 150, {from: BORROWER});
 
     //   await fraFactory.initAgreementERC20(150, 150, 90000, fromPercentToRey(3),
-    //     ETH_A, {from: BORROWER});
+    //     ETH_A_SYM, ETH_A_IDX, {from: BORROWER});
 
     //   const localAgreement = await Agreement.at(await fraFactory.agreementList.call(0));
     //   await localAgreement.setMcdDaiAddrMock(daiErc20.address);
@@ -121,7 +122,7 @@ contract('erc20 Transfers', async (accounts) => {
       await daiErc20.mint(LENDER, 2000);
 
       await fraFactory.initAgreementETH(1005, 90000, fromPercentToRey(3),
-        ETH_A, {from: BORROWER, value: 2000});
+        ETH_A_SYM, ETH_A_IDX, {from: BORROWER, value: 2000});
 
       const localAgreement = await Agreement.at(await fraFactory.agreementList.call(0));
       await localAgreement.setMcdDaiAddrMock(daiErc20.address);

@@ -25,7 +25,8 @@ contract('IntegrationPool', async (accounts) => {
   const OWNER = accounts[0];
   const BORROWER = accounts[1];
   const LENDER = accounts[2];
-  const ETH_A = '0x4554482d41000000000000000000000000000000000000000000000000000000';
+  const ETH_A_SYM = "ETH-A"
+  const ETH_A_IDX = '0x4554482d41000000000000000000000000000000000000000000000000000000';
 
   before('setup', async () => {
     agreement = await Agreement.new();
@@ -41,10 +42,10 @@ contract('IntegrationPool', async (accounts) => {
     it('', async () => {
       const localAgreementAddress =
       await fraFactory.initAgreementETH.call(toBN(22000000000000000000), 90, fromPercentToRey(3),
-        ETH_A, {from: BORROWER, value: toBN(300000000000000000)});
+        ETH_A_SYM, ETH_A_IDX, {from: BORROWER, value: toBN(300000000000000000)});
 
       await fraFactory.initAgreementETH(toBN(22000000000000000000),
-        120, fromPercentToRey(3), ETH_A, {from: BORROWER, value: toBN(300000000000000000)});
+        120, fromPercentToRey(3), ETH_A_SYM, ETH_A_IDX, {from: BORROWER, value: toBN(300000000000000000)});
 
       console.log('Agreement initialized with address ' + localAgreementAddress);
 

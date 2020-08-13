@@ -505,19 +505,30 @@ contract Agreement is IAgreement, ClaimableIni, McdWrapper {
     function _updateAgreementState(bool _isLastUpdate) internal returns(bool _success) {
         // if it is last update take the time interval up to expireDate, otherwise up to current time
         uint timeInterval = (_isLastUpdate ? expireDate : now).sub(lastCheckTime);
+        uint irDiff; 
         uint injectionAmount;
         uint drawnDai;
-        uint currentDebt; 
+        uint currentDebt;
+        int savingsDifference;
+        uint dsr = getDsr();
+        uint rp;
         // uint currDuty     = getIlkDuty(ilkIndex); // warn about change in pricing
 
         // calculate savings difference between dsr and fixed interest rate during time interval
-        int256 irDiff = int256(getDsr()).sub( int256(interestRate) );
-        int irSign = irDiff > 0? int(1) : int(-1);
-        irDiff = (irDiff > 0? irDiff : -irDiff); 
-        int savingsDifference = irSign.mul(int(cdpDebtValue.mul( rpow( uint(irDiff), timeInterval,ONE))));
-        delta    = delta.add(  savingsDifference );
-        feeAccum = feeAccum.add(cdpDebtValue.mul( rpow(Config(configAddr).acapFee(), timeInterval, ONE)));
+        if(getDsr() > interestRate) {
+            irDiff = ONE.add(dsr.sub(interestRate));
+            rp = rpow(irDiff, timeInterval, ONE);
+            savingsDifference = int(cdpDebtValue.mul( rp ));
+            delta = delta.add(savingsDifference); // lender debt increases
+        } else {
+            irDiff = ONE.add((interestRate).sub(dsr));
+            rp = rpow(irDiff, timeInterval, ONE);
+            savingsDifference = int(cdpDebtValue.mul( rp ));
+            delta = delta.sub(savingsDifference); // lender debt decreases
+        }                
         
+        feeAccum = feeAccum.add(cdpDebtValue.mul( rpow(Config(configAddr).acapFee(), timeInterval, ONE)));
+    
         // check the current debt is above threshold
         currentDebt = uint(fromRay(delta < 0 ? -delta : delta));
         if (currentDebt >= (_isLastUpdate ? 1 : Config(configAddr).injectionThreshold())) {    
@@ -533,7 +544,7 @@ contract Agreement is IAgreement, ClaimableIni, McdWrapper {
                 injectedTotal = injectedTotal.add(injectionAmount);
             }
         }        
-
+        
         emit AgreementUpdated(savingsDifference, delta, getDsr(), timeInterval, drawnDai, injectionAmount);       
         
         uint daiFee = fromRay(feeAccum);
@@ -548,13 +559,14 @@ contract Agreement is IAgreement, ClaimableIni, McdWrapper {
                 }
             }   
 
-         // for the next iteration, last debt value and time
-        lastCheckTime = now;
-        (, cdpDebtValue) = getCdpInfo(ilkIndex, cdpId); // update new starting debt value for the next update
 
-        _monitorRisky();
-        if (_isLastUpdate)
-            _refund();
+        // for the next iteration, last debt value and time
+        lastCheckTime = now;
+        //(, cdpDebtValue) = getCdpInfo(ilkIndex, cdpId); // update new starting debt value for the next update
+
+        // vr _monitorRisky();
+        // if (_isLastUpdate)
+        //    _refund();
         return true;
     }
 
