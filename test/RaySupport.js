@@ -3,6 +3,8 @@ const Reverter = require('./helpers/reverter');
 // const {assertReverts} = require('./helpers/assertThrows');
 const BigNumber = require('bignumber.js');
 
+
+
 contract('RaySupport', async (accounts) => {
   const reverter = new Reverter(web3);
 
@@ -22,7 +24,7 @@ contract('RaySupport', async (accounts) => {
 
   describe('toRay()', async () => {
     it('should correctly convert to ray value 5', async () => {
-      assert.equal((toBN(await raySupport.toRay.call(5))).toFixed(), 5000000000000000000000000000);
+      assert.equal((toBN(await raySupport.toRay.call(5))), 5000000000000000000000000000);
     });
 
     it('should correctly convert to ray value 10', async () => {

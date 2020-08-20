@@ -11,7 +11,7 @@ const toBN = (num) => {
   return new BigNumber(num);
 };
 
-const fromPercentToRey = (num) => {
+const fromPercentToRay = (num) => {
   return (toBN(num).times((toBN(10).pow(toBN(25))))).plus((toBN(10).pow(toBN(27))));
 };
 
@@ -30,12 +30,12 @@ contract('LenderPool', async (accounts) => {
 
   before('setup', async () => {
     lenderPool = await LenderPool.new(TARGET_AGREEMENT_ADDRESS,
-      fromPercentToRey(1), 10, 1000000, 500000, 6000000000);
+      fromPercentToRay(1), 10, 1000000, 500000, 6000000000);
     daiTokenMock = await ERC20Token.new();
     await lenderPool.appointAdmin(ADMIN);
 
     await lenderPool.setAgreementDebtValue(20000000);
-    await lenderPool.setAgreementInterestRate(fromPercentToRey(3));
+    await lenderPool.setAgreementInterestRate(fromPercentToRay(3));
     await lenderPool.setAgreementDuration(100000);
     await lenderPool.setDaiTokenMock(daiTokenMock.address);
 
@@ -49,7 +49,7 @@ contract('LenderPool', async (accounts) => {
   describe('creation', async () => {
     it('should set all values correctly during creation', async () => {
       const lenderPoolLocal = await LenderPool.new(TARGET_AGREEMENT_ADDRESS,
-        fromPercentToRey(1), 10, 1000000, 500000, 6000000000);
+        fromPercentToRay(1), 10, 1000000, 500000, 6000000000);
 
       const result = await truffleAssert.createTransactionResult(lenderPoolLocal,
         lenderPoolLocal.transactionHash);

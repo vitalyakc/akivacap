@@ -9,7 +9,7 @@ interface IAgreement {
     enum Statuses {All, Pending, Open, Active, Closed}
     enum ClosedTypes {Ended, Liquidated, Blocked, Cancelled}
 
-    function initAgreement(address payable, uint256, uint256, uint256, uint256, bytes32, bytes32, bool, address) external payable;
+    function initAgreement(address payable, uint256, uint256, uint256, uint256, bytes32, bool, address) external payable;
 
     function transferOwnership(address) external;
     function claimOwnership() external;
@@ -36,7 +36,7 @@ interface IAgreement {
     function withdrawDai(uint) external;
     function getDaiAddress() external view returns(address); // ext
 
-    function getInfo() external view returns (address,uint,uint,uint,address,address,bytes32,bytes32,uint,uint,uint,bool); // ext
+    function getInfo() external view returns (address,uint,uint,uint,address,address,bytes32,uint,uint,uint,bool); // ext
 
     event AgreementInitiated(address _borrower, uint _collateralValue, uint _debtValue, uint _expireDate, uint _interestRate);
     event AgreementApproved();

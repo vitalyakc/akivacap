@@ -9,7 +9,7 @@ const toBN = (num) => {
   return new BigNumber(num);
 };
 
-const fromPercentToRey = (num) => {
+const fromPercentToRay = (num) => {
   return (toBN(num).times((toBN(10).pow(toBN(25))))).plus((toBN(10).pow(toBN(27))));
 };
 
@@ -41,11 +41,11 @@ contract('IntegrationPool', async (accounts) => {
   describe('Agreement lifesycle complete flow with pooling lender system integration test', async () => {
     it('', async () => {
       const localAgreementAddress =
-      await fraFactory.initAgreementETH.call(toBN(22000000000000000000), 90, fromPercentToRey(3),
-        ETH_A_SYM, ETH_A_IDX, {from: BORROWER, value: toBN(300000000000000000)});
+      await fraFactory.initAgreementETH.call(toBN(22000000000000000000), 90, fromPercentToRay(3),
+        ETH_A_SYM,  {from: BORROWER, value: toBN(300000000000000000)});
 
       await fraFactory.initAgreementETH(toBN(22000000000000000000),
-        120, fromPercentToRey(3), ETH_A_SYM, ETH_A_IDX, {from: BORROWER, value: toBN(300000000000000000)});
+        120, fromPercentToRay(3), ETH_A_SYM,  {from: BORROWER, value: toBN(300000000000000000)});
 
       console.log('Agreement initialized with address ' + localAgreementAddress);
 
@@ -54,7 +54,7 @@ contract('IntegrationPool', async (accounts) => {
       console.log('Agreement approved ');
 
       lenderPool = await LenderPool.new(localAgreementAddress,
-        fromPercentToRey(1), 1, 50000, 1, 20000000000000, {from: LENDER});
+        fromPercentToRay(1), 1, 50000, 1, 20000000000000, {from: LENDER});
 
       console.log('lenderPool created ' + lenderPool.address);
 

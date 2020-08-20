@@ -8,9 +8,14 @@ const toBN = (num) => {
   return new BigNumber(num);
 };
 
-const fromPercentToRey = (num) => {
-  return (toBN(num).times((toBN(10).pow(toBN(25))))).plus((toBN(10).pow(toBN(27))));
-};
+  //const fromPercentToRay = (num) => {
+  //  return (  toBN(num).times(  ( toBN(10).pow( toBN(25) ) )  )  ).plus((   toBN(10).pow(toBN(27))  ));
+  //};
+
+  const fromPercentToRay = (num) => {
+    x = Math.exp( (1.0+num/100)/(365*24*60*60) );  
+    return (BigNumber(Math.floor(x*(10**27)))).toFixed();
+  };
 
 contract('Integration', async (accounts) => {
   let configContract;
@@ -38,7 +43,7 @@ contract('Integration', async (accounts) => {
   describe('Case when agreement is initialized by borrower and immediately canceled by borrower', async () => {
     it('', async () => {
       const initiatiziationResult = await agreement.initAgreement(BORROWER, 2300, 30000, 90000,
-        fromPercentToRey(3), ETH_A_SYM, ETH_A_IDX, true, configContract.address, {from: OWNER, value: 2300});
+        fromPercentToRay(3), ETH_A_SYM,  true, configContract.address, {from: OWNER, value: 2300});
 
       console.log(agreement.address);
 
@@ -49,8 +54,8 @@ contract('Integration', async (accounts) => {
       console.log('Agreement borrower is ' + BORROWER);
       assert.equal((await agreement.debtValue.call()).toString(), 30000);
       console.log('Agreement debtValue is 30000');
-      assert.equal((await agreement.interestRate.call()).toString(), fromPercentToRey(3).toFixed());
-      console.log('Agreement interestRate is ' + fromPercentToRey(3).toFixed());
+      assert.equal((await agreement.interestRate.call()).toString(), fromPercentToRay(3));
+      console.log('Agreement interestRate is ' + fromPercentToRay(3));
       assert.equal((await agreement.collateralAmount.call()).toString(), 2300);
       console.log('Agreement collateralAmount is 2300');
       assert.equal(await agreement.collateralType.call(), ETH_A_SYM);
@@ -65,7 +70,7 @@ contract('Integration', async (accounts) => {
       assert.equal(initiatiziationResult.logs[1].args._debtValue.toString(), 30000);
       assert.equal(initiatiziationResult.logs[1].args._expireDate.toString(), 90000);
       assert.equal(initiatiziationResult.logs[1].args._interestRate.toString(),
-        fromPercentToRey(3).toFixed());
+        fromPercentToRay(3));
       console.log('Event ' + initiatiziationResult.logs[1].event + ' emmited');
 
       const resultCanceled = await agreement.cancelAgreement({from: BORROWER});
@@ -85,7 +90,7 @@ contract('Integration', async (accounts) => {
   describe('Case when agreement is initialized by borrower and gets rejected by owner', async () => {
     it('', async () => {
       const initiatiziationResult = await agreement.initAgreement(BORROWER, 2300, 30000, 90000,
-        fromPercentToRey(3), ETH_A_SYM, ETH_A_IDX, true, configContract.address, {from: OWNER, value: 2300});
+        fromPercentToRay(3), ETH_A_SYM,  true, configContract.address, {from: OWNER, value: 2300});
 
       console.log(agreement.address);
 
@@ -96,8 +101,8 @@ contract('Integration', async (accounts) => {
       console.log('Agreement borrower is ' + BORROWER);
       assert.equal((await agreement.debtValue.call()).toString(), 30000);
       console.log('Agreement debtValue is 30000');
-      assert.equal((await agreement.interestRate.call()).toString(), fromPercentToRey(3).toFixed());
-      console.log('Agreement interestRate is ' + fromPercentToRey(3).toFixed());
+      assert.equal((await agreement.interestRate.call()).toString(), fromPercentToRay(3));
+      console.log('Agreement interestRate is ' + fromPercentToRay(3));
       assert.equal((await agreement.collateralAmount.call()).toString(), 2300);
       console.log('Agreement collateralAmount is 2300');
       assert.equal(await agreement.collateralType.call(), ETH_A_SYM);
@@ -112,7 +117,7 @@ contract('Integration', async (accounts) => {
       assert.equal(initiatiziationResult.logs[1].args._debtValue.toString(), 30000);
       assert.equal(initiatiziationResult.logs[1].args._expireDate.toString(), 90000);
       assert.equal(initiatiziationResult.logs[1].args._interestRate.toString(),
-        fromPercentToRey(3).toFixed());
+        fromPercentToRay(3));
       console.log('Event ' + initiatiziationResult.logs[1].event + ' emmited');
 
       await agreement.rejectAgreement();
@@ -125,7 +130,7 @@ contract('Integration', async (accounts) => {
   describe('Case when agreement is initialized by borrower, gets approved by owner and immediately canceled by borrower', async () => {
     it('', async () => {
       const initiatiziationResult = await agreement.initAgreement(BORROWER, 2300, 30000, 90000,
-        fromPercentToRey(3), ETH_A_SYM, ETH_A_IDX, true, configContract.address, {from: OWNER, value: 2300});
+        fromPercentToRay(3), ETH_A_SYM,  true, configContract.address, {from: OWNER, value: 2300});
 
       console.log(agreement.address);
 
@@ -136,8 +141,8 @@ contract('Integration', async (accounts) => {
       console.log('Agreement borrower is ' + BORROWER);
       assert.equal((await agreement.debtValue.call()).toString(), 30000);
       console.log('Agreement debtValue is 30000');
-      assert.equal((await agreement.interestRate.call()).toString(), fromPercentToRey(3).toFixed());
-      console.log('Agreement interestRate is ' + fromPercentToRey(3).toFixed());
+      assert.equal((await agreement.interestRate.call()).toString(), fromPercentToRay(3));
+      console.log('Agreement interestRate is ' + fromPercentToRay(3));
       assert.equal((await agreement.collateralAmount.call()).toString(), 2300);
       console.log('Agreement collateralAmount is 2300');
       assert.equal(await agreement.collateralType.call(), ETH_A_SYM);
@@ -152,7 +157,7 @@ contract('Integration', async (accounts) => {
       assert.equal(initiatiziationResult.logs[1].args._debtValue.toString(), 30000);
       assert.equal(initiatiziationResult.logs[1].args._expireDate.toString(), 90000);
       assert.equal(initiatiziationResult.logs[1].args._interestRate.toString(),
-        fromPercentToRey(3).toFixed());
+        fromPercentToRay(3));
       console.log('Event ' + initiatiziationResult.logs[1].event + ' emmited');
 
       const resultApproved = await agreement.approveAgreement();
@@ -182,7 +187,7 @@ contract('Integration', async (accounts) => {
     it('', async () => {
       const initiatiziationResult = await agreement.initAgreement(BORROWER,
         toBN(250000000000000000), toBN(20000000000000000000), 90000,
-        fromPercentToRey(3), ETH_A_SYM, ETH_A_IDX, true, configContract.address,
+        fromPercentToRay(3), ETH_A_SYM,  true, configContract.address,
         {from: OWNER, value: toBN(250000000000000000)});
 
       console.log(agreement.address);
@@ -194,8 +199,8 @@ contract('Integration', async (accounts) => {
       console.log('Agreement borrower is ' + BORROWER);
       assert.equal((await agreement.debtValue.call()).toString(), '20000000000000000000');
       console.log('Agreement debtValue is 20000000000000000000');
-      assert.equal((await agreement.interestRate.call()).toString(), fromPercentToRey(3).toFixed());
-      console.log('Agreement interestRate is ' + fromPercentToRey(3).toFixed());
+      assert.equal((await agreement.interestRate.call()).toString(), fromPercentToRay(3));
+      console.log('Agreement interestRate is ' + fromPercentToRay(3));
       assert.equal((await agreement.collateralAmount.call()).toString(), '250000000000000000');
       console.log('Agreement collateralAmount is 250000000000000000 wei');
       assert.equal(await agreement.collateralType.call(), ETH_A_SYM);
@@ -212,7 +217,7 @@ contract('Integration', async (accounts) => {
         '20000000000000000000');
       assert.equal(initiatiziationResult.logs[1].args._expireDate.toString(), 90000);
       assert.equal(initiatiziationResult.logs[1].args._interestRate.toString(),
-        fromPercentToRey(3).toFixed());
+        fromPercentToRay(3));
       console.log('Event ' + initiatiziationResult.logs[1].event + ' emmited');
 
       const resultApproved = await agreement.approveAgreement();
@@ -272,7 +277,7 @@ contract('Integration', async (accounts) => {
     it('', async () => {
       const initiatiziationResult = await agreement.initAgreement(BORROWER,
         toBN(250000000000000000), toBN(28000000000000000000), 90000,
-        fromPercentToRey(3), ETH_A_SYM, ETH_A_IDX, true, configContract.address,
+        fromPercentToRay(3), ETH_A_SYM,  true, configContract.address,
         {from: OWNER, value: toBN(250000000000000000)});
 
       console.log(agreement.address);
@@ -284,8 +289,8 @@ contract('Integration', async (accounts) => {
       console.log('Agreement borrower is ' + BORROWER);
       assert.equal((await agreement.debtValue.call()).toString(), '28000000000000000000');
       console.log('Agreement debtValue is 28000000000000000000');
-      assert.equal((await agreement.interestRate.call()).toString(), fromPercentToRey(3).toFixed());
-      console.log('Agreement interestRate is ' + fromPercentToRey(3).toFixed());
+      assert.equal((await agreement.interestRate.call()).toString(), fromPercentToRay(3));
+      console.log('Agreement interestRate is ' + fromPercentToRay(3));
       assert.equal((await agreement.collateralAmount.call()).toString(), '250000000000000000');
       console.log('Agreement collateralAmount is 250000000000000000 wei');
       assert.equal(await agreement.collateralType.call(), ETH_A_SYM);
@@ -302,7 +307,7 @@ contract('Integration', async (accounts) => {
         '28000000000000000000');
       assert.equal(initiatiziationResult.logs[1].args._expireDate.toString(), 90000);
       assert.equal(initiatiziationResult.logs[1].args._interestRate.toString(),
-        fromPercentToRey(3).toFixed());
+        fromPercentToRay(3));
       console.log('Event ' + initiatiziationResult.logs[1].event + ' emmited');
 
       const resultApproved = await agreement.approveAgreement();
@@ -377,7 +382,7 @@ contract('Integration', async (accounts) => {
     it('', async () => {
       const initiatiziationResult = await agreement.initAgreement(BORROWER,
         toBN(250000000000000000), toBN(20000000000000000000), 90,
-        fromPercentToRey(3), ETH_A_SYM, ETH_A_IDX, true, configContract.address,
+        fromPercentToRay(3), ETH_A_SYM,  true, configContract.address,
         {from: OWNER, value: toBN(250000000000000000)});
 
       console.log(agreement.address);
@@ -389,8 +394,8 @@ contract('Integration', async (accounts) => {
       console.log('Agreement borrower is ' + BORROWER);
       assert.equal((await agreement.debtValue.call()).toString(), '20000000000000000000');
       console.log('Agreement debtValue is 20000000000000000000');
-      assert.equal((await agreement.interestRate.call()).toString(), fromPercentToRey(3).toFixed());
-      console.log('Agreement interestRate is ' + fromPercentToRey(3).toFixed());
+      assert.equal((await agreement.interestRate.call()).toString(), fromPercentToRay(3));
+      console.log('Agreement interestRate is ' + fromPercentToRay(3));
       assert.equal((await agreement.collateralAmount.call()).toString(), '250000000000000000');
       console.log('Agreement collateralAmount is 250000000000000000 wei');
       assert.equal(await agreement.collateralType.call(), ETH_A_SYM);
@@ -407,7 +412,7 @@ contract('Integration', async (accounts) => {
         '20000000000000000000');
       assert.equal(initiatiziationResult.logs[1].args._expireDate.toString(), 90);
       assert.equal(initiatiziationResult.logs[1].args._interestRate.toString(),
-        fromPercentToRey(3).toFixed());
+        fromPercentToRay(3));
       console.log('Event ' + initiatiziationResult.logs[1].event + ' emmited');
 
       const resultApproved = await agreement.approveAgreement();
@@ -469,7 +474,7 @@ contract('Integration', async (accounts) => {
     it('', async () => {
       const initiatiziationResult = await agreement.initAgreement(BORROWER,
         toBN(300000000000000000), toBN(22000000000000000000), 90,
-        '1005000000000000000000000000', ETH_A_SYM, ETH_A_IDX, true, configContract.address,
+        '1005000000000000000000000000', ETH_A_SYM,  true, configContract.address,
         {from: OWNER, value: toBN(300000000000000000)});
 
       console.log(agreement.address);
@@ -561,7 +566,7 @@ contract('Integration', async (accounts) => {
     it('', async () => {
       const initiatiziationResult = await agreement.initAgreement(BORROWER,
         toBN(215771454874996400), '24999999000000000000', 60000,
-        fromPercentToRey(5), ETH_A_SYM, ETH_A_IDX, true, configContract.address,
+        fromPercentToRay(5), ETH_A_SYM,  true, configContract.address,
         {from: OWNER, value: toBN(215771454874996400)});
 
       console.log(agreement.address);
@@ -573,8 +578,8 @@ contract('Integration', async (accounts) => {
       console.log('Agreement borrower is ' + BORROWER);
       assert.equal((await agreement.debtValue.call()).toString(), '24999999000000000000');
       console.log('Agreement debtValue is 24999999000000000000');
-      assert.equal((await agreement.interestRate.call()).toString(), fromPercentToRey(5).toFixed());
-      console.log('Agreement interestRate is ' + fromPercentToRey(5).toFixed());
+      assert.equal((await agreement.interestRate.call()).toString(), fromPercentToRay(5));
+      console.log('Agreement interestRate is ' + fromPercentToRay(5));
       assert.equal((await agreement.collateralAmount.call()).toString(), '215771454874996400');
       console.log('Agreement collateralAmount is 215771454874996400 wei');
       assert.equal(await agreement.collateralType.call(), ETH_A_SYM);
@@ -591,7 +596,7 @@ contract('Integration', async (accounts) => {
         '24999999000000000000');
       assert.equal(initiatiziationResult.logs[1].args._expireDate.toString(), 60000);
       assert.equal(initiatiziationResult.logs[1].args._interestRate.toString(),
-        fromPercentToRey(5).toFixed());
+        fromPercentToRay(5));
       console.log('Event ' + initiatiziationResult.logs[1].event + ' emmited');
 
       const resultApproved = await agreement.approveAgreement();

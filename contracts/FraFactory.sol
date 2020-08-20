@@ -30,20 +30,18 @@ contract FraFactory is Administrable {
      * @param _debtValue value of borrower's ETH put into the contract as collateral
      * @param _duration number of minutes which agreement should be terminated after
      * @param _interestRate percent of interest rate, should be passed like RAY
-     * @param _collateralType type of collateral, should be passed as bytes32 - useless
-     * @param _ilkIndex index of collateral in Maker structures - useless
+     * @param _collateralType type of collateral, should be passed as bytes32 - only ETH
      * @return agreement address
      */
     function initAgreementETH (
         uint256 _debtValue,
         uint256 _duration,
         uint256 _interestRate,
-        bytes32 _collateralType, 
-        bytes32 _ilkIndex
+        bytes32 _collateralType
     ) external payable returns(address _newAgreement) {
         address payable agreementProxyAddr = address(new UpgradeabilityProxy(agreementImpl, ""));
         IAgreement(agreementProxyAddr).
-            initAgreement.value(msg.value)(msg.sender, msg.value, _debtValue, _duration, _interestRate, _collateralType, _ilkIndex, true, configAddr);
+            initAgreement.value(msg.value)(msg.sender, msg.value, _debtValue, _duration, _interestRate, _collateralType, true, configAddr);
         
         agreementList.push(agreementProxyAddr);
         return agreementProxyAddr; //address(agreement);
@@ -55,7 +53,6 @@ contract FraFactory is Administrable {
      * @param _duration number of minutes which agreement should be terminated after
      * @param _interestRate percent of interest rate, should be passed like RAY 
      * @param _collateralType type of collateral, should be passed as bytes32
-     * @param _ilkIndex ilk id from ilk registry 
      * @return agreement address
      */
     function initAgreementERC20 (
@@ -63,19 +60,18 @@ contract FraFactory is Administrable {
         uint256 _debtValue,
         uint256 _duration,
         uint256 _interestRate,
-        bytes32 _collateralType, 
-        bytes32 _ilkIndex
+        bytes32 _collateralType
     ) external returns(address _newAgreement) {
-        address payable agreementProxyAddr = address(new UpgradeabilityProxy(agreementImpl, ""));
 
-        // recalculate interest rate 
-        // 
+        address  agreementProxyAddr;
+        agreementProxyAddr = address(new UpgradeabilityProxy(agreementImpl, ""));
+        
         IAgreement(agreementProxyAddr).
-            initAgreement(msg.sender, _collateralValue, _debtValue, _duration, _interestRate, _collateralType, _ilkIndex, false, configAddr);
-
-        IAgreement(agreementProxyAddr).erc20TokenContract(_collateralType).transferFrom(
-            msg.sender, address(agreementProxyAddr), _collateralValue);
-
+            initAgreement(msg.sender, _collateralValue, _debtValue, _duration, _interestRate, _collateralType, false, configAddr);
+        
+        IERC20 t = IAgreement(agreementProxyAddr).erc20TokenContract(_collateralType);        
+        t.transferFrom(msg.sender, address(agreementProxyAddr), _collateralValue);
+        
         agreementList.push(agreementProxyAddr);
         return agreementProxyAddr;
     }

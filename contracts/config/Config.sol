@@ -31,9 +31,7 @@ contract Config is ClaimableBase, RaySupport {
         enableCollateral("WBTC-A");
         enableCollateral("USDC-A");
         enableCollateral("USDC-B");
-
-        acapFee  = 1000000000158153903837946257; 
-        acapAddr = 0xF79179D06C687342a3f5C1daE5A7253AFC03C7A8; 
+        acapFee  = 1000000000158153903837946257;  
 
     }
 
@@ -78,14 +76,6 @@ contract Config is ClaimableBase, RaySupport {
      */
     function setAcapFee(uint _acapFee) public onlyContractOwner {
         acapFee = _acapFee;
-    }
-
-    /**
-     * @dev     Set config parameter
-     * @param   _a  address for drip fees
-     */
-    function setAcapAddr(address payable _a) public onlyContractOwner {
-        acapAddr = _a;
     }
 
     /**

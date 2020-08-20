@@ -8,7 +8,8 @@ import "./SafeMath.sol";
 contract RaySupport {
     using SafeMath for uint256;
     using SafeMath for int256;
-    uint constant public ONE = 10 ** 27;
+    uint constant public ONE  = 10 ** 27;
+    uint constant public HALF = ONE / 2;
     uint constant public HUNDRED = 100;
 
     /**
@@ -24,7 +25,10 @@ contract RaySupport {
      * @param   _val    uint value should be converted
      */
     function fromRay(uint _val) public pure returns(uint) {
-        return _val / ONE;
+        uint x = _val / ONE;
+        if (  (_val.sub(toRay(x))) > uint( (HALF-1) ) )
+            return x.add(1); 
+        return x;
     }
 
     /**
@@ -40,7 +44,10 @@ contract RaySupport {
      * @param   _val    int value should be converted
      */
     function fromRay(int _val) public pure returns(int) {
-        return _val / int(ONE);
+        int x = _val / int(ONE);
+        if (  (_val.sub(toRay(x))) > int( (HALF-1) ) )
+            return x.add(1); 
+        return x;
     }
 
     /**

@@ -8,7 +8,7 @@ import "./ConfigMock.sol";
  * @dev Should not be deployed. It is being used as an abstract class
  */
 contract AgreementMock is Agreement {
-    uint public dsrTest = 105 * 10 ** 25;
+    uint public dsrTest = 1000000001547125957863212448; // 5% per sec compounding
     uint256 public currentTime;
     uint256 public unlockedDai;
     address erc20Token;
@@ -19,6 +19,8 @@ contract AgreementMock is Agreement {
     uint256 mcr;
     uint256 price;
 
+    uint256 ink;
+    uint256 art;
     /**
      * @notice should be removed after testing!!!
      */
@@ -84,15 +86,17 @@ contract AgreementMock is Agreement {
       uint256 _duration,
       uint256 _interestRatePercent,
       bytes32 _collateralType,
-      bytes32 _ilkIndex,
       bool _isETH,
       address _configAddr
     ) public payable {
       Agreement.initAgreement(_borrower, _collateralAmount, _debtValue,
-        _duration, _interestRatePercent, _collateralType, _ilkIndex, _isETH, _configAddr);
+        _duration, _interestRatePercent, _collateralType, _isETH, _configAddr);
       
+      ink = _collateralAmount;
+      art = _debtValue;
       setErc20Token(ConfigMock(_configAddr).getErc20collToken());
     }
+
 
     function updateAgreementState(bool _lastUpdate) public returns(bool success) {
       return _updateAgreementState(_lastUpdate);
@@ -112,6 +116,8 @@ contract AgreementMock is Agreement {
 
     function _transferCdpOwnershipToProxy(uint256, address) internal {}
 
+
+
     function setDrawnCdp(uint256 _drawnCdp) public {
         drawnCdp = _drawnCdp;
     }
@@ -120,6 +126,9 @@ contract AgreementMock is Agreement {
       return drawnCdp;
     }
 
+
+
+
     function _injectToCdpFromDsr(uint, uint) internal returns(uint) {
       return injectionWad;
     }
@@ -127,6 +136,8 @@ contract AgreementMock is Agreement {
     function setInjectionWad(uint256 _injectionWad) public {
       injectionWad = _injectionWad;
     }
+
+
 
     function nextStatus() public {
       _nextStatus();
@@ -172,6 +183,11 @@ contract AgreementMock is Agreement {
         return CR;
     }
 
+
+    function getCdpInfo(bytes32 ilk, uint cdpId) public view returns(uint, uint) {
+        return (ink, art); 
+
+    }
 
   function setMCR(uint256 _mcr) public  {
     mcr = _mcr;
