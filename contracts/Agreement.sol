@@ -494,26 +494,20 @@ contract Agreement is IAgreement, ClaimableIni, McdWrapper {
      * @return  Operation success
      */
     function _updateAgreementState(bool _isLastUpdate) internal returns(bool _success) {
-        // if it is last update take the time interval up to expireDate, otherwise up to current time
         uint timeInterval = (_isLastUpdate ? expireDate : now).sub(lastCheckTime);
         uint injectionAmount;
         uint drawnDai;
         uint currentDebt;
-        uint rp; // compounded rate in the last period
         int  savingsDifference;
-        uint dsr = getDsr();
         // uint currDuty     = getIlkDuty(collateralType); // warn about change in pricing
   
-        // calculate savings difference between dsr and fixed interest rate during time interval
-        uint dsrEff = rpow(dsr, timeInterval, ONE);
+        uint dsrEff = rpow(getDsr(), timeInterval, ONE);
         uint firEff = rpow(interestRate, timeInterval, ONE);
-        if(dsr > interestRate ) // lender owes to borrower, savingsDifference is >0
-        {
-            rp = dsrEff.sub(firEff);
-            savingsDifference = int(cdpDebtValue.mul( rp ));
-        } else {                // borrower owes to lender, savings diff is <0
-            rp = firEff.sub(dsrEff);
-            savingsDifference = -int(cdpDebtValue.mul( rp ));
+        if(getDsr() > interestRate ) 
+        {                       // lender owes to borrower, savingsDiff >0
+            savingsDifference = int(cdpDebtValue.mul( dsrEff.sub(firEff) ));
+        } else {                // borrower owes to lender, savingsDiff <0
+            savingsDifference = -int(cdpDebtValue.mul( firEff.sub(dsrEff) ));
         }
 
         delta = delta.add(savingsDifference);
@@ -537,19 +531,20 @@ contract Agreement is IAgreement, ClaimableIni, McdWrapper {
         
         uint feeFrac =  rpow(Config(configAddr).acapFee(), timeInterval, ONE).sub(ONE);
         uint nowFee = cdpDebtValue.mul(feeFrac);
-        feeAccum = feeAccum.add(nowFee);        
-        if ( fromRay(feeAccum) > Config(configAddr).injectionThreshold() || _isLastUpdate)  {
-            drawnDai = _drawDaiToCdp(collateralType, cdpId, fromRay(feeAccum));
+        feeAccum = feeAccum.add(nowFee); 
+        uint feePay = fromRay(feeAccum);
+        if ( feePay > Config(configAddr).injectionThreshold() || _isLastUpdate)  {
+            drawnDai = _drawDaiToCdp(collateralType, cdpId, feePay);
             if (drawnDai > 0) 
             {
-                _pushDaiAsset(owner, drawnDai); 
-                drawnTotal = drawnTotal.add(drawnDai);
+                _pushDaiAsset(Config(configAddr).acapAddr(), drawnDai); 
+                drawnTotal   = drawnTotal.add(drawnDai);
                 feePaidTotal = feePaidTotal.add(drawnDai);
-                feeAccum     = feeAccum.sub(drawnDai);                 
+                feeAccum     = feeAccum.sub(drawnDai);
             }
         }   
 
-        emit AgreementUpdated(savingsDifference, delta, dsrEff, timeInterval, drawnDai, injectionAmount);
+        emit AgreementUpdated(savingsDifference, delta, timeInterval, drawnDai, injectionAmount);
         
         // for the next iteration, last debt value and time
         lastCheckTime = now;

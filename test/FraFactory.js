@@ -81,7 +81,7 @@ contract('FraFactory', async (accounts) => {
     it('should be possible to init agreement on ERC20 with valid values from borrower', async () => {
       await erc20.mint(BORROWER, toBN('2000000000000000000'));
       await erc20.approve(fraFactory.address, toBN('2000000000000000000'), {from: BORROWER});
-      await debug(fraFactory.initAgreementERC20(toBN('1000000000000000000'),300000, 90000,  fromPercentToRay(3), ETH_A_SYM,  
+      await (fraFactory.initAgreementERC20(toBN('1000000000000000000'),300000, 90000,  fromPercentToRay(3), ETH_A_SYM,  
           {from: BORROWER}));
       return;
       assert.notEqual(await fraFactory.agreementList.call(0), ADDRESS_NULL);
@@ -559,7 +559,7 @@ contract('FraFactory', async (accounts) => {
       await localAgreement3.setUnlockedDai(toBN(300000));
 
       await setCurrentTime(10000);
-      await debug(fraFactory.updateAgreements());
+      await (fraFactory.updateAgreements());
 
       assert.equal((await localAgreement1.borrowerFraDebt.call()).toString(), '2');
       assert.equal((await localAgreement2.borrowerFraDebt.call()).toString(), '2');

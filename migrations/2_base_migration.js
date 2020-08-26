@@ -26,8 +26,6 @@ module.exports = function (deployer, network) {
     if (network == 'mainnet') {
         deployer.then(async () => {
      
-            // todo replace 
-     
             await deployer.deploy(Config)
             await deployer.deploy(Agreement)
             

@@ -120,21 +120,23 @@ contract AgreementMock is Agreement {
 
     function setDrawnCdp(uint256 _drawnCdp) public {
         drawnCdp = _drawnCdp;
+        _drawnCdp = 0; 
     }
 
-    function _drawDaiToCdp(bytes32, uint, uint) internal returns (uint) {
-      return drawnCdp;
+    function _drawDaiToCdp(bytes32, uint, uint cdebt) internal returns (uint) {
+      return drawnCdp > cdebt ? cdebt : drawnCdp;
     }
 
 
 
 
-    function _injectToCdpFromDsr(uint, uint) internal returns(uint) {
-      return injectionWad;
+    function _injectToCdpFromDsr(uint, uint debt) internal returns(uint) {
+      return injectionWad > debt? debt : injectionWad;
     }
 
     function setInjectionWad(uint256 _injectionWad) public {
       injectionWad = _injectionWad;
+      _injectionWad = 0;
     }
 
 

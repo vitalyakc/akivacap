@@ -41,7 +41,7 @@ interface IAgreement {
     event AgreementInitiated(address _borrower, uint _collateralValue, uint _debtValue, uint _expireDate, uint _interestRate);
     event AgreementApproved();
     event AgreementMatched(address _lender, uint _expireDate, uint _cdpId, uint _collateralAmount, uint _debtValue, uint _drawnDai);
-    event AgreementUpdated(int _savingsDifference, int _delta, uint _currentDsrAnnual, uint _timeInterval, uint _drawnDai, uint _injectionAmount);
+    event AgreementUpdated(int _savingsDifference, int _delta, uint _timeInterval, uint _drawnDai, uint _injectionAmount);
     event AgreementClosed(uint _closedType, address _user);
     event AssetsCollateralPush(address _holder, uint _amount, bytes32 _collateralType);
     event AssetsCollateralPop(address _holder, uint _amount, bytes32 _collateralType);

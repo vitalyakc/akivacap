@@ -191,7 +191,8 @@ pragma solidity 0.5.12;
 contract RaySupport {
     using SafeMath for uint256;
     using SafeMath for int256;
-    uint constant public ONE = 10 ** 27;
+    uint constant public ONE  = 10 ** 27;
+    uint constant public HALF = ONE / 2;
     uint constant public HUNDRED = 100;
 
     /**
@@ -207,7 +208,10 @@ contract RaySupport {
      * @param   _val    uint value should be converted
      */
     function fromRay(uint _val) public pure returns(uint) {
-        return _val / ONE;
+        uint x = _val / ONE;
+        //if (  (_val.sub(toRay(x))) > uint( (HALF-1) ) )
+        //    return x.add(1); 
+        return x;
     }
 
     /**
@@ -223,7 +227,10 @@ contract RaySupport {
      * @param   _val    int value should be converted
      */
     function fromRay(int _val) public pure returns(int) {
-        return _val / int(ONE);
+        int x = _val / int(ONE);
+        //if (  (_val.sub(toRay(x))) > int( (HALF-1) ) )
+        //    return x.add(1); 
+        return x;
     }
 
     /**
@@ -277,32 +284,35 @@ contract Config is ClaimableBase, RaySupport {
     uint public minDuration;
     uint public maxDuration;
     uint public riskyMargin;
-    uint public acapFee; // per second %
+    uint public acapFee;   // per second %
+    address payable public acapAddr;  // 
 
     /**
      * @dev     Set default config
      */
     constructor() public {
         // last parameter: fee is 0.5% annual in per-second compounding 
-        setGeneral(7 days, 1 days, 0.01 ether, 0.2 ether, 10000 ether, 1 minutes, 365 days, 20, 1000000000158153903837946257);
+        setGeneral(7 days, 1 days, 0.01 ether, 0.2 ether, 10000 ether, 1 minutes, 1000 days, 20);
         enableCollateral("ETH-A");
         enableCollateral("BAT-A");
         enableCollateral("WBTC-A");
         enableCollateral("USDC-A");
         enableCollateral("USDC-B");
+        acapFee  = 1000000000158153903837946257;
+        acapAddr = 0xF79179D06C687342a3f5C1daE5A7253AFC03C7A8;  
+
     }
 
     /**
      * @dev     Set all config parameters
-     * @param   _approveLimit      max duration available for approve after creation, if expires - agreement should be closed
-     * @param   _matchLimit        max duration available for match after approve, if expires - agreement should be closed
+     * @param   _approveLimit      max time available for approve after creation, if expires - agreement should be closed
+     * @param   _matchLimit        max time available for match after approve, if expires - agreement should be closed
      * @param   _injectionThreshold     minimal threshold permitted for injection
      * @param   _minCollateralAmount    min amount
      * @param   _maxCollateralAmount    max amount
      * @param   _minDuration        min agreement length
      * @param   _maxDuration        max agreement length
      * @param   _riskyMargin        risky Margin %
-     * @param   _acapFee            Fee for Acap service, %
      */
     function setGeneral(
         uint _approveLimit,
@@ -312,8 +322,7 @@ contract Config is ClaimableBase, RaySupport {
         uint _maxCollateralAmount,
         uint _minDuration,
         uint _maxDuration,
-        uint _riskyMargin,
-        uint _acapFee
+        uint _riskyMargin
     ) public onlyContractOwner {
         approveLimit = _approveLimit;
         matchLimit = _matchLimit;
@@ -327,16 +336,24 @@ contract Config is ClaimableBase, RaySupport {
         maxDuration = _maxDuration;
 
         riskyMargin = _riskyMargin;
-        acapFee     = _acapFee;
     }
 
     /**
      * @dev     Set config parameter
-     * @param   _acapFee        fee in % per second
+     * @param   _acapFee  fee in % per second
      */
     function setAcapFee(uint _acapFee) public onlyContractOwner {
         acapFee = _acapFee;
     }
+
+    /**
+     * @dev     Set config parameter
+     * @param   _a  address for fees
+     */
+    function setAcapAddr(address payable _a) public onlyContractOwner {
+        acapAddr = _a;
+    }
+
 
     /**
      * @dev     Set config parameter
@@ -426,39 +443,39 @@ interface IAgreement {
     enum Statuses {All, Pending, Open, Active, Closed}
     enum ClosedTypes {Ended, Liquidated, Blocked, Cancelled}
 
-    function initAgreement(address payable, uint256, uint256, uint256, uint256, bytes32, bytes32, bool, address) external payable;
+    function initAgreement(address payable, uint256, uint256, uint256, uint256, bytes32, bool, address) external payable;
 
     function transferOwnership(address) external;
     function claimOwnership() external;
     function approveAgreement() external returns(bool);
     function updateAgreement() external returns(bool);
-    function cancelAgreement() external returns(bool);
+    function cancelAgreement() external returns(bool); // ext
     function rejectAgreement() external returns(bool);
     function blockAgreement() external returns(bool);
     function matchAgreement() external returns(bool);
     function interestRate() external view returns(uint);
     function duration() external view returns(uint);
-    function debtValue() external view returns(uint);
+    function cdpDebtValue() external view returns(uint);
     function status() external view returns(uint);
     function lender() external view returns(address);
     function borrower() external view returns(address);
-    function collateralType() external view returns(bytes32);
+    function collateralType() external view returns(bytes32); // ext
     function isStatus(Statuses) external view returns(bool);
     function isBeforeStatus(Statuses) external view returns(bool);
     function isClosedWithType(ClosedTypes) external view returns(bool);
     function checkTimeToCancel(uint, uint) external view returns(bool);
     function cdpId() external view returns(uint);
     function erc20TokenContract(bytes32) external view returns(IERC20);
-    function getAssets(address) external view returns(uint,uint);
+    function getAssets(address) external view returns(uint,uint); // ext
     function withdrawDai(uint) external;
-    function getDaiAddress() external view returns(address);
+    function getDaiAddress() external view returns(address); // ext
 
-    function getInfo() external view returns (address,uint,uint,uint,address,address,bytes32,uint,uint,uint,bool);
+    function getInfo() external view returns (address,uint,uint,uint,address,address,bytes32,uint,uint,uint,bool); // ext
 
     event AgreementInitiated(address _borrower, uint _collateralValue, uint _debtValue, uint _expireDate, uint _interestRate);
     event AgreementApproved();
     event AgreementMatched(address _lender, uint _expireDate, uint _cdpId, uint _collateralAmount, uint _debtValue, uint _drawnDai);
-    event AgreementUpdated(int _savingsDifference, int _delta, uint _currentDsrAnnual, uint _timeInterval, uint _drawnDai, uint _injectionAmount);
+    event AgreementUpdated(int _savingsDifference, int _delta, uint _timeInterval, uint _drawnDai, uint _injectionAmount);
     event AgreementClosed(uint _closedType, address _user);
     event AssetsCollateralPush(address _holder, uint _amount, bytes32 _collateralType);
     event AssetsCollateralPop(address _holder, uint _amount, bytes32 _collateralType);
@@ -750,20 +767,18 @@ contract FraFactory is Administrable {
      * @param _debtValue value of borrower's ETH put into the contract as collateral
      * @param _duration number of minutes which agreement should be terminated after
      * @param _interestRate percent of interest rate, should be passed like RAY
-     * @param _collateralType type of collateral, should be passed as bytes32
-     * @param _ilkIndex index of collateral in Maker structures
+     * @param _collateralType type of collateral, should be passed as bytes32 - only ETH
      * @return agreement address
      */
     function initAgreementETH (
         uint256 _debtValue,
         uint256 _duration,
         uint256 _interestRate,
-        bytes32 _collateralType, 
-        bytes32 _ilkIndex
+        bytes32 _collateralType
     ) external payable returns(address _newAgreement) {
         address payable agreementProxyAddr = address(new UpgradeabilityProxy(agreementImpl, ""));
         IAgreement(agreementProxyAddr).
-            initAgreement.value(msg.value)(msg.sender, msg.value, _debtValue, _duration, _interestRate, _collateralType, _ilkIndex, true, configAddr);
+            initAgreement.value(msg.value)(msg.sender, msg.value, _debtValue, _duration, _interestRate, _collateralType, true, configAddr);
         
         agreementList.push(agreementProxyAddr);
         return agreementProxyAddr; //address(agreement);
@@ -773,7 +788,7 @@ contract FraFactory is Administrable {
      * @dev Requests agreement on ERC-20 collateralType
      * @param _debtValue value of borrower's collateral
      * @param _duration number of minutes which agreement should be terminated after
-     * @param _interestRate percent of interest rate, should be passed like
+     * @param _interestRate percent of interest rate, should be passed like RAY 
      * @param _collateralType type of collateral, should be passed as bytes32
      * @return agreement address
      */
@@ -782,16 +797,18 @@ contract FraFactory is Administrable {
         uint256 _debtValue,
         uint256 _duration,
         uint256 _interestRate,
-        bytes32 _collateralType, 
-        bytes32 _ilkIndex
+        bytes32 _collateralType
     ) external returns(address _newAgreement) {
-        address payable agreementProxyAddr = address(new UpgradeabilityProxy(agreementImpl, ""));
+
+        address  agreementProxyAddr;
+        agreementProxyAddr = address(new UpgradeabilityProxy(agreementImpl, ""));
+        
         IAgreement(agreementProxyAddr).
-            initAgreement(msg.sender, _collateralValue, _debtValue, _duration, _interestRate, _collateralType, _ilkIndex, false, configAddr);
-
-        IAgreement(agreementProxyAddr).erc20TokenContract(_collateralType).transferFrom(
-            msg.sender, address(agreementProxyAddr), _collateralValue);
-
+            initAgreement(msg.sender, _collateralValue, _debtValue, _duration, _interestRate, _collateralType, false, configAddr);
+        
+        IERC20 t = IAgreement(agreementProxyAddr).erc20TokenContract(_collateralType);        
+        t.transferFrom(msg.sender, address(agreementProxyAddr), _collateralValue);
+        
         agreementList.push(agreementProxyAddr);
         return agreementProxyAddr;
     }

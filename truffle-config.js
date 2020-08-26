@@ -47,13 +47,24 @@ module.exports = {
     // options below to some value.
     //
     development: {
-      host: 'localhost', // Localhost (default: none)
+      host: '127.0.0.1', // Localhost (default: none)
       port: 8545, // Standard Ethereum port (default: none)
       network_id: '*', // Any network (default: none)
       gas: 6000000,
       gasLimit: 6000000, // <-- Use this high gas value
       gasPrice: 1,
     },
+    
+    dev2: {    
+      host: '127.0.0.1', // Localhost (default: none)
+      port: 8546, // Standard Ethereum port (default: none)
+      network_id: '*', // Any network (default: none)
+      gas: 6000000,
+      gasLimit: 6000000, // <-- Use this high gas value
+      gasPrice: 1,
+    },
+    
+    
     coverage: {
       host: 'localhost',
       network_id: '*',

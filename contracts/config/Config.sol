@@ -31,14 +31,15 @@ contract Config is ClaimableBase, RaySupport {
         enableCollateral("WBTC-A");
         enableCollateral("USDC-A");
         enableCollateral("USDC-B");
-        acapFee  = 1000000000158153903837946257;  
+        acapFee  = 1000000000158153903837946257;
+        acapAddr = 0xF79179D06C687342a3f5C1daE5A7253AFC03C7A8;  
 
     }
 
     /**
      * @dev     Set all config parameters
-     * @param   _approveLimit      max duration available for approve after creation, if expires - agreement should be closed
-     * @param   _matchLimit        max duration available for match after approve, if expires - agreement should be closed
+     * @param   _approveLimit      max time available for approve after creation, if expires - agreement should be closed
+     * @param   _matchLimit        max time available for match after approve, if expires - agreement should be closed
      * @param   _injectionThreshold     minimal threshold permitted for injection
      * @param   _minCollateralAmount    min amount
      * @param   _maxCollateralAmount    max amount
@@ -77,6 +78,15 @@ contract Config is ClaimableBase, RaySupport {
     function setAcapFee(uint _acapFee) public onlyContractOwner {
         acapFee = _acapFee;
     }
+
+    /**
+     * @dev     Set config parameter
+     * @param   _a  address for fees
+     */
+    function setAcapAddr(address payable _a) public onlyContractOwner {
+        acapAddr = _a;
+    }
+
 
     /**
      * @dev     Set config parameter

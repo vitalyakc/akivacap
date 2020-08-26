@@ -26,8 +26,8 @@ contract RaySupport {
      */
     function fromRay(uint _val) public pure returns(uint) {
         uint x = _val / ONE;
-        if (  (_val.sub(toRay(x))) > uint( (HALF-1) ) )
-            return x.add(1); 
+        //if (  (_val.sub(toRay(x))) > uint( (HALF-1) ) )
+        //    return x.add(1); 
         return x;
     }
 
@@ -45,8 +45,8 @@ contract RaySupport {
      */
     function fromRay(int _val) public pure returns(int) {
         int x = _val / int(ONE);
-        if (  (_val.sub(toRay(x))) > int( (HALF-1) ) )
-            return x.add(1); 
+        //if (  (_val.sub(toRay(x))) > int( (HALF-1) ) )
+        //    return x.add(1); 
         return x;
     }
 

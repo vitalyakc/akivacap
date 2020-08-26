@@ -191,7 +191,8 @@ pragma solidity 0.5.12;
 contract RaySupport {
     using SafeMath for uint256;
     using SafeMath for int256;
-    uint constant public ONE = 10 ** 27;
+    uint constant public ONE  = 10 ** 27;
+    uint constant public HALF = ONE / 2;
     uint constant public HUNDRED = 100;
 
     /**
@@ -207,7 +208,10 @@ contract RaySupport {
      * @param   _val    uint value should be converted
      */
     function fromRay(uint _val) public pure returns(uint) {
-        return _val / ONE;
+        uint x = _val / ONE;
+        //if (  (_val.sub(toRay(x))) > uint( (HALF-1) ) )
+        //    return x.add(1); 
+        return x;
     }
 
     /**
@@ -223,7 +227,10 @@ contract RaySupport {
      * @param   _val    int value should be converted
      */
     function fromRay(int _val) public pure returns(int) {
-        return _val / int(ONE);
+        int x = _val / int(ONE);
+        //if (  (_val.sub(toRay(x))) > int( (HALF-1) ) )
+        //    return x.add(1); 
+        return x;
     }
 
     /**
@@ -277,32 +284,35 @@ contract Config is ClaimableBase, RaySupport {
     uint public minDuration;
     uint public maxDuration;
     uint public riskyMargin;
-    uint public acapFee; // per second %
+    uint public acapFee;   // per second %
+    address payable public acapAddr;  // 
 
     /**
      * @dev     Set default config
      */
     constructor() public {
         // last parameter: fee is 0.5% annual in per-second compounding 
-        setGeneral(7 days, 1 days, 0.01 ether, 0.2 ether, 10000 ether, 1 minutes, 365 days, 20, 1000000000158153903837946257);
+        setGeneral(7 days, 1 days, 0.01 ether, 0.2 ether, 10000 ether, 1 minutes, 1000 days, 20);
         enableCollateral("ETH-A");
         enableCollateral("BAT-A");
         enableCollateral("WBTC-A");
         enableCollateral("USDC-A");
         enableCollateral("USDC-B");
+        acapFee  = 1000000000158153903837946257;
+        acapAddr = 0xF79179D06C687342a3f5C1daE5A7253AFC03C7A8;  
+
     }
 
     /**
      * @dev     Set all config parameters
-     * @param   _approveLimit      max duration available for approve after creation, if expires - agreement should be closed
-     * @param   _matchLimit        max duration available for match after approve, if expires - agreement should be closed
+     * @param   _approveLimit      max time available for approve after creation, if expires - agreement should be closed
+     * @param   _matchLimit        max time available for match after approve, if expires - agreement should be closed
      * @param   _injectionThreshold     minimal threshold permitted for injection
      * @param   _minCollateralAmount    min amount
      * @param   _maxCollateralAmount    max amount
      * @param   _minDuration        min agreement length
      * @param   _maxDuration        max agreement length
      * @param   _riskyMargin        risky Margin %
-     * @param   _acapFee            Fee for Acap service, %
      */
     function setGeneral(
         uint _approveLimit,
@@ -312,8 +322,7 @@ contract Config is ClaimableBase, RaySupport {
         uint _maxCollateralAmount,
         uint _minDuration,
         uint _maxDuration,
-        uint _riskyMargin,
-        uint _acapFee
+        uint _riskyMargin
     ) public onlyContractOwner {
         approveLimit = _approveLimit;
         matchLimit = _matchLimit;
@@ -327,16 +336,24 @@ contract Config is ClaimableBase, RaySupport {
         maxDuration = _maxDuration;
 
         riskyMargin = _riskyMargin;
-        acapFee     = _acapFee;
     }
 
     /**
      * @dev     Set config parameter
-     * @param   _acapFee        fee in % per second
+     * @param   _acapFee  fee in % per second
      */
     function setAcapFee(uint _acapFee) public onlyContractOwner {
         acapFee = _acapFee;
     }
+
+    /**
+     * @dev     Set config parameter
+     * @param   _a  address for fees
+     */
+    function setAcapAddr(address payable _a) public onlyContractOwner {
+        acapAddr = _a;
+    }
+
 
     /**
      * @dev     Set config parameter
@@ -1126,39 +1143,39 @@ interface IAgreement {
     enum Statuses {All, Pending, Open, Active, Closed}
     enum ClosedTypes {Ended, Liquidated, Blocked, Cancelled}
 
-    function initAgreement(address payable, uint256, uint256, uint256, uint256, bytes32, bytes32, bool, address) external payable;
+    function initAgreement(address payable, uint256, uint256, uint256, uint256, bytes32, bool, address) external payable;
 
     function transferOwnership(address) external;
     function claimOwnership() external;
     function approveAgreement() external returns(bool);
     function updateAgreement() external returns(bool);
-    function cancelAgreement() external returns(bool);
+    function cancelAgreement() external returns(bool); // ext
     function rejectAgreement() external returns(bool);
     function blockAgreement() external returns(bool);
     function matchAgreement() external returns(bool);
     function interestRate() external view returns(uint);
     function duration() external view returns(uint);
-    function debtValue() external view returns(uint);
+    function cdpDebtValue() external view returns(uint);
     function status() external view returns(uint);
     function lender() external view returns(address);
     function borrower() external view returns(address);
-    function collateralType() external view returns(bytes32);
+    function collateralType() external view returns(bytes32); // ext
     function isStatus(Statuses) external view returns(bool);
     function isBeforeStatus(Statuses) external view returns(bool);
     function isClosedWithType(ClosedTypes) external view returns(bool);
     function checkTimeToCancel(uint, uint) external view returns(bool);
     function cdpId() external view returns(uint);
     function erc20TokenContract(bytes32) external view returns(IERC20);
-    function getAssets(address) external view returns(uint,uint);
+    function getAssets(address) external view returns(uint,uint); // ext
     function withdrawDai(uint) external;
-    function getDaiAddress() external view returns(address);
+    function getDaiAddress() external view returns(address); // ext
 
-    function getInfo() external view returns (address,uint,uint,uint,address,address,bytes32,uint,uint,uint,bool);
+    function getInfo() external view returns (address,uint,uint,uint,address,address,bytes32,uint,uint,uint,bool); // ext
 
     event AgreementInitiated(address _borrower, uint _collateralValue, uint _debtValue, uint _expireDate, uint _interestRate);
     event AgreementApproved();
     event AgreementMatched(address _lender, uint _expireDate, uint _cdpId, uint _collateralAmount, uint _debtValue, uint _drawnDai);
-    event AgreementUpdated(int _savingsDifference, int _delta, uint _currentDsrAnnual, uint _timeInterval, uint _drawnDai, uint _injectionAmount);
+    event AgreementUpdated(int _savingsDifference, int _delta, uint _timeInterval, uint _drawnDai, uint _injectionAmount);
     event AgreementClosed(uint _closedType, address _user);
     event AssetsCollateralPush(address _holder, uint _amount, bytes32 _collateralType);
     event AssetsCollateralPop(address _holder, uint _amount, bytes32 _collateralType);
@@ -1254,20 +1271,15 @@ contract Agreement is IAgreement, ClaimableIni, McdWrapper {
      */
     bytes32 public collateralType;
 
-    /** 
-     * uint ilk index in Jug and IlkRegistry
-     */
-    bytes32 ilkIndex;
-
     /**
      * Collateral amount
      */
     uint256 public collateralAmount;
 
     /**
-     * Dai debt amount
+     * Dai debt amount of CDP at the last update
      */
-    uint256 public debtValue;
+    uint256 public cdpDebtValue;
 
     /**
      * Fixed intereast rate %
@@ -1295,11 +1307,21 @@ contract Agreement is IAgreement, ClaimableIni, McdWrapper {
     uint public injectedTotal;
 
     /**
-     * Delta shows user's debt
+     * Delta shows user's debt (ray units)
      * if delta < 0 - it is borrower's debt to lender
      * if delta > 0 - it is lender's debt to borrower
      */
     int public delta;
+
+    /**
+     * shows borrower's unpaid fee debt, in RAY 
+     */
+    uint public feeAccum;
+
+    /**
+     * shows paid fee in DAI
+     */
+    uint public feePaidTotal;
 
     /**
      * @dev  Grants access only to agreement's borrower
@@ -1345,8 +1367,7 @@ contract Agreement is IAgreement, ClaimableIni, McdWrapper {
         uint256 _duration,
         uint256 _interestRate,
         bytes32 _collateralType,
-        bytes32 _ilkIndex,
-        bool    _isETH,
+        bool _isETH,
         address _configAddr
     ) public payable initializer {
         ClaimableIni.initialize();
@@ -1362,21 +1383,20 @@ contract Agreement is IAgreement, ClaimableIni, McdWrapper {
         require(
             (_duration > Config(_configAddr).minDuration()) &&
             (_duration < Config(_configAddr).maxDuration()), "Agreement: duration value does not match min and max");
-        require(!_isETH || msg.value == _collateralAmount, "Agreement: Actual ehter sent value is not correct");
+        require(!_isETH || msg.value == _collateralAmount, "Agreement: Actual ether sent value is not correct");
     
         configAddr = _configAddr;
         isETH = _isETH;
         borrower = _borrower;
-        debtValue = _debtValue;
+        cdpDebtValue = _debtValue;
         duration = _duration;
         interestRate = _interestRate;
         collateralAmount = _collateralAmount;
         collateralType = _collateralType;
-        ilkIndex = _ilkIndex;
 
         _nextStatus();
         _initMcdWrapper(collateralType, isETH);
-        emit AgreementInitiated(borrower, collateralAmount, debtValue, duration, interestRate);
+        emit AgreementInitiated(borrower, collateralAmount, cdpDebtValue, duration, interestRate);
 
         _monitorRisky();
     }
@@ -1403,19 +1423,19 @@ contract Agreement is IAgreement, ClaimableIni, McdWrapper {
         lastCheckTime = now;
 
         // transfer dai from lender to agreement & lock lender's dai to dsr
-        _transferFromDai(msg.sender, address(this), debtValue);
-        _lockDai(debtValue);
+        _transferFromDai(msg.sender, address(this), cdpDebtValue);
+        _lockDai(cdpDebtValue);
 
         if (isETH) {
-            cdpId = _openLockETHAndDraw(collateralType, collateralAmount, debtValue);
+            cdpId = _openLockETHAndDraw(collateralType, collateralAmount, cdpDebtValue);
         } else {
-            cdpId = _openLockERC20AndDraw(collateralType, collateralAmount, debtValue, true);
+            cdpId = _openLockERC20AndDraw(collateralType, collateralAmount, cdpDebtValue, true);
         }
         uint drawnDai = _balanceDai(address(this));
         // due to the lack of preceision in mcd cdp contracts drawn dai can be less by 1 dai wei
 
-        emit AgreementMatched(lender, expireDate, cdpId, collateralAmount, debtValue, drawnDai);
-        _pushDaiAsset(borrower, debtValue < drawnDai ? debtValue : drawnDai);
+        emit AgreementMatched(lender, expireDate, cdpId, collateralAmount, cdpDebtValue, drawnDai);
+        _pushDaiAsset(borrower, cdpDebtValue < drawnDai ? cdpDebtValue : drawnDai);
 
         return true;
     }
@@ -1447,7 +1467,7 @@ contract Agreement is IAgreement, ClaimableIni, McdWrapper {
     function cancelAgreement() external onlyBorrower beforeStatus(Statuses.Active) returns(bool _success)  {
         _closeAgreement(ClosedTypes.Cancelled);
         //push to lenders internal wallet collateral locked in agreement
-        _pushCollateralAsset(borrower, collateralAmount);
+        _pushCollateralAsset(lender, collateralAmount);
         return true;
     }
 
@@ -1458,7 +1478,7 @@ contract Agreement is IAgreement, ClaimableIni, McdWrapper {
     function rejectAgreement() external onlyContractOwner beforeStatus(Statuses.Active) returns(bool _success)  {
         _closeAgreement(ClosedTypes.Cancelled);
         //push to lenders internal wallet collateral locked in agreement
-        _pushCollateralAsset(borrower, collateralAmount);
+        _pushCollateralAsset(lender, collateralAmount); 
         return true;
     }
 
@@ -1543,7 +1563,7 @@ contract Agreement is IAgreement, ClaimableIni, McdWrapper {
         bytes32 _collateralType,
         uint _collateralAmount,
         uint _debtValue,
-        uint _interestRate,
+        uint _interestRate, // per sec
         bool _isRisky
     ) {
         _addr = address(this);
@@ -1554,7 +1574,7 @@ contract Agreement is IAgreement, ClaimableIni, McdWrapper {
         _lender = lender;
         _collateralType = collateralType;
         _collateralAmount = collateralAmount;
-        _debtValue = debtValue;
+        _debtValue = cdpDebtValue;
         _interestRate = interestRate;
         _isRisky = isRisky;
     }
@@ -1619,7 +1639,7 @@ contract Agreement is IAgreement, ClaimableIni, McdWrapper {
      * @return  collateralization ratio in RAY
      */
     function getCR() public view returns(uint) {
-        return cdpId > 0 ? getCdpCR(collateralType, cdpId) : collateralAmount.mul(getPrice(collateralType)).div(debtValue);
+        return cdpId > 0 ? getCdpCR(collateralType, cdpId) : collateralAmount.mul(getPrice(collateralType)).div(cdpDebtValue);
     }
 
     /**
@@ -1663,47 +1683,66 @@ contract Agreement is IAgreement, ClaimableIni, McdWrapper {
      * @return  Operation success
      */
     function _updateAgreementState(bool _isLastUpdate) internal returns(bool _success) {
-        // if it is last update take the time interval up to expireDate, otherwise up to current time
         uint timeInterval = (_isLastUpdate ? expireDate : now).sub(lastCheckTime);
         uint injectionAmount;
         uint drawnDai;
-        uint currentDsrAnnual  = rpow(getDsr(), YEAR_SECS, ONE);
-        uint currentDutyAnnual = rpow(getIlkDuty(ilkIndex), YEAR_SECS, ONE);
-        uint ourFeeAnnual      = rpow(Config(configAddr).acapFee(), YEAR_SECS, ONE);
+        uint currentDebt;
+        int  savingsDifference;
+        // uint currDuty     = getIlkDuty(collateralType); // warn about change in pricing
+  
+        uint dsrEff = rpow(getDsr(), timeInterval, ONE);
+        uint firEff = rpow(interestRate, timeInterval, ONE);
+        if(getDsr() > interestRate ) 
+        {                       // lender owes to borrower, savingsDiff >0
+            savingsDifference = int(cdpDebtValue.mul( dsrEff.sub(firEff) ));
+        } else {                // borrower owes to lender, savingsDiff <0
+            savingsDifference = -int(cdpDebtValue.mul( firEff.sub(dsrEff) ));
+        }
 
-        // calculate savings difference between dsr and interest rate during time interval
-
-        // todo debt value used not updated
-        int savingsDifference =      int(   debtValue.mul(timeInterval) )
-                                    .mul(  (int(currentDsrAnnual)).sub(int(interestRate))  ) 
-                                    .div(   int(YEAR_SECS) );
-         
-        
         delta = delta.add(savingsDifference);
-        lastCheckTime = now;
-        uint currentDebt = uint(fromRay(delta < 0 ? -delta : delta));
+        currentDebt = uint(fromRay(delta < 0 ? -delta : delta)); // and this is borrower debt
 
-        // check the current debt is above threshold
-        if (currentDebt >= (_isLastUpdate ? 1 : Config(configAddr).injectionThreshold())) {
-            if (delta < 0) {
-                // if delta < 0 - currentDebt is borrower's debt to lender
+        if (currentDebt >= (_isLastUpdate ? 1 : Config(configAddr).injectionThreshold())) {    
+            if (delta < 0) {  // if delta < 0 - currentDebt is borrower's debt to lender
                 drawnDai = _drawDaiToCdp(collateralType, cdpId, currentDebt);
-                delta = delta.add(int(toRay(drawnDai)));
-                drawnTotal = drawnTotal.add(drawnDai);
-            } else {
-                // delta > 0 - currentDebt is lender's debt to borrower
+                if (drawnDai > 0) 
+                {   
+                    _pushDaiAsset(lender, drawnDai); // push to internal wallet
+                    delta = delta.add(int(toRay(drawnDai)));
+                    drawnTotal = drawnTotal.add(drawnDai);
+                }
+            } else {          // delta > 0 - currentDebt is lender's debt to borrower
                 injectionAmount = _injectToCdpFromDsr(cdpId, currentDebt);
                 delta = delta.sub(int(toRay(injectionAmount)));
                 injectedTotal = injectedTotal.add(injectionAmount);
             }
-        }
+        }        
         
-        emit AgreementUpdated(savingsDifference, delta, currentDsrAnnual, timeInterval, drawnDai, injectionAmount);
-        if (drawnDai > 0)
-            _pushDaiAsset(lender, drawnDai);
+        uint feeFrac =  rpow(Config(configAddr).acapFee(), timeInterval, ONE).sub(ONE);
+        uint nowFee = cdpDebtValue.mul(feeFrac);
+        feeAccum = feeAccum.add(nowFee); 
+        uint feePay = fromRay(feeAccum);
+        if ( feePay > Config(configAddr).injectionThreshold() || _isLastUpdate)  {
+            drawnDai = _drawDaiToCdp(collateralType, cdpId, feePay);
+            if (drawnDai > 0) 
+            {
+                _pushDaiAsset(Config(configAddr).acapAddr(), drawnDai); 
+                drawnTotal   = drawnTotal.add(drawnDai);
+                feePaidTotal = feePaidTotal.add(drawnDai);
+                feeAccum     = feeAccum.sub(drawnDai);
+            }
+        }   
+
+        emit AgreementUpdated(savingsDifference, delta, timeInterval, drawnDai, injectionAmount);
+        
+        // for the next iteration, last debt value and time
+        lastCheckTime = now;
+        (, cdpDebtValue) = getCdpInfo(collateralType, cdpId); // update new starting debt value for the next update
+        
         _monitorRisky();
         if (_isLastUpdate)
             _refund();
+    
         return true;
     }
 
