@@ -24,8 +24,8 @@ contract McdWrapper is McdAddressesR17, RaySupport {
      * @param   ilk     collateral type
      * @return  IERC20 instance
      */
-    function erc20TokenContract(bytes32 ilk) public view returns(IERC20) {
-        (,address payable collateralBaseAddress) = _getCollateralAddreses(ilk);
+    function erc20TokenContract(bytes32 ilk) public view returns (IERC20) {
+        (, address payable collateralBaseAddress) = _getCollateralAddreses(ilk);
         return IERC20(collateralBaseAddress);
     }
 
@@ -33,7 +33,7 @@ contract McdWrapper is McdAddressesR17, RaySupport {
      * @dev     get amount of dai tokens currently locked in dsr(pot) contract.
      * @return  pie amount of all dai tokens locked in dsr
      */
-    function getLockedDai() public view returns(uint256 pie, uint256 pieS) {
+    function getLockedDai() public view returns (uint256 pie, uint256 pieS) {
         pie = PotLike(mcdPotAddr).pie(address(proxy()));
         pieS = pie.mul(PotLike(mcdPotAddr).chi());
     }
@@ -42,7 +42,7 @@ contract McdWrapper is McdAddressesR17, RaySupport {
      * @dev     get dai savings rate
      * @return  dsr value in multiplier format defined by maker dao system. 100 * 10^25 - means 0% dsr. 103 * 10^25 means 3% dsr.
      */
-    function getDsr() public view returns(uint) {
+    function getDsr() public view returns (uint256) {
         return PotLike(mcdPotAddr).dsr();
     }
 
@@ -50,8 +50,8 @@ contract McdWrapper is McdAddressesR17, RaySupport {
      * @dev     get collateral cost
      * @return  Duty (base rate plus risk premium) in multiplier format, per-second accrual.
      */
-    function getIlkDuty(bytes32 _ilkIndex) public view returns (uint) {
-        (, uint _duty) = JugLike(mcdJugAddr).ilks(_ilkIndex);
+    function getIlkDuty(bytes32 _ilkIndex) public view returns (uint256) {
+        (, uint256 _duty) = JugLike(mcdJugAddr).ilks(_ilkIndex);
         return _duty;
     }
 
@@ -62,10 +62,17 @@ contract McdWrapper is McdAddressesR17, RaySupport {
      * @param   daiAmount   dai tokens amount
      * @return  collateral tokens amount worth dai amount
      */
-    function getCollateralEquivalent(bytes32 ilk, uint daiAmount) public view returns(uint) {
-        uint price = getPrice(ilk);
-        uint ethAmount = daiAmount.mul(ONE).div(price);
-        return (ethAmount.mul(price).div(ONE) == daiAmount) ? ethAmount : (ethAmount.add(1));
+    function getCollateralEquivalent(bytes32 ilk, uint256 daiAmount)
+        public
+        view
+        returns (uint256)
+    {
+        uint256 price = getPrice(ilk);
+        uint256 ethAmount = daiAmount.mul(ONE).div(price);
+        return
+            (ethAmount.mul(price).div(ONE) == daiAmount)
+                ? ethAmount
+                : (ethAmount.add(1));
     }
 
     /**
@@ -75,9 +82,18 @@ contract McdWrapper is McdAddressesR17, RaySupport {
      * @return  ink     collateral tokens amount
      *          art     dai debt amount
      */
-    function getCdpInfo(bytes32 ilk, uint cdpId) public view returns(uint ink, uint art) {
+    function getCdpInfo(bytes32 ilk, uint256 cdpId)
+        public
+        view
+        returns (uint256 ink, uint256 debt)
+    {
         address urn = ManagerLike(cdpManagerAddr).urns(cdpId);
+        uint256 art;
+        uint256 rate;
+
         (ink, art) = VatLike(mcdVatAddr).urns(ilk, urn);
+        (,rate,,,) = VatLike(mcdVatAddr).ilks(ilk);
+        debt = rate.mul(art);
     }
 
     /**
@@ -85,7 +101,7 @@ contract McdWrapper is McdAddressesR17, RaySupport {
      * @param   ilk     collateral type in bytes32 format
      * @return  collateral to USD price
      */
-    function getPrice(bytes32 ilk) public view returns(uint) {
+    function getPrice(bytes32 ilk) public view returns (uint256) {
         return getSafePrice(ilk).mul(getLiquidationRatio(ilk)).div(ONE);
     }
 
@@ -94,8 +110,8 @@ contract McdWrapper is McdAddressesR17, RaySupport {
      * @param   ilk     collateral type in bytes32 format
      * @return  collateral to USD price
      */
-    function getSafePrice(bytes32 ilk) public view returns(uint) {
-        (,, uint spot,,) = VatLike(mcdVatAddr).ilks(ilk);
+    function getSafePrice(bytes32 ilk) public view returns (uint256) {
+        (, , uint256 spot, , ) = VatLike(mcdVatAddr).ilks(ilk);
         return spot;
     }
 
@@ -104,8 +120,8 @@ contract McdWrapper is McdAddressesR17, RaySupport {
      * @param   ilk     collateral type in bytes32 format
      * @return  liquidation ratio  150 * 10^25 - means 150%
      */
-    function getLiquidationRatio(bytes32 ilk) public view returns(uint) {
-        (,uint mat) = SpotterLike(mcdSpotAddr).ilks(ilk);
+    function getLiquidationRatio(bytes32 ilk) public view returns (uint256) {
+        (, uint256 mat) = SpotterLike(mcdSpotAddr).ilks(ilk);
         return mat;
     }
 
@@ -115,7 +131,7 @@ contract McdWrapper is McdAddressesR17, RaySupport {
      * @param   cdpId   cdp ID
      * @return  true if unsafe
      */
-    function isCdpSafe(bytes32 ilk, uint cdpId) public view returns(bool) {
+    function isCdpSafe(bytes32 ilk, uint256 cdpId) public view returns (bool) {
         return getDaiAvailable(ilk, cdpId) > 0;
     }
 
@@ -125,10 +141,20 @@ contract McdWrapper is McdAddressesR17, RaySupport {
      * @param   cdpId   cdp ID
      * @return  dai amount available to be drawn
      */
-    function getDaiAvailable(bytes32 ilk, uint cdpId) public view returns(uint) {
-        (, uint rate, uint spot,,) = VatLike(mcdVatAddr).ilks(ilk);
-        (uint ink, uint art) = VatLike(mcdVatAddr).urns(ilk, ManagerLike(cdpManagerAddr).urns(cdpId));
-        return (ink.mul(spot) > art.mul(rate)) ? fromRay(ink.mul(spot).sub(art.mul(rate))) : 0;
+    function getDaiAvailable(bytes32 ilk, uint256 cdpId)
+        public
+        view
+        returns (uint256)
+    {
+        (, uint256 rate, uint256 spot, , ) = VatLike(mcdVatAddr).ilks(ilk);
+        (uint256 ink, uint256 art) = VatLike(mcdVatAddr).urns(
+            ilk,
+            ManagerLike(cdpManagerAddr).urns(cdpId)
+        );
+        return
+            (ink.mul(spot) > art.mul(rate))
+                ? fromRay(ink.mul(spot).sub(art.mul(rate)))
+                : 0;
     }
 
     /**
@@ -137,10 +163,17 @@ contract McdWrapper is McdAddressesR17, RaySupport {
      * @param   cdpId   cdp ID
      * @return  collateralization ratio
      */
-    function getCdpCR(bytes32 ilk, uint cdpId) public view returns(uint) {
-        (, uint rate, uint spot,,) = VatLike(mcdVatAddr).ilks(ilk);
-        (uint ink, uint art) = VatLike(mcdVatAddr).urns(ilk, ManagerLike(cdpManagerAddr).urns(cdpId));
-        (,uint mat) = SpotterLike(mcdSpotAddr).ilks(ilk);
+    function getCdpCR(bytes32 ilk, uint256 cdpId)
+        public
+        view
+        returns (uint256)
+    {
+        (, uint256 rate, uint256 spot, , ) = VatLike(mcdVatAddr).ilks(ilk);
+        (uint256 ink, uint256 art) = VatLike(mcdVatAddr).urns(
+            ilk,
+            ManagerLike(cdpManagerAddr).urns(cdpId)
+        );
+        (, uint256 mat) = SpotterLike(mcdSpotAddr).ilks(ilk);
         return ink.mul(spot).mul(mat).div(art.mul(rate));
     }
 
@@ -149,8 +182,8 @@ contract McdWrapper is McdAddressesR17, RaySupport {
      * @param   ilk     collateral type in bytes32 format
      * @return  minimal collateralization ratio
      */
-    function getMCR(bytes32 ilk) public view returns(uint) {
-        (,uint mat) = SpotterLike(mcdSpotAddr).ilks(ilk);
+    function getMCR(bytes32 ilk) public view returns (uint256) {
+        (, uint256 mat) = SpotterLike(mcdSpotAddr).ilks(ilk);
         return mat;
     }
 
@@ -162,9 +195,9 @@ contract McdWrapper is McdAddressesR17, RaySupport {
     function _initMcdWrapper(bytes32 ilk, bool isEther) internal {
         _buildProxy();
         if (!isEther) {
-            _approveERC20(ilk, proxyAddress, 2 ** 256 - 1);
+            _approveERC20(ilk, proxyAddress, 2**256 - 1);
         }
-        _approveDai(proxyAddress, 2 ** 256 - 1);
+        _approveDai(proxyAddress, 2**256 - 1);
     }
 
     /**
@@ -188,13 +221,22 @@ contract McdWrapper is McdAddressesR17, RaySupport {
      * @param   cdp     cdp id
      * @param   wadC    collateral amount to be locked in cdp contract
      */
-    function _lockETH(bytes32 ilk, uint cdp, uint wadC) internal {
+    function _lockETH(
+        bytes32 ilk,
+        uint256 cdp,
+        uint256 wadC
+    ) internal {
         bytes memory data;
-        (address collateralJoinAddr,) = _getCollateralAddreses(ilk);
+        (address collateralJoinAddr, ) = _getCollateralAddreses(ilk);
         data = abi.encodeWithSignature(
             "lockETH(address,address,uint256)",
-            cdpManagerAddr, collateralJoinAddr, cdp);
-        (bool success,) = proxyAddress.call.value(wadC)(abi.encodeWithSignature("execute(address,bytes)", proxyLib, data));
+            cdpManagerAddr,
+            collateralJoinAddr,
+            cdp
+        );
+        (bool success, ) = proxyAddress.call.value(wadC)(
+            abi.encodeWithSignature("execute(address,bytes)", proxyLib, data)
+        );
         require(success, "failed to lock eth");
     }
 
@@ -205,13 +247,24 @@ contract McdWrapper is McdAddressesR17, RaySupport {
      * @param   wadC    collateral amount to be locked in cdp contract
      * @param   transferFrom   collateral tokens should be transfered from caller
      */
-    function _lockERC20(bytes32 ilk, uint cdp, uint wadC, bool transferFrom) internal {
-        (address collateralJoinAddr,) = _getCollateralAddreses(ilk);
+    function _lockERC20(
+        bytes32 ilk,
+        uint256 cdp,
+        uint256 wadC,
+        bool transferFrom
+    ) internal {
+        (address collateralJoinAddr, ) = _getCollateralAddreses(ilk);
         proxy().execute(
             proxyLib,
             abi.encodeWithSignature(
                 "lockGem(address,address,uint256,uint256,bool)",
-                cdpManagerAddr, collateralJoinAddr, cdp, wadC, transferFrom));
+                cdpManagerAddr,
+                collateralJoinAddr,
+                cdp,
+                wadC,
+                transferFrom
+            )
+        );
     }
 
     /**
@@ -221,30 +274,52 @@ contract McdWrapper is McdAddressesR17, RaySupport {
      * @param   wadC    collateral amount to be locked in cdp contract
      * @param   wadD    dai amount to be drawn
      */
-    function _openLockETHAndDraw(bytes32 ilk, uint wadC, uint wadD) internal returns (uint cdp) {
+    function _openLockETHAndDraw(
+        bytes32 ilk,
+        uint256 wadC,
+        uint256 wadD
+    ) internal returns (uint256 cdp) {
         address payable target = proxyAddress;
-        (address collateralJoinAddr,) = _getCollateralAddreses(ilk);
+        (address collateralJoinAddr, ) = _getCollateralAddreses(ilk);
         bytes memory data = abi.encodeWithSignature(
             "execute(address,bytes)",
             proxyLib,
             abi.encodeWithSignature(
                 "openLockETHAndDraw(address,address,address,address,bytes32,uint256)",
-                cdpManagerAddr, mcdJugAddr, collateralJoinAddr, mcdJoinDaiAddr, ilk, wadD));
+                cdpManagerAddr,
+                mcdJugAddr,
+                collateralJoinAddr,
+                mcdJoinDaiAddr,
+                ilk,
+                wadD
+            )
+        );
         assembly {
-            let succeeded := call(sub(gas, 5000), target, wadC, add(data, 0x20), mload(data), 0, 0)
+            let succeeded := call(
+                sub(gas, 5000),
+                target,
+                wadC,
+                add(data, 0x20),
+                mload(data),
+                0,
+                0
+            )
             let size := returndatasize
             let response := mload(0x40)
-            mstore(0x40, add(response, and(add(add(size, 0x20), 0x1f), not(0x1f))))
+            mstore(
+                0x40,
+                add(response, and(add(add(size, 0x20), 0x1f), not(0x1f)))
+            )
             mstore(response, size)
             returndatacopy(add(response, 0x20), 0, size)
 
             cdp := mload(add(response, 0x60))
 
             switch iszero(succeeded)
-            case 1 {
-                // throw if delegatecall failed
-                revert(add(response, 0x20), size)
-            }
+                case 1 {
+                    // throw if delegatecall failed
+                    revert(add(response, 0x20), size)
+                }
         }
     }
 
@@ -256,14 +331,28 @@ contract McdWrapper is McdAddressesR17, RaySupport {
      * @param   wadD    dai amount to be drawn
      * @param   transferFrom   collateral tokens should be transfered from caller
      */
-    function _openLockERC20AndDraw(bytes32 ilk, uint wadC, uint wadD, bool transferFrom) internal returns (uint cdp) {
+    function _openLockERC20AndDraw(
+        bytes32 ilk,
+        uint256 wadC,
+        uint256 wadD,
+        bool transferFrom
+    ) internal returns (uint256 cdp) {
         // _approveERC20(ilk, proxyAddress, wadC);
-        (address collateralJoinAddr,) = _getCollateralAddreses(ilk);
+        (address collateralJoinAddr, ) = _getCollateralAddreses(ilk);
         bytes memory response = proxy().execute(
             proxyLib,
             abi.encodeWithSignature(
                 "openLockGemAndDraw(address,address,address,address,bytes32,uint256,uint256,bool)",
-                cdpManagerAddr, mcdJugAddr, collateralJoinAddr, mcdJoinDaiAddr, ilk, wadC, wadD, transferFrom));
+                cdpManagerAddr,
+                mcdJugAddr,
+                collateralJoinAddr,
+                mcdJoinDaiAddr,
+                ilk,
+                wadC,
+                wadD,
+                transferFrom
+            )
+        );
         assembly {
             cdp := mload(add(response, 0x20))
         }
@@ -274,13 +363,21 @@ contract McdWrapper is McdAddressesR17, RaySupport {
      * @param   cdp   cdp ID
      * @param   wad   amount of dai tokens
      */
-    function _injectToCdpFromDsr(uint cdp, uint wad) internal returns(uint injectionWad) {
+    function _injectToCdpFromDsr(uint256 cdp, uint256 wad)
+        internal
+        returns (uint256 injectionWad)
+    {
         injectionWad = _unlockDai(wad);
         proxy().execute(
             proxyLib,
             abi.encodeWithSignature(
                 "wipe(address,address,uint256,uint256)",
-                cdpManagerAddr, mcdJoinDaiAddr, cdp, injectionWad));
+                cdpManagerAddr,
+                mcdJoinDaiAddr,
+                cdp,
+                injectionWad
+            )
+        );
     }
 
     /**
@@ -290,27 +387,42 @@ contract McdWrapper is McdAddressesR17, RaySupport {
      * @param   wad   amount of dai tokens
      * @return  drawn dai amount
      */
-    function _drawDaiToCdp(bytes32 ilk, uint cdp, uint wad) internal returns (uint drawnDai) {
+    function _drawDaiToCdp(
+        bytes32 ilk,
+        uint256 cdp,
+        uint256 wad
+    ) internal returns (uint256 drawnDai) {
         JugLike(mcdJugAddr).drip(ilk);
-        uint maxToDraw = getDaiAvailable(ilk, cdp);
+        uint256 maxToDraw = getDaiAvailable(ilk, cdp);
         drawnDai = wad > maxToDraw ? maxToDraw : wad;
         proxy().execute(
             proxyLib,
             abi.encodeWithSignature(
                 "draw(address,address,address,uint256,uint256)",
-                cdpManagerAddr, mcdJugAddr, mcdJoinDaiAddr, cdp, drawnDai));
+                cdpManagerAddr,
+                mcdJugAddr,
+                mcdJoinDaiAddr,
+                cdp,
+                drawnDai
+            )
+        );
     }
+
     /**
      * @dev     lock dai tokens to dsr(pot) contract.
      * @dev     approves this amount of dai tokens to proxy before locking
      * @param   wad amount of dai tokens
      */
-    function _lockDai(uint wad) internal {
+    function _lockDai(uint256 wad) internal {
         proxy().execute(
             proxyLibDsr,
             abi.encodeWithSignature(
                 "join(address,address,uint256)",
-                mcdJoinDaiAddr, mcdPotAddr, wad));
+                mcdJoinDaiAddr,
+                mcdPotAddr,
+                wad
+            )
+        );
     }
 
     /**
@@ -318,13 +430,17 @@ contract McdWrapper is McdAddressesR17, RaySupport {
      * @param   wad amount of dai tokens
      * @return  actually unlocked amount of dai
      */
-    function _unlockDai(uint wad) internal returns(uint unlockedWad) {
-        uint _balanceBefore = _balanceDai(address(this));
+    function _unlockDai(uint256 wad) internal returns (uint256 unlockedWad) {
+        uint256 _balanceBefore = _balanceDai(address(this));
         proxy().execute(
             proxyLibDsr,
             abi.encodeWithSignature(
                 "exit(address,address,uint256)",
-                mcdJoinDaiAddr, mcdPotAddr, wad));
+                mcdJoinDaiAddr,
+                mcdPotAddr,
+                wad
+            )
+        );
         unlockedWad = _balanceDai(address(this)).sub(_balanceBefore);
     }
 
@@ -332,13 +448,16 @@ contract McdWrapper is McdAddressesR17, RaySupport {
      * @dev     unlock all dai tokens from dsr(pot) contract.
      * @return  pie amount of all dai tokens was unlocked in fact
      */
-    function _unlockAllDai() internal returns(uint pie) {
-        uint _balanceBefore = _balanceDai(address(this));
+    function _unlockAllDai() internal returns (uint256 pie) {
+        uint256 _balanceBefore = _balanceDai(address(this));
         proxy().execute(
             proxyLibDsr,
             abi.encodeWithSignature(
                 "exitAll(address,address)",
-                mcdJoinDaiAddr, mcdPotAddr));
+                mcdJoinDaiAddr,
+                mcdPotAddr
+            )
+        );
         pie = _balanceDai(address(this)).sub(_balanceBefore);
     }
 
@@ -347,7 +466,7 @@ contract McdWrapper is McdAddressesR17, RaySupport {
      * @param   to      address allowed to call transferFrom
      * @param   amount  tokens amount for approval
      */
-    function _approveDai(address to, uint amount) internal returns(bool) {
+    function _approveDai(address to, uint256 amount) internal returns (bool) {
         IERC20(mcdDaiAddr).approve(to, amount);
         return true;
     }
@@ -358,7 +477,11 @@ contract McdWrapper is McdAddressesR17, RaySupport {
      * @param   to      address allowed to call transferFrom
      * @param   amount  tokens amount for approval
      */
-    function _approveERC20(bytes32 ilk, address to, uint amount) internal returns(bool) {
+    function _approveERC20(
+        bytes32 ilk,
+        address to,
+        uint256 amount
+    ) internal returns (bool) {
         erc20TokenContract(ilk).approve(to, amount);
         return true;
     }
@@ -368,7 +491,7 @@ contract McdWrapper is McdAddressesR17, RaySupport {
      * @param   to      address of recepient
      * @param   amount  tokens amount
      */
-    function _transferDai(address to, uint amount) internal returns(bool) {
+    function _transferDai(address to, uint256 amount) internal returns (bool) {
         IERC20(mcdDaiAddr).transfer(to, amount);
         return true;
     }
@@ -379,7 +502,11 @@ contract McdWrapper is McdAddressesR17, RaySupport {
      * @param   to      address of recepient
      * @param   amount  tokens amount
      */
-    function _transferERC20(bytes32 ilk, address to, uint amount) internal returns(bool) {
+    function _transferERC20(
+        bytes32 ilk,
+        address to,
+        uint256 amount
+    ) internal returns (bool) {
         erc20TokenContract(ilk).transfer(to, amount);
         return true;
     }
@@ -390,7 +517,11 @@ contract McdWrapper is McdAddressesR17, RaySupport {
      * @param   to      address of recepient
      * @param   amount  tokens amount
      */
-    function _transferFromDai(address from, address to, uint amount) internal returns(bool) {
+    function _transferFromDai(
+        address from,
+        address to,
+        uint256 amount
+    ) internal returns (bool) {
         return IERC20(mcdDaiAddr).transferFrom(from, to, amount);
     }
 
@@ -401,7 +532,12 @@ contract McdWrapper is McdAddressesR17, RaySupport {
      * @param   to      address of recepient
      * @param   amount  tokens amount
      */
-    function _transferFromERC20(bytes32 ilk, address from, address to, uint amount) internal returns(bool) {
+    function _transferFromERC20(
+        bytes32 ilk,
+        address from,
+        address to,
+        uint256 amount
+    ) internal returns (bool) {
         return erc20TokenContract(ilk).transferFrom(from, to, amount);
     }
 
@@ -410,30 +546,38 @@ contract McdWrapper is McdAddressesR17, RaySupport {
      * @param   cdp     cdp ID
      * @param   guy     address, ownership should be transfered to
      */
-    function _transferCdpOwnershipToProxy(uint cdp, address guy) internal {
+    function _transferCdpOwnershipToProxy(uint256 cdp, address guy) internal {
         proxy().execute(
             proxyLib,
             abi.encodeWithSignature(
                 "giveToProxy(address,address,uint256,address)",
-                proxyRegistryAddrMD, cdpManagerAddr, cdp, guy));
+                proxyRegistryAddrMD,
+                cdpManagerAddr,
+                cdp,
+                guy
+            )
+        );
     }
 
     /**
      * @dev     Get balance of dai tokens
      * @param   addr      address
      */
-    function _balanceDai(address addr) internal view returns(uint) {
+    function _balanceDai(address addr) internal view returns (uint256) {
         return IERC20(mcdDaiAddr).balanceOf(addr);
     }
 
     /**
      * @dev     Transfer exact amount of erc20 tokens, approved beforehand
-     * @param   ilk     collateral type 
+     * @param   ilk     collateral type
      * @return  token adapter address
      * @return  token erc20 contract address
      */
-    function _getCollateralAddreses(bytes32 ilk) internal view returns(address, address payable) {
-
+    function _getCollateralAddreses(bytes32 ilk)
+        internal
+        view
+        returns (address, address payable)
+    {
         if (ilk == "ETH-A") {
             return (mcdJoinEthaAddr, wethAddr);
         }
@@ -453,7 +597,6 @@ contract McdWrapper is McdAddressesR17, RaySupport {
         // actual registry
         address _gem = IlkRegistryLike(mcdIlkRegAddr).gem(ilk);
         address payable _join = IlkRegistryLike(mcdIlkRegAddr).join(ilk);
-        return (_gem, _join);        
+        return (_gem, _join);
     }
-    
 }

@@ -32,7 +32,7 @@ contract Config is ClaimableBase, RaySupport {
         enableCollateral("USDC-A");
         enableCollateral("USDC-B");
         acapFee  = 1000000000158153903837946257;
-        acapAddr = 0xF79179D06C687342a3f5C1daE5A7253AFC03C7A8;  
+        acapAddr = 0x5f75505f0bb6f2e24a650efc44e7806c2c54d4d0; // 0xF79179D06C687342a3f5C1daE5A7253AFC03C7A8;  
 
     }
 

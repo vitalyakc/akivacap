@@ -93,6 +93,11 @@ contract Agreement is IAgreement, ClaimableIni, McdWrapper {
     uint256 public cdpDebtValue;
 
     /**
+     * Initial dai debt amount of CDP
+     */
+    uint256 public initDebtValue;
+
+    /**
      * Fixed intereast rate %
      */
     uint256 public interestRate;
@@ -199,6 +204,7 @@ contract Agreement is IAgreement, ClaimableIni, McdWrapper {
         configAddr = _configAddr;
         isETH = _isETH;
         borrower = _borrower;
+        initDebtValue = _debtValue;
         cdpDebtValue = _debtValue;
         duration = _duration;
         interestRate = _interestRate;

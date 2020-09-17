@@ -1,4 +1,3 @@
-
 // File: contracts/helpers/Claimable.sol
 
 pragma solidity 0.5.12;
@@ -1467,7 +1466,7 @@ contract Agreement is IAgreement, ClaimableIni, McdWrapper {
     function cancelAgreement() external onlyBorrower beforeStatus(Statuses.Active) returns(bool _success)  {
         _closeAgreement(ClosedTypes.Cancelled);
         //push to lenders internal wallet collateral locked in agreement
-        _pushCollateralAsset(lender, collateralAmount);
+        _pushCollateralAsset(borrower, collateralAmount);
         return true;
     }
 
@@ -1477,8 +1476,7 @@ contract Agreement is IAgreement, ClaimableIni, McdWrapper {
      */
     function rejectAgreement() external onlyContractOwner beforeStatus(Statuses.Active) returns(bool _success)  {
         _closeAgreement(ClosedTypes.Cancelled);
-        //push to lenders internal wallet collateral locked in agreement
-        _pushCollateralAsset(lender, collateralAmount); 
+        _pushCollateralAsset(borrower, collateralAmount); 
         return true;
     }
 

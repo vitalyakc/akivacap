@@ -47,24 +47,13 @@ module.exports = {
     // options below to some value.
     //
     development: {
-      host: '127.0.0.1', // Localhost (default: none)
+      host: 'localhost', // Localhost (default: none)
       port: 8545, // Standard Ethereum port (default: none)
       network_id: '*', // Any network (default: none)
       gas: 6000000,
       gasLimit: 6000000, // <-- Use this high gas value
       gasPrice: 1,
     },
-    
-    dev2: {    
-      host: '127.0.0.1', // Localhost (default: none)
-      port: 8546, // Standard Ethereum port (default: none)
-      network_id: '*', // Any network (default: none)
-      gas: 6000000,
-      gasLimit: 6000000, // <-- Use this high gas value
-      gasPrice: 1,
-    },
-    
-    
     coverage: {
       host: 'localhost',
       network_id: '*',
@@ -96,12 +85,17 @@ module.exports = {
     },
 
     kovan: {
-      provider: () => new HDWalletProvider(
-        // [process.env.PRIVATEKEY1, process.env.PRIVATEKEY2, process.env.PRIVATEKEY3],
-        mnemonic,
-        'https://kovan.infura.io/v3/' + process.env.INFURA_API_KEY, 0, 3),
-      network_id: 42,
-      gasPrice: 1000000000,
+      provider: () => 
+        {
+          debugger;
+          console.log(process.env.MNENOMIC, process.env.INFURA_API_KEY);
+          return new HDWalletProvider(
+            // [process.env.PRIVATEKEY1, process.env.PRIVATEKEY2, process.env.PRIVATEKEY3],
+            process.env.MNENOMIC,
+            'https://kovan.infura.io/v3/' + process.env.INFURA_API_KEY, 0, 3);
+        },
+        network_id: 42,
+        gasPrice: 1000000000,
     },
 
     kovandeploy: {
