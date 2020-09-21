@@ -62,16 +62,18 @@ contract FraFactory is Administrable {
         uint256 _interestRate,
         bytes32 _collateralType
     ) external returns(address _newAgreement) {
-
         address  agreementProxyAddr;
         agreementProxyAddr = address(new UpgradeabilityProxy(agreementImpl, ""));
         
         IAgreement(agreementProxyAddr).
             initAgreement(msg.sender, _collateralValue, _debtValue, _duration, _interestRate, _collateralType, false, configAddr);
+
         
-        IERC20 t = IAgreement(agreementProxyAddr).erc20TokenContract(_collateralType);        
+        IERC20 t = IAgreement(agreementProxyAddr).erc20TokenContract(_collateralType);                
+
+        // t.approve(address(this), _collateralValue);
         t.transferFrom(msg.sender, address(agreementProxyAddr), _collateralValue);
-        
+
         agreementList.push(agreementProxyAddr);
         return agreementProxyAddr;
     }

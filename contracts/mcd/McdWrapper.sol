@@ -93,7 +93,7 @@ contract McdWrapper is McdAddressesR17, RaySupport {
 
         (ink, art) = VatLike(mcdVatAddr).urns(ilk, urn);
         (,rate,,,) = VatLike(mcdVatAddr).ilks(ilk);
-        debt = rate.mul(art);
+        debt = rate.mul(art).div(ONE);
     }
 
     /**
